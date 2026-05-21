@@ -12,6 +12,8 @@ import {
   SAMPLE_CUSTOMERS, customerTotal, customerOverdue, fmtAmt, fmtD,
   type SampleCustomer,
 } from "@/lib/receivables-data";
+import { ExportButtons } from "@/components/ui/export-buttons";
+import { downloadExcel, printAsPDF } from "@/lib/export-utils";
 
 type SortKey = "name" | "total" | "overdue" | "ag0to30" | "ag31to60" | "ag61to90" | "ag90plus";
 type Filter  = "All" | "Overdue" | "Critical";
@@ -53,6 +55,58 @@ export function CustomerTable({ customers }: Props) {
     Critical: customers.filter((c) => c.ag90plus > 0 || c.ag61to90 > 0).length,
   };
 
+  // ── Export handlers ──────────────────────────────────────────────────────────
+  function handleExcelExport() {
+    const rows = filtered.map((c) => ({
+      "Customer":          c.name,
+      "Segment":           c.segment,
+      "0–30 Days":         c.ag0to30   > 0 ? c.ag0to30   : "",
+      "31–60 Days":        c.ag31to60  > 0 ? c.ag31to60  : "",
+      "61–90 Days":        c.ag61to90  > 0 ? c.ag61to90  : "",
+      "90+ Days":          c.ag90plus  > 0 ? c.ag90plus  : "",
+      "Total (₹)":         customerTotal(c),
+      "Overdue (₹)":       customerOverdue(c),
+      "Last Payment Date": fmtD(c.last_payment_date),
+    }));
+    downloadExcel(rows, "AR_Aging_Report", "AR Aging",
+      [{ wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 18 }]
+    );
+  }
+
+  function handlePDFExport() {
+    const rows = filtered.map((c) => `
+      <tr>
+        <td>${c.name}</td>
+        <td>${c.segment}</td>
+        <td class="num">${c.ag0to30  > 0 ? fmtAmt(c.ag0to30)  : "—"}</td>
+        <td class="num">${c.ag31to60 > 0 ? fmtAmt(c.ag31to60) : "—"}</td>
+        <td class="num">${c.ag61to90 > 0 ? fmtAmt(c.ag61to90) : "—"}</td>
+        <td class="num">${c.ag90plus > 0 ? fmtAmt(c.ag90plus) : "—"}</td>
+        <td class="num"><strong>${fmtAmt(customerTotal(c))}</strong></td>
+      </tr>`).join("");
+    const totals = `<tfoot><tr>
+      <td colspan="2" style="font-weight:700">Total (${filtered.length} customers)</td>
+      <td class="num">${fmtAmt(filtered.reduce((s, c) => s + c.ag0to30, 0))}</td>
+      <td class="num">${fmtAmt(filtered.reduce((s, c) => s + c.ag31to60, 0))}</td>
+      <td class="num">${fmtAmt(filtered.reduce((s, c) => s + c.ag61to90, 0))}</td>
+      <td class="num">${fmtAmt(filtered.reduce((s, c) => s + c.ag90plus, 0))}</td>
+      <td class="num">${fmtAmt(filtered.reduce((s, c) => s + customerTotal(c), 0))}</td>
+    </tr></tfoot>`;
+    printAsPDF(`
+      <h1>Accounts Receivable — Aging Report</h1>
+      <p class="subtitle">Filter: ${filter} · ${filtered.length} customers · Exported ${new Date().toLocaleDateString("en-IN")}</p>
+      <style>.num { text-align: right; }</style>
+      <table>
+        <thead><tr>
+          <th>Customer</th><th>City</th>
+          <th style="text-align:right">0–30d</th><th style="text-align:right">31–60d</th>
+          <th style="text-align:right">61–90d</th><th style="text-align:right">90+d</th>
+          <th style="text-align:right">Total</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>${totals}
+      </table>`, "AR Aging Report — Robotek FinOS");
+  }
+
   return (
     <div className="bg-white rounded-xl border border-border overflow-hidden">
       {/* Filter tabs */}
@@ -71,6 +125,7 @@ export function CustomerTable({ customers }: Props) {
           </button>
         ))}
         <span className="ml-auto text-xs text-brand-gray-mid">{filtered.length} customers</span>
+        <ExportButtons onExcelClick={handleExcelExport} onPDFClick={handlePDFExport} />
       </div>
 
       {/* Table */}

@@ -15,6 +15,8 @@ import {
   ChevronDown, ChevronUp, FileText, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ExportButtons } from "@/components/ui/export-buttons";
+import { downloadExcel, printAsPDF } from "@/lib/export-utils";
 import { StatusBadge } from "@/components/compliance/status-badge";
 import { MiniCalendar } from "@/components/compliance/mini-calendar";
 import { updateComplianceStatus } from "@/app/actions/compliance";
@@ -132,6 +134,46 @@ export function ComplianceContent({ items: initialItems }: Props) {
   const toggleSection = (key: string) =>
     setCollapsed((c) => ({ ...c, [key]: !c[key] }));
 
+  // ── Export handlers ──────────────────────────────────────────────────────────
+  function handleExcelExport() {
+    const rows = filtered.map((i) => ({
+      "Description":  i.title,
+      "Category":     CATEGORY_META[i.category]?.label ?? i.category,
+      "Due Date":     fmtDate(i.due_date),
+      "Status":       i.status,
+      "Filed Date":   i.filed_date ?? "",
+      "Ack. Number":  i.acknowledgement_number ?? "",
+      "Notes":        i.notes ?? "",
+    }));
+    downloadExcel(rows, "Compliance_Calendar", "Compliance",
+      [{ wch: 40 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 20 }, { wch: 30 }]
+    );
+  }
+
+  function handlePDFExport() {
+    const statusBadge = (s: string) => {
+      const cls = s === "overdue" ? "badge-red" : s === "filed" || s === "paid" ? "badge-green" : s === "pending" ? "badge-yellow" : "badge-gray";
+      return `<span class="badge ${cls}">${s}</span>`;
+    };
+    const rows = filtered.map((i) => `
+      <tr>
+        <td>${i.title}</td>
+        <td>${CATEGORY_META[i.category]?.label ?? i.category}</td>
+        <td>${fmtDate(i.due_date)}</td>
+        <td>${statusBadge(i.status)}</td>
+        <td>${i.acknowledgement_number ?? "—"}</td>
+      </tr>`).join("");
+    printAsPDF(`
+      <h1>Compliance Calendar</h1>
+      <p class="subtitle">Filter: ${catFilter} · ${filtered.length} items · Score: ${score}% · Exported ${new Date().toLocaleDateString("en-IN")}</p>
+      <table>
+        <thead><tr>
+          <th>Description</th><th>Category</th><th>Due Date</th><th>Status</th><th>Ack. No.</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`, "Compliance Calendar — Robotek FinOS");
+  }
+
   // ── Compliance score color ────────────────────────────────────────────────
   const scoreColor = score >= 90 ? "text-green-700" : score >= 70 ? "text-amber-700" : "text-red-700";
   const scoreBg    = score >= 90 ? "bg-green-50 border-green-200" : score >= 70 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200";
@@ -158,8 +200,9 @@ export function ComplianceContent({ items: initialItems }: Props) {
         {/* ── Left: list ───────────────────────────────────────────────── */}
         <div className="flex-1 min-w-0 space-y-4">
 
-          {/* Category filter pills */}
-          <div className="flex flex-wrap gap-2">
+          {/* Category filter pills + export */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap gap-2 flex-1">
             <FilterPill label="All" active={catFilter === "All"} onClick={() => { setCatFilter("All"); setSelectedDate(undefined); }} />
             {ALL_CATEGORIES.map((cat) => {
               const count = items.filter(i => i.category === cat).length;
@@ -173,6 +216,8 @@ export function ComplianceContent({ items: initialItems }: Props) {
                 />
               );
             })}
+            </div>
+            <ExportButtons onExcelClick={handleExcelExport} onPDFClick={handlePDFExport} />
           </div>
 
           {selectedDate && (

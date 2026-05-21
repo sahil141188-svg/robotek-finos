@@ -7,11 +7,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, Minus, Printer, ExternalLink, AlertCircle, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Printer, Download, ExternalLink, AlertCircle, Info } from "lucide-react";
 import {
   SCORECARD_DATA, trendClass, trendIcon,
   type PeriodTab, type MetricRow,
 } from "@/lib/review-data";
+import { downloadExcel, printAsPDF } from "@/lib/export-utils";
 
 const TABS: { key: PeriodTab; label: string }[] = [
   { key: "weekly",    label: "Weekly" },
@@ -25,6 +26,53 @@ export function ReviewContent() {
 
   const handlePrint = () => {
     if (typeof window !== "undefined") window.print();
+  };
+
+  const handleExcelExport = () => {
+    const rows = data.sections.flatMap((section) =>
+      section.metrics.map((m) => ({
+        "Section":      section.title,
+        "Metric":       m.label,
+        "Value":        m.value,
+        "Raw Number":   m.raw,
+        "Change":       m.change_label,
+        "Change %":     m.change_pct !== null ? `${m.change_pct > 0 ? "+" : ""}${m.change_pct}%` : "",
+        "Direction":    m.good_direction,
+        "Note":         m.note ?? "",
+      }))
+    );
+    downloadExcel(rows, `Finance_Review_${period}_${data.as_of.replace(/\s/g, "_")}`, "Scorecard",
+      [{ wch: 22 }, { wch: 32 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 12 }, { wch: 12 }, { wch: 40 }]
+    );
+  };
+
+  const handlePDFExport = () => {
+    const trendArrow = (dir: string) =>
+      dir === "up" ? "▲" : dir === "down" ? "▼" : "—";
+    const rows = data.sections.map((section) => `
+      <tr style="background:#1F1B20;color:#fff">
+        <td colspan="4" style="padding:6px 8px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">${section.title}</td>
+      </tr>
+      ${section.metrics.map((m) => `
+        <tr>
+          <td style="padding-left:16px">${m.label}</td>
+          <td style="text-align:right;font-weight:600">${m.value}</td>
+          <td style="text-align:right;color:#9A9596">${m.change_label}</td>
+          <td style="text-align:center">${trendArrow(m.good_direction)}</td>
+        </tr>`).join("")}`).join("");
+    printAsPDF(`
+      <h1>Finance Review — ${data.period_label}</h1>
+      <p class="subtitle">Health Score: ${data.health_score}/100 — ${data.health_label} · As of ${data.as_of}</p>
+      <p style="font-size:11px;color:#1F1B20;margin-bottom:16px">${data.executive_summary}</p>
+      <table>
+        <thead><tr>
+          <th>Metric</th>
+          <th style="text-align:right">Value</th>
+          <th style="text-align:right">vs. Prior</th>
+          <th style="text-align:center">Dir.</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`, `Finance Review ${data.period_label} — Robotek FinOS`);
   };
 
   return (
@@ -49,14 +97,23 @@ export function ReviewContent() {
           ))}
         </div>
 
-        {/* Export button */}
-        <button
-          onClick={handlePrint}
-          className="inline-flex items-center gap-1.5 text-xs font-medium px-4 py-2 bg-brand-black text-white rounded-lg hover:bg-brand-maroon transition-colors"
-        >
-          <Printer className="w-3.5 h-3.5" />
-          Export PDF
-        </button>
+        {/* Export buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExcelExport}
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 border border-border bg-white rounded-lg hover:bg-brand-gray-light transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Excel
+          </button>
+          <button
+            onClick={handlePDFExport}
+            className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 border border-border bg-white rounded-lg hover:bg-brand-gray-light transition-colors"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            PDF
+          </button>
+        </div>
       </div>
 
       {/* Print header (only visible when printing) */}

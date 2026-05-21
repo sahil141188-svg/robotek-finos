@@ -8,6 +8,8 @@
 import { useState, useMemo } from "react";
 import { CATEGORY_META, fmtAmt, fmtD, type BankTransaction, type TxnCategory } from "@/lib/bank-data";
 import { Search } from "lucide-react";
+import { ExportButtons } from "@/components/ui/export-buttons";
+import { downloadExcel, printAsPDF } from "@/lib/export-utils";
 
 const CATEGORY_FILTERS: { value: TxnCategory | "all"; label: string }[] = [
   { value: "all",                    label: "All" },
@@ -44,6 +46,55 @@ export function TransactionTable({ transactions, showBalance = false, limit }: P
     return limit ? list.slice(0, limit) : list;
   }, [transactions, catFilter, search, limit]);
 
+  // ── Export handlers ──────────────────────────────────────────────────────────
+  function handleExcelExport() {
+    const rows = filtered.map((t) => ({
+      "Date":         fmtD(t.txn_date),
+      "Description":  t.description,
+      "Counterparty": t.counterparty ?? "",
+      "Reference":    t.reference   ?? "",
+      "Category":     CATEGORY_META[t.category]?.label ?? t.category,
+      "Debit (₹)":    t.debit  > 0 ? t.debit  : "",
+      "Credit (₹)":   t.credit > 0 ? t.credit : "",
+      ...(showBalance ? { "Balance (₹)": t.balance } : {}),
+    }));
+    downloadExcel(rows, "Bank_Transactions", "Transactions",
+      [{ wch: 14 }, { wch: 36 }, { wch: 22 }, { wch: 18 }, { wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 14 }]
+    );
+  }
+
+  function handlePDFExport() {
+    const rows = filtered.map((t) => `
+      <tr>
+        <td>${fmtD(t.txn_date)}</td>
+        <td>${t.description}${t.counterparty ? `<br/><small style="color:#9A9596">${t.counterparty}</small>` : ""}</td>
+        <td>${CATEGORY_META[t.category]?.label ?? t.category}</td>
+        <td class="num">${t.debit  > 0 ? fmtAmt(t.debit)  : "—"}</td>
+        <td class="num">${t.credit > 0 ? fmtAmt(t.credit) : "—"}</td>
+        ${showBalance ? `<td class="num">${fmtAmt(t.balance)}</td>` : ""}
+      </tr>`).join("");
+    const totalDebit  = filtered.reduce((s, t) => s + t.debit,  0);
+    const totalCredit = filtered.reduce((s, t) => s + t.credit, 0);
+    printAsPDF(`
+      <h1>Bank Transactions</h1>
+      <p class="subtitle">${filtered.length} transactions · Exported ${new Date().toLocaleDateString("en-IN")}</p>
+      <style>.num { text-align: right; }</style>
+      <table>
+        <thead><tr>
+          <th>Date</th><th>Description</th><th>Category</th>
+          <th style="text-align:right">Debit</th><th style="text-align:right">Credit</th>
+          ${showBalance ? '<th style="text-align:right">Balance</th>' : ""}
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        <tfoot><tr>
+          <td colspan="3"><strong>Total</strong></td>
+          <td class="num">${fmtAmt(totalDebit)}</td>
+          <td class="num">${fmtAmt(totalCredit)}</td>
+          ${showBalance ? "<td></td>" : ""}
+        </tr></tfoot>
+      </table>`, "Bank Transactions — Robotek FinOS");
+  }
+
   return (
     <div className="space-y-3">
       {/* Filters */}
@@ -73,6 +124,7 @@ export function TransactionTable({ transactions, showBalance = false, limit }: P
             </button>
           ))}
         </div>
+        <ExportButtons onExcelClick={handleExcelExport} onPDFClick={handlePDFExport} />
       </div>
 
       {/* Table */}

@@ -15,6 +15,8 @@ import {
   Calendar, Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ExportButtons } from "@/components/ui/export-buttons";
+import { downloadExcel, printAsPDF } from "@/lib/export-utils";
 import { PriorityBadge } from "@/components/tasks/priority-badge";
 import { updateTaskStatus } from "@/app/actions/tasks";
 import {
@@ -117,6 +119,51 @@ export function TaskContent({ tasks: initialTasks }: Props) {
   const toggleSection = (key: string) =>
     setCollapsed((c) => ({ ...c, [key]: !c[key] }));
 
+  // ── Export handlers ──────────────────────────────────────────────────────────
+  function handleExcelExport() {
+    const rows = filtered.map((t) => ({
+      "Title":       t.title,
+      "Module":      MODULE_LABELS[t.module] ?? t.module,
+      "Assigned To": ROLE_LABELS[t.assigned_to_role]?.label ?? t.assigned_to_role,
+      "Priority":    t.priority,
+      "Status":      effectiveStatus(t, TODAY),
+      "Due Date":    fmtTaskDate(t.due_date),
+      "Description": t.description ?? "",
+    }));
+    downloadExcel(rows, "Tasks_Report", "Tasks",
+      [{ wch: 40 }, { wch: 16 }, { wch: 18 }, { wch: 10 }, { wch: 12 }, { wch: 14 }, { wch: 50 }]
+    );
+  }
+
+  function handlePDFExport() {
+    const statusBadge = (s: string) => {
+      const cls = s === "overdue" ? "badge-red" : s === "completed" ? "badge-green" : s === "in_progress" ? "badge-yellow" : "badge-gray";
+      return `<span class="badge ${cls}">${s.replace("_", " ")}</span>`;
+    };
+    const priorityBadge = (p: string) => {
+      const cls = p === "critical" ? "badge-red" : p === "high" ? "badge-yellow" : "badge-gray";
+      return `<span class="badge ${cls}">${p}</span>`;
+    };
+    const rows = filtered.map((t) => `
+      <tr>
+        <td>${t.title}</td>
+        <td>${MODULE_LABELS[t.module] ?? t.module}</td>
+        <td>${ROLE_LABELS[t.assigned_to_role]?.label ?? t.assigned_to_role}</td>
+        <td>${priorityBadge(t.priority)}</td>
+        <td>${statusBadge(effectiveStatus(t, TODAY))}</td>
+        <td>${fmtTaskDate(t.due_date)}</td>
+      </tr>`).join("");
+    printAsPDF(`
+      <h1>Task Report</h1>
+      <p class="subtitle">${filtered.length} tasks · Exported ${new Date().toLocaleDateString("en-IN")}</p>
+      <table>
+        <thead><tr>
+          <th>Title</th><th>Module</th><th>Assigned To</th><th>Priority</th><th>Status</th><th>Due Date</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`, "Task Report — Robotek FinOS");
+  }
+
   return (
     <div className="space-y-5">
 
@@ -128,8 +175,9 @@ export function TaskContent({ tasks: initialTasks }: Props) {
         <StatCard label="Completed"     value={totalCompleted}    className="bg-green-50 border-green-200 text-green-700" />
       </div>
 
-      {/* ── Filter row ─────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-2 items-center">
+      {/* ── Filter row + export ─────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 items-center justify-between">
+        <div className="flex flex-wrap gap-2 items-center flex-1">
         <span className="text-xs font-medium text-brand-gray-mid mr-1">Module:</span>
         <FilterPill label="All" active={moduleFilter === "All"} onClick={() => setModule("All")} />
         {(Object.keys(MODULE_LABELS) as TaskModule[]).map((mod) => {
@@ -144,6 +192,8 @@ export function TaskContent({ tasks: initialTasks }: Props) {
             />
           );
         })}
+        </div>
+        <ExportButtons onExcelClick={handleExcelExport} onPDFClick={handlePDFExport} />
       </div>
 
       <div className="flex flex-wrap gap-2 items-center">

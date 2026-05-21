@@ -12,6 +12,8 @@ import {
   SAMPLE_VENDORS, vendorTotal, vendorOverdue, fmtAmt, fmtD,
   type SampleVendor,
 } from "@/lib/payables-data";
+import { ExportButtons } from "@/components/ui/export-buttons";
+import { downloadExcel, printAsPDF } from "@/lib/export-utils";
 
 type SortKey = "name" | "total" | "overdue" | "ag0to30" | "ag31to60" | "ag61to90" | "ag90plus";
 type Filter  = "All" | "Overdue" | "Critical";
@@ -47,6 +49,58 @@ export function VendorTable({ vendors }: Props) {
     else { setSortKey(key); setSortAsc(false); }
   };
 
+  // ── Export handlers ──────────────────────────────────────────────────────────
+  function handleExcelExport() {
+    const rows = filtered.map((v) => ({
+      "Vendor":       v.name,
+      "Category":     v.category,
+      "0–30 Days":    v.ag0to30   > 0 ? v.ag0to30   : "",
+      "31–60 Days":   v.ag31to60  > 0 ? v.ag31to60  : "",
+      "61–90 Days":   v.ag61to90  > 0 ? v.ag61to90  : "",
+      "90+ Days":     v.ag90plus  > 0 ? v.ag90plus  : "",
+      "Total (₹)":    vendorTotal(v),
+      "Overdue (₹)":  vendorOverdue(v),
+      "Last Payment": fmtD(v.last_payment_date),
+    }));
+    downloadExcel(rows, "AP_Aging_Report", "AP Aging",
+      [{ wch: 28 }, { wch: 18 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }]
+    );
+  }
+
+  function handlePDFExport() {
+    const rows = filtered.map((v) => `
+      <tr>
+        <td>${v.name}</td>
+        <td>${v.category}</td>
+        <td class="num">${v.ag0to30  > 0 ? fmtAmt(v.ag0to30)  : "—"}</td>
+        <td class="num">${v.ag31to60 > 0 ? fmtAmt(v.ag31to60) : "—"}</td>
+        <td class="num">${v.ag61to90 > 0 ? fmtAmt(v.ag61to90) : "—"}</td>
+        <td class="num">${v.ag90plus > 0 ? fmtAmt(v.ag90plus) : "—"}</td>
+        <td class="num"><strong>${fmtAmt(vendorTotal(v))}</strong></td>
+      </tr>`).join("");
+    const totals = `<tfoot><tr>
+      <td colspan="2"><strong>Total (${filtered.length} vendors)</strong></td>
+      <td class="num">${fmtAmt(filtered.reduce((s, v) => s + v.ag0to30, 0))}</td>
+      <td class="num">${fmtAmt(filtered.reduce((s, v) => s + v.ag31to60, 0))}</td>
+      <td class="num">${fmtAmt(filtered.reduce((s, v) => s + v.ag61to90, 0))}</td>
+      <td class="num">${fmtAmt(filtered.reduce((s, v) => s + v.ag90plus, 0))}</td>
+      <td class="num">${fmtAmt(filtered.reduce((s, v) => s + vendorTotal(v), 0))}</td>
+    </tr></tfoot>`;
+    printAsPDF(`
+      <h1>Accounts Payable — Aging Report</h1>
+      <p class="subtitle">Filter: ${filter} · ${filtered.length} vendors · Exported ${new Date().toLocaleDateString("en-IN")}</p>
+      <style>.num { text-align: right; }</style>
+      <table>
+        <thead><tr>
+          <th>Vendor</th><th>Category</th>
+          <th style="text-align:right">0–30d</th><th style="text-align:right">31–60d</th>
+          <th style="text-align:right">61–90d</th><th style="text-align:right">90+d</th>
+          <th style="text-align:right">Total</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>${totals}
+      </table>`, "AP Aging Report — Robotek FinOS");
+  }
+
   const filterCounts = {
     All:      vendors.length,
     Overdue:  vendors.filter((v) => vendorOverdue(v) > 0).length,
@@ -71,6 +125,7 @@ export function VendorTable({ vendors }: Props) {
           </button>
         ))}
         <span className="ml-auto text-xs text-brand-gray-mid">{filtered.length} vendors</span>
+        <ExportButtons onExcelClick={handleExcelExport} onPDFClick={handlePDFExport} />
       </div>
 
       {/* Table */}
