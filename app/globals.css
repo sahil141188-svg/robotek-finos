@@ -165,7 +165,7 @@
 /* Review Engine — Print / PDF export styles */
 @media print {
   /* Hide navigation sidebar and non-content elements */
-  nav, header, aside, [data-sidebar], .print\\:hidden {
+  nav, header, aside, [data-sidebar] {
     display: none !important;
   }
 
