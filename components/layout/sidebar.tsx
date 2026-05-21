@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import type { Database, UserPermissions } from "@/types/database";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -46,13 +45,6 @@ interface SidebarProps {
 
 export function Sidebar({ profile }: SidebarProps) {
   const pathname = usePathname();
-  const router = useRouter();
-  const supabase = createClient();
-
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-    router.push("/login");
-  }
 
   /** Filter nav items based on the user's actual permissions */
   const visibleItems = NAV_ITEMS.filter((item) => {
@@ -137,13 +129,15 @@ export function Sidebar({ profile }: SidebarProps) {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-2 text-white/60 hover:text-white text-xs transition-colors w-full"
-        >
-          <LogOut className="w-3.5 h-3.5" />
-          Sign out
-        </button>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="flex items-center gap-2 text-white/60 hover:text-white text-xs transition-colors w-full"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Sign out
+          </button>
+        </form>
       </div>
     </aside>
   );

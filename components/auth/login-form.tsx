@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useActionState } from "react";
+import { signIn } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,30 +13,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const initialState = { error: null as string | null };
+
 export function LoginForm() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const supabase = createClient();
-
-  async function handleSignIn(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      window.location.href = "/dashboard";
-    }
-
-    setLoading(false);
-  }
+  const [state, formAction, pending] = useActionState(signIn, initialState);
 
   return (
     <Card className="border-border shadow-sm">
@@ -45,15 +25,14 @@ export function LoginForm() {
         <CardDescription>Enter your credentials to continue</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSignIn} className="space-y-4">
+        <form action={formAction} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="you@robotek.in"
-              value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
               required
               autoComplete="email"
             />
@@ -62,32 +41,26 @@ export function LoginForm() {
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
+              name="password"
               type="password"
               placeholder="••••••••"
-              value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
             />
           </div>
 
-          {error && (
+          {state.error && (
             <p className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-md">
-              {error}
-            </p>
-          )}
-          {message && (
-            <p className="text-sm text-green-700 bg-green-50 px-3 py-2 rounded-md">
-              {message}
+              {state.error}
             </p>
           )}
 
           <Button
             type="submit"
             className="w-full !bg-brand-red hover:!bg-brand-maroon !text-white"
-            disabled={loading}
+            disabled={pending}
           >
-            {loading ? "Signing in…" : "Sign in"}
+            {pending ? "Signing in…" : "Sign in"}
           </Button>
         </form>
       </CardContent>
