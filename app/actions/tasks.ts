@@ -21,7 +21,8 @@ export type CreateTaskPayload = {
   title: string;
   description?: string;
   priority: TaskPriority;
-  assigned_to_user_id?: string;
+  assigned_to_user_id?: string;  // UUID of a registered user
+  assigned_to_name?: string;     // free-text name (manual entry)
   due_date?: string;
   module?: TaskModule;
   compliance_item_id?: string;
@@ -36,12 +37,15 @@ export async function createTask(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, message: "Not authenticated" };
 
+  // assigned_to: prefer registered user UUID, fall back to manual name string
+  const assignedTo = payload.assigned_to_user_id ?? payload.assigned_to_name ?? null;
+
   const insert: TaskInsert = {
     title:               payload.title,
     description:         payload.description ?? null,
     status:              "pending",
     priority:            payload.priority,
-    assigned_to:         payload.assigned_to_user_id ?? null,
+    assigned_to:         assignedTo,
     assigned_by:         user.id,
     due_date:            payload.due_date ?? null,
     module:              payload.module ?? "general",

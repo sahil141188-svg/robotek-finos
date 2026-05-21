@@ -137,6 +137,33 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
 }
 
 // ─────────────────────────────────────────────────────────
+// Fetch team users for task-assignment dropdowns (any auth)
+// ─────────────────────────────────────────────────────────
+export type TeamUser = {
+  id:        string;
+  full_name: string;
+  role:      string;
+  email:     string;
+};
+
+export async function getTeamUsers(): Promise<TeamUser[]> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+  const { data, error } = await db
+    .from("users")
+    .select("id, full_name, role, email")
+    .eq("is_active", true)
+    .order("role", { ascending: true })
+    .order("full_name", { ascending: true }) as {
+      data: TeamUser[] | null;
+      error: { message: string } | null;
+    };
+  if (error || !data) return [];
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────
 // Fetch all users (server action for the admin table)
 // ─────────────────────────────────────────────────────────
 export async function getAllUsers(): Promise<UserRow[]> {

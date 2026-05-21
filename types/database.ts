@@ -3,15 +3,16 @@ export type UserRole = "ceo" | "cfo" | "accounts" | "ca";
 
 /** All granular module permissions — stored as JSONB on each user row */
 export type UserPermissions = {
-  view_dashboard: boolean;
-  import_data: boolean;
+  view_dashboard:  boolean;
+  import_data:     boolean;
   view_compliance: boolean;
-  manage_tasks: boolean;
-  view_payables: boolean;
-  view_receivables: boolean;
-  view_review: boolean;
-  view_alerts: boolean;
-  admin_users: boolean;
+  manage_tasks:    boolean;
+  view_payables:   boolean;
+  view_receivables:boolean;
+  view_banking:    boolean;  // Module 8 — Bank Statement Dashboard
+  view_review:     boolean;
+  view_alerts:     boolean;
+  admin_users:     boolean;
 };
 
 export type Database = {
