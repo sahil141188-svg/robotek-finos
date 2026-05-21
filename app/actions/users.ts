@@ -43,7 +43,58 @@ async function assertCEO(): Promise<string> {
 }
 
 // ─────────────────────────────────────────────────────────
-// Invite a new user
+// Create a new user directly with email + password (no invite email)
+// Admin sets the credentials; user logs in immediately.
+// ─────────────────────────────────────────────────────────
+export async function createUserWithPassword(formData: FormData) {
+  await assertCEO();
+  const admin = getAdminClient();
+
+  const email     = formData.get("email")     as string;
+  const password  = formData.get("password")  as string;
+  const full_name = formData.get("full_name") as string;
+  const role      = formData.get("role")      as UserRole;
+  const permissionsRaw = formData.get("permissions") as string | null;
+  const permissions = permissionsRaw
+    ? (JSON.parse(permissionsRaw) as UserPermissions)
+    : DEFAULT_PERMISSIONS[role];
+
+  // Create auth user with password; mark email as confirmed so they can log in immediately
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name },
+  });
+
+  if (error) throw new Error(error.message);
+
+  // Set role in app_metadata (JWT-safe; not user-editable)
+  await admin.auth.admin.updateUserById(data.user.id, {
+    app_metadata: { role },
+  });
+
+  // Upsert the profile row (the trigger may have already created it)
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: profileError } = await (supabase as any)
+    .from("users")
+    .upsert({
+      id: data.user.id,
+      email,
+      full_name,
+      role,
+      permissions,
+      is_active: true,
+    });
+
+  if (profileError) throw new Error(profileError.message);
+
+  revalidatePath("/dashboard/admin");
+}
+
+// ─────────────────────────────────────────────────────────
+// Invite a new user (kept for backwards compatibility)
 // ─────────────────────────────────────────────────────────
 export async function inviteUser(formData: FormData) {
   await assertCEO();

@@ -9,6 +9,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { Sidebar } from "./sidebar";
 import { SidebarProvider, useSidebar } from "./sidebar-context";
+import { CompanyProvider } from "./company-context";
 import type { Database } from "@/types/database";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -21,9 +22,11 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   return (
-    <SidebarProvider>
-      <ShellInner profile={profile}>{children}</ShellInner>
-    </SidebarProvider>
+    <CompanyProvider>
+      <SidebarProvider>
+        <ShellInner profile={profile}>{children}</ShellInner>
+      </SidebarProvider>
+    </CompanyProvider>
   );
 }
 

@@ -12,7 +12,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { redirect } from "next/navigation";
-import { UserPlus, Users } from "lucide-react";
+import Link from "next/link";
+import { UserPlus, Users, Settings } from "lucide-react";
 
 /**
  * Admin Panel — CEO only.
@@ -66,22 +67,22 @@ export default async function AdminPage() {
               </span>
             </div>
 
-            {/* Invite user — opens a sheet */}
+            {/* Add user — opens a sheet */}
             <Sheet>
               <SheetTrigger
                 render={
                   <button className="inline-flex items-center gap-2 h-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium bg-brand-red hover:bg-brand-maroon text-white transition-colors">
                     <UserPlus className="w-3.5 h-3.5" />
-                    Invite User
+                    Add User
                   </button>
                 }
               />
               <SheetContent className="w-[500px] sm:max-w-[500px] overflow-y-auto">
                 <SheetHeader className="mb-6">
-                  <SheetTitle>Invite New User</SheetTitle>
+                  <SheetTitle>Add New User</SheetTitle>
                   <SheetDescription>
-                    Enter the user's details and set their module permissions. They will receive an
-                    email invitation to set their password.
+                    Set the user&apos;s email, password, role, company access, and module permissions.
+                    No invitation email — the user logs in directly with these credentials.
                   </SheetDescription>
                 </SheetHeader>
                 <UserForm />
@@ -90,6 +91,17 @@ export default async function AdminPage() {
           </div>
 
           <UserTable users={users} />
+        </div>
+
+        {/* Notification settings shortcut */}
+        <div className="flex justify-end">
+          <Link
+            href="/dashboard/admin/settings"
+            className="inline-flex items-center gap-2 text-sm text-brand-gray-mid hover:text-brand-black transition-colors"
+          >
+            <Settings className="w-4 h-4" />
+            Notification &amp; Reminder Settings
+          </Link>
         </div>
 
         {/* Service key notice */}

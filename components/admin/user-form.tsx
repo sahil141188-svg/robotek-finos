@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { inviteUser, updateUser } from "@/app/actions/users";
+import { createUserWithPassword, updateUser } from "@/app/actions/users";
 import { DEFAULT_PERMISSIONS, PERMISSION_GROUPS, PERMISSION_META } from "@/lib/permissions";
 import { ROLE_LABELS } from "@/lib/roles";
+import { COMPANIES } from "@/lib/companies-data";
 import type { Database, UserPermissions, UserRole } from "@/types/database";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Eye, EyeOff, Building2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
@@ -36,12 +38,20 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const [fullName, setFullName] = useState(user?.full_name ?? "");
-  const [email, setEmail] = useState(user?.email ?? "");
-  const [role, setRole] = useState<UserRole>(user?.role ?? "accounts");
-  const [isActive, setIsActive] = useState(user?.is_active ?? true);
+  const [fullName,    setFullName]    = useState(user?.full_name ?? "");
+  const [email,       setEmail]       = useState(user?.email ?? "");
+  const [password,    setPassword]    = useState("");
+  const [confirmPwd,  setConfirmPwd]  = useState("");
+  const [showPwd,     setShowPwd]     = useState(false);
+  const [role,        setRole]        = useState<UserRole>(user?.role ?? "accounts");
+  const [isActive,    setIsActive]    = useState(user?.is_active ?? true);
   const [permissions, setPermissions] = useState<UserPermissions>(
     user?.permissions ?? DEFAULT_PERMISSIONS["accounts"]
+  );
+  // Company access — array of company ids this user can access
+  const [companyIds, setCompanyIds] = useState<string[]>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (user as any)?.company_ids ?? COMPANIES.map((c) => c.id)
   );
 
   /** When the role changes, reset permissions to the role's defaults */
@@ -70,9 +80,33 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
     });
   }
 
+  /** Toggle a company in the company access list */
+  function toggleCompany(id: string) {
+    setCompanyIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  function selectAllCompanies() {
+    setCompanyIds(COMPANIES.map((c) => c.id));
+  }
+
+  function clearAllCompanies() {
+    setCompanyIds([]);
+  }
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    if (!isEditing && password !== confirmPwd) {
+      setError("Passwords do not match.");
+      return;
+    }
+    if (!isEditing && password.length < 8) {
+      setError("Password must be at least 8 characters.");
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -85,11 +119,12 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
           });
         } else {
           const fd = new FormData();
-          fd.set("email", email);
-          fd.set("full_name", fullName);
-          fd.set("role", role);
-          // permissions are set via the default for the role
-          await inviteUser(fd);
+          fd.set("email",       email);
+          fd.set("full_name",   fullName);
+          fd.set("password",    password);
+          fd.set("role",        role);
+          fd.set("permissions", JSON.stringify(permissions));
+          await createUserWithPassword(fd);
         }
         onSuccess?.();
       } catch (err) {
@@ -102,7 +137,7 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic info */}
+      {/* ── Basic info ── */}
       <div className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="full_name">Full Name</Label>
@@ -116,20 +151,65 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         </div>
 
         {!isEditing && (
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email Address</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-              placeholder="rahul@robotek.in"
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              An invitation email will be sent to this address.
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                placeholder="rahul@robotek.in"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password">Set Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPwd ? "text" : "password"}
+                  value={password}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                  placeholder="Minimum 8 characters"
+                  required
+                  minLength={8}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPwd((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-gray-mid hover:text-brand-black"
+                  tabIndex={-1}
+                >
+                  {showPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmPwd">Confirm Password</Label>
+              <Input
+                id="confirmPwd"
+                type={showPwd ? "text" : "password"}
+                value={confirmPwd}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPwd(e.target.value)}
+                placeholder="Repeat password"
+                required
+                className={cn(
+                  confirmPwd && confirmPwd !== password ? "border-red-400 focus-visible:ring-red-400" : ""
+                )}
+              />
+              {confirmPwd && confirmPwd !== password && (
+                <p className="text-xs text-red-600">Passwords do not match</p>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground bg-muted/40 border border-border rounded-lg px-3 py-2">
+              The user will log in directly with these credentials. No email invitation will be sent.
             </p>
-          </div>
+          </>
         )}
 
         <div className="grid grid-cols-2 gap-4">
@@ -171,7 +251,69 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
 
       <Separator />
 
-      {/* Permissions */}
+      {/* ── Company Access ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-brand-red" />
+            <h3 className="font-semibold text-sm">Company Access</h3>
+          </div>
+          <div className="flex gap-2 text-xs">
+            <button
+              type="button"
+              onClick={selectAllCompanies}
+              disabled={companyIds.length === COMPANIES.length}
+              className="text-brand-red hover:underline disabled:opacity-30"
+            >
+              All
+            </button>
+            <span className="text-muted-foreground">·</span>
+            <button
+              type="button"
+              onClick={clearAllCompanies}
+              disabled={companyIds.length === 0}
+              className="text-muted-foreground hover:text-foreground hover:underline disabled:opacity-30"
+            >
+              None
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border overflow-hidden max-h-52 overflow-y-auto">
+          {COMPANIES.map((co) => (
+            <label
+              key={co.id}
+              htmlFor={`co-${co.id}`}
+              className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-muted/30 transition-colors border-b border-border last:border-0"
+            >
+              <input
+                id={`co-${co.id}`}
+                type="checkbox"
+                checked={companyIds.includes(co.id)}
+                onChange={() => toggleCompany(co.id)}
+                className="h-4 w-4 rounded border-border accent-brand-red cursor-pointer"
+              />
+              <div className={cn("w-5 h-5 rounded flex items-center justify-center shrink-0", co.color_class)}>
+                <Building2 className="w-2.5 h-2.5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium leading-tight truncate">{co.short_name}</p>
+                <p className="text-xs text-muted-foreground truncate">{co.city}</p>
+              </div>
+              {co.status === "dormant" && (
+                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">Dormant</span>
+              )}
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {companyIds.length} of {COMPANIES.length} companies selected
+        </p>
+      </div>
+
+      <Separator />
+
+      {/* ── Permissions ── */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -185,7 +327,7 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
 
         {PERMISSION_GROUPS.map((group) => {
           const groupPerms = PERMISSION_META.filter((p) => p.group === group);
-          const allOn = groupPerms.every((p) => permissions[p.key]);
+          const allOn  = groupPerms.every((p) => permissions[p.key]);
           const allOff = groupPerms.every((p) => !permissions[p.key]);
 
           return (
@@ -256,8 +398,8 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
           disabled={isPending}
         >
           {isPending
-            ? isEditing ? "Saving…" : "Sending invite…"
-            : isEditing ? "Save changes" : "Send invite"}
+            ? isEditing ? "Saving…" : "Creating user…"
+            : isEditing ? "Save changes" : "Create User"}
         </Button>
       </div>
     </form>

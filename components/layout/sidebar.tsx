@@ -5,12 +5,13 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "./sidebar-context";
+import { CompanySwitcher } from "./company-switcher";
 import type { Database, UserPermissions } from "@/types/database";
 import { ROLE_LABELS } from "@/lib/roles";
 import {
   LayoutDashboard, Upload, CalendarCheck, CheckSquare,
   TrendingDown, TrendingUp, FileText, Bell, LogOut,
-  Building2, ShieldCheck, X, Landmark,
+  Building2, ShieldCheck, X, Landmark, LayoutGrid,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -84,6 +85,9 @@ export function Sidebar({ profile }: SidebarProps) {
         </button>
       </div>
 
+      {/* Company switcher — below logo */}
+      <CompanySwitcher />
+
       {/* Nav items */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {visibleItems.map((item) => {
@@ -109,6 +113,26 @@ export function Sidebar({ profile }: SidebarProps) {
             </Link>
           );
         })}
+
+        {/* All Companies consolidated link — CEO/CFO */}
+        {(profile.permissions?.admin_users === true || profile.role === "cfo") && (
+          <>
+            <div className="my-2 border-t border-white/10" />
+            <Link
+              href="/dashboard/consolidated"
+              onClick={close}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                pathname.startsWith("/dashboard/consolidated")
+                  ? "bg-brand-yellow text-brand-black font-medium"
+                  : "text-white/70 hover:text-white hover:bg-white/10"
+              )}
+            >
+              <LayoutGrid className="w-4 h-4 shrink-0" />
+              All Companies
+            </Link>
+          </>
+        )}
 
         {/* Admin link */}
         {isAdmin && (
