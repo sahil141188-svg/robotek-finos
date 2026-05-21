@@ -97,7 +97,7 @@ export default async function DrillPage({ params }: Props) {
                 Monthly Breakdown — FY 2025-26
               </p>
               <p className="text-xs text-brand-gray-mid">
-                Click "View →" on any row to see individual transactions
+                Click &quot;View →&quot; on any row to see individual transactions
               </p>
             </div>
             <Link

@@ -119,17 +119,18 @@ export async function inviteUser(formData: FormData) {
 
   // Upsert the profile row (the trigger may have already created it)
   const supabase = await createClient();
-  const { error: profileError } = await supabase
-    .from("users")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .upsert({
-      id: data.user.id,
-      email,
-      full_name,
-      role,
-      permissions,
-      is_active: true,
-    } as unknown as any);
+  // Cast required because Supabase's generated types don't include all optional cols
+  const db = supabase as unknown as {
+    from: (t: string) => { upsert: (row: object) => Promise<{ error: Error | null }> };
+  };
+  const { error: profileError } = await db.from("users").upsert({
+    id:         data.user.id,
+    email,
+    full_name,
+    role,
+    permissions,
+    is_active:  true,
+  });
 
   if (profileError) throw new Error(profileError.message);
 

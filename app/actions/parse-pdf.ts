@@ -32,7 +32,9 @@ function normaliseDate(raw: string): string | null {
   // DD/MM/YYYY  DD-MM-YYYY  DD.MM.YYYY
   const m1 = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
   if (m1) {
-    let [, d, mo, y] = m1;
+    const d  = m1[1];
+    const mo = m1[2];
+    let   y  = m1[3];
     if (y.length === 2) y = parseInt(y) > 50 ? `19${y}` : `20${y}`;
     return `${y}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }

@@ -10,7 +10,6 @@ import {
   createContext,
   useContext,
   useState,
-  useEffect,
   type ReactNode,
 } from "react";
 import { COMPANIES, getCompany, type Company } from "@/lib/companies-data";
@@ -32,17 +31,15 @@ const CompanyContext = createContext<CompanyContextType>({
 });
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  // Default to comp-01 (Robotek India) on first load
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>("comp-01");
-
-  // Sync with localStorage after mount (avoids SSR hydration mismatch)
-  useEffect(() => {
+  // Lazy initializer reads localStorage once on mount — avoids setState-in-effect
+  // and prevents a flash of the default company before the stored value loads.
+  // typeof window guard makes this SSR-safe.
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return "comp-01";
     const stored = localStorage.getItem(LS_KEY);
-    // stored can be a company id or "null" (serialised)
-    if (stored !== null) {
-      setSelectedCompanyId(stored === "null" ? null : stored);
-    }
-  }, []);
+    if (stored === null) return "comp-01";          // first visit
+    return stored === "null" ? null : stored;       // "null" string → All Companies
+  });
 
   function setCompanyId(id: string | null) {
     setSelectedCompanyId(id);

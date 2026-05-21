@@ -20,7 +20,18 @@ type BeforeInstallPromptEvent = Event & {
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showAndroid,    setShowAndroid]    = useState(false);
-  const [showIOS,        setShowIOS]        = useState(false);
+  // Lazy initializer: iOS/Safari detection runs once synchronously on the client,
+  // so we never need a setState call inside useEffect.
+  const [showIOS, setShowIOS] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    if (window.matchMedia("(display-mode: standalone)").matches) return false;
+    if (localStorage.getItem("rk_pwa_dismissed")) return false;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    return isIOS && isSafari;
+  });
 
   useEffect(() => {
     // Don't show if already installed (running in standalone mode)
@@ -28,20 +39,14 @@ export function InstallPrompt() {
     // Don't show if already dismissed
     if (localStorage.getItem("rk_pwa_dismissed")) return;
 
-    // Android / Chrome — catch the install prompt
+    // Android / Chrome — catch the install prompt (fires as an event callback,
+    // so setState inside the handler is async and does not trigger the lint rule)
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowAndroid(true);
     };
     window.addEventListener("beforeinstallprompt", handler);
-
-    // iOS / Safari — detect and show manual guide
-    const isIOS =
-      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-    if (isIOS && isSafari) setShowIOS(true);
 
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
@@ -93,7 +98,7 @@ export function InstallPrompt() {
           {showIOS && (
             <>
               <p className="text-xs text-white/60 mt-0.5 leading-relaxed">
-                Tap <span className="inline-flex items-center gap-0.5 font-semibold text-white"><Share className="w-3 h-3" /> Share</span>, then <strong className="text-white">"Add to Home Screen"</strong> to install.
+                Tap <span className="inline-flex items-center gap-0.5 font-semibold text-white"><Share className="w-3 h-3" /> Share</span>, then <strong className="text-white">&quot;Add to Home Screen&quot;</strong> to install.
               </p>
             </>
           )}

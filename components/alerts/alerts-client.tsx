@@ -5,7 +5,7 @@
  * Supports category filter tabs, dismiss (localStorage), and drill-down links.
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { Alert, AlertCategory } from "@/lib/alerts-data";
@@ -31,19 +31,16 @@ interface Props {
 }
 
 export function AlertsClient({ alerts }: Props) {
-  const [activeTab,   setActiveTab]   = useState<AlertCategory | "all">("all");
-  const [dismissed,   setDismissed]   = useState<Set<string>>(new Set());
-  const [showDismissed, setShowDismissed] = useState(false);
-
-  // Load dismissed alert IDs from localStorage
-  useEffect(() => {
+  const [activeTab,     setActiveTab]     = useState<AlertCategory | "all">("all");
+  // Lazy initializer reads localStorage once on mount — avoids setState-in-effect
+  const [dismissed,     setDismissed]     = useState<Set<string>>(() => {
+    if (typeof window === "undefined") return new Set();
     try {
       const raw = localStorage.getItem(LS_DISMISSED);
-      if (raw) setDismissed(new Set(JSON.parse(raw)));
-    } catch {
-      // ignore
-    }
-  }, []);
+      return raw ? new Set<string>(JSON.parse(raw)) : new Set();
+    } catch { return new Set(); }
+  });
+  const [showDismissed, setShowDismissed] = useState(false);
 
   function dismiss(id: string) {
     setDismissed((prev) => {

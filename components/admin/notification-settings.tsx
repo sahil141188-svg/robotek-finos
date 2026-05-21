@@ -11,7 +11,7 @@
  * In production these would be stored in Supabase app_settings.
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -159,31 +159,29 @@ function DayChips({
 export function NotificationSettings() {
   const [activeTab, setActiveTab] = useState<TabId>("email");
 
-  // State for each settings section
-  const [email,      setEmail]      = useState(DEFAULT_EMAIL);
-  const [whatsapp,   setWhatsapp]   = useState(DEFAULT_WHATSAPP);
-  const [reminders,  setReminders]  = useState(DEFAULT_REMINDERS);
-  const [templates,  setTemplates]  = useState(DEFAULT_TEMPLATES);
+  // State for each settings section — lazy initializers read localStorage once on
+  // first render, avoiding a setState-in-effect re-render cycle. typeof window
+  // guard ensures SSR safety (localStorage doesn't exist on the server).
+  const [email, setEmail] = useState<typeof DEFAULT_EMAIL>(() => {
+    if (typeof window === "undefined") return DEFAULT_EMAIL;
+    try { const s = localStorage.getItem("rk_notif_email");     return s ? (JSON.parse(s) as typeof DEFAULT_EMAIL)     : DEFAULT_EMAIL;     } catch { return DEFAULT_EMAIL; }
+  });
+  const [whatsapp, setWhatsapp] = useState<typeof DEFAULT_WHATSAPP>(() => {
+    if (typeof window === "undefined") return DEFAULT_WHATSAPP;
+    try { const s = localStorage.getItem("rk_notif_whatsapp");  return s ? (JSON.parse(s) as typeof DEFAULT_WHATSAPP)  : DEFAULT_WHATSAPP;  } catch { return DEFAULT_WHATSAPP; }
+  });
+  const [reminders, setReminders] = useState<typeof DEFAULT_REMINDERS>(() => {
+    if (typeof window === "undefined") return DEFAULT_REMINDERS;
+    try { const s = localStorage.getItem("rk_notif_reminders"); return s ? (JSON.parse(s) as typeof DEFAULT_REMINDERS) : DEFAULT_REMINDERS; } catch { return DEFAULT_REMINDERS; }
+  });
+  const [templates, setTemplates] = useState<typeof DEFAULT_TEMPLATES>(() => {
+    if (typeof window === "undefined") return DEFAULT_TEMPLATES;
+    try { const s = localStorage.getItem("rk_notif_templates"); return s ? (JSON.parse(s) as typeof DEFAULT_TEMPLATES) : DEFAULT_TEMPLATES; } catch { return DEFAULT_TEMPLATES; }
+  });
 
   const [showSmtpPwd, setShowSmtpPwd] = useState(false);
   const [showWaToken, setShowWaToken] = useState(false);
   const [saved, setSaved]             = useState(false);
-
-  // Load from localStorage on mount
-  useEffect(() => {
-    try {
-      const e = localStorage.getItem("rk_notif_email");
-      const w = localStorage.getItem("rk_notif_whatsapp");
-      const r = localStorage.getItem("rk_notif_reminders");
-      const t = localStorage.getItem("rk_notif_templates");
-      if (e) setEmail(JSON.parse(e));
-      if (w) setWhatsapp(JSON.parse(w));
-      if (r) setReminders(JSON.parse(r));
-      if (t) setTemplates(JSON.parse(t));
-    } catch {
-      // ignore parse errors — just use defaults
-    }
-  }, []);
 
   function handleSave() {
     localStorage.setItem("rk_notif_email",     JSON.stringify(email));

@@ -16,6 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { RevenueTrendPoint } from "@/lib/dashboard-data";
 
@@ -76,12 +77,12 @@ export function RevenueChart({ data }: RevenueChartProps) {
             FY 2025–26 · last 6 months · ₹ Lakhs · click a month to drill down
           </p>
         </div>
-        <a
+        <Link
           href="/dashboard/drill/revenue"
           className="text-xs text-brand-red hover:underline shrink-0"
         >
           All months →
-        </a>
+        </Link>
       </div>
 
       {/* Chart */}

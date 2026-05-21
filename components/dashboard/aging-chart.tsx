@@ -16,6 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AgingBucket } from "@/lib/dashboard-data";
 
@@ -62,18 +63,18 @@ export function AgingChart({ data }: AgingChartProps) {
           </p>
         </div>
         <div className="flex gap-3">
-          <a
+          <Link
             href="/dashboard/payables"
             className="text-xs text-brand-red hover:underline"
           >
             AP →
-          </a>
-          <a
+          </Link>
+          <Link
             href="/dashboard/receivables"
             className="text-xs text-brand-red hover:underline"
           >
             AR →
-          </a>
+          </Link>
         </div>
       </div>
 
