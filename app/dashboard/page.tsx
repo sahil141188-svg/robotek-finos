@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
+import { ROLE_LABELS } from "@/lib/roles";
 
 /**
  * CFO Dashboard — Module 1 (coming in Day 2).
@@ -28,7 +29,7 @@ export default async function DashboardPage() {
             CFO Dashboard (Module 1) — coming on Day 2. Import your first data file to get started.
           </p>
           <p className="text-xs text-brand-gray-mid">
-            Role: <span className="font-medium text-brand-red uppercase">{profile.role}</span>
+            Role: <span className="font-medium text-brand-red">{ROLE_LABELS[profile.role]}</span>
           </p>
         </div>
       </main>

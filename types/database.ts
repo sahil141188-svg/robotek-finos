@@ -1,4 +1,18 @@
-export type UserRole = "ceo" | "cfo" | "coo" | "accounts" | "ca";
+/** Roles available in the UI. COO exists in DB enum but is not used. */
+export type UserRole = "ceo" | "cfo" | "accounts" | "ca";
+
+/** All granular module permissions — stored as JSONB on each user row */
+export type UserPermissions = {
+  view_dashboard: boolean;
+  import_data: boolean;
+  view_compliance: boolean;
+  manage_tasks: boolean;
+  view_payables: boolean;
+  view_receivables: boolean;
+  view_review: boolean;
+  view_alerts: boolean;
+  admin_users: boolean;
+};
 
 export type Database = {
   public: {
@@ -10,6 +24,7 @@ export type Database = {
           full_name: string;
           role: UserRole;
           is_active: boolean;
+          permissions: UserPermissions;
           whatsapp_number: string | null;
           notify_whatsapp: boolean;
           notify_email: boolean;
@@ -22,6 +37,7 @@ export type Database = {
           full_name: string;
           role: UserRole;
           is_active?: boolean;
+          permissions?: UserPermissions;
           whatsapp_number?: string | null;
           notify_whatsapp?: boolean;
           notify_email?: boolean;
@@ -34,6 +50,7 @@ export type Database = {
           full_name?: string;
           role?: UserRole;
           is_active?: boolean;
+          permissions?: UserPermissions;
           whatsapp_number?: string | null;
           notify_whatsapp?: boolean;
           notify_email?: boolean;
