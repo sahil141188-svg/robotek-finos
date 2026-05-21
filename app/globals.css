@@ -161,3 +161,43 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/* Review Engine — Print / PDF export styles */
+@media print {
+  /* Hide navigation sidebar and non-content elements */
+  nav, header, aside, [data-sidebar], .print\\:hidden {
+    display: none !important;
+  }
+
+  /* Reset page layout for print */
+  body {
+    background: white !important;
+    color: #1F1B20 !important;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Ensure cards print cleanly */
+  .bg-white {
+    background: white !important;
+  }
+
+  /* Force color backgrounds to show in print */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+
+  @page {
+    margin: 1.5cm 2cm;
+    size: A4 portrait;
+  }
+}
