@@ -345,8 +345,8 @@ export type Database = {
         Update: Record<string, never>;
       };
     };
-    Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Views: { [_ in never]: never };
+    Functions: { [_ in never]: never };
     Enums: {
       user_role: UserRole;
     };
