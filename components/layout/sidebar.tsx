@@ -157,23 +157,27 @@ export function Sidebar({ profile }: SidebarProps) {
 
       {/* User profile + sign out */}
       <div className="p-4 border-t border-white/10">
-        <div className="flex items-center gap-3 mb-3">
+        <Link
+          href="/dashboard/profile"
+          onClick={close}
+          className="flex items-center gap-3 mb-3 hover:bg-white/10 rounded-lg px-2 py-1.5 -mx-2 -my-1.5 transition-colors group"
+        >
           <div className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center shrink-0">
             <span className="text-white text-xs font-bold uppercase">
               {profile.full_name.charAt(0)}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">{profile.full_name}</p>
+            <p className="text-white text-sm font-medium truncate group-hover:text-brand-yellow transition-colors">{profile.full_name}</p>
             <p className="text-white/50 text-xs truncate">
               {ROLE_LABELS[profile.role] ?? profile.role}
             </p>
           </div>
-        </div>
+        </Link>
         <form action={signOut}>
           <button
             type="submit"
-            className="flex items-center gap-2 text-white/60 hover:text-white text-xs transition-colors w-full"
+            className="flex items-center gap-2 text-white/60 hover:text-white text-xs transition-colors w-full mt-1"
           >
             <LogOut className="w-3.5 h-3.5" />
             Sign out

@@ -188,6 +188,30 @@ export async function toggleUserActive(userId: string, isActive: boolean) {
 }
 
 // ─────────────────────────────────────────────────────────
+// Update the currently logged-in user's own profile
+// (any authenticated user — not CEO-only)
+// ─────────────────────────────────────────────────────────
+export async function updateProfile(updates: {
+  full_name?:        string;
+  whatsapp_number?:  string | null;
+  notify_whatsapp?:  boolean;
+  notify_email?:     boolean;
+}) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from("users")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard");
+}
+
+// ─────────────────────────────────────────────────────────
 // Fetch team users for task-assignment dropdowns (any auth)
 // ─────────────────────────────────────────────────────────
 export type TeamUser = {

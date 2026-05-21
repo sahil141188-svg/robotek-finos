@@ -1,88 +1,74 @@
+/**
+ * Smart Alerts — Module 8
+ *
+ * Real-data alert feed generated from compliance, AP, AR, and task data.
+ * Sorted by priority (critical → high → medium → low).
+ */
+
 import { requireAuth } from "@/lib/auth";
 import { Header } from "@/components/layout/header";
-import { Bell, AlertTriangle, Info, CheckCircle } from "lucide-react";
+import { getAllAlerts, alertCounts, PRIORITY_META, CATEGORY_META_ALERTS } from "@/lib/alerts-data";
+import { AlertsClient } from "@/components/alerts/alerts-client";
+import { AlertTriangle, Bell, TrendingDown, TrendingUp, CheckSquare, ShieldAlert } from "lucide-react";
 
-const SAMPLE_ALERTS = [
-  {
-    type: "warning",
-    title: "TDS Deposit Due in 3 Days",
-    body: "TDS for May salaries (₹2,84,000) must be deposited by 7 June 2025.",
-    time: "2 hours ago",
-  },
-  {
-    type: "error",
-    title: "Vendor Payment Overdue — Anand Cables",
-    body: "₹8,30,000 outstanding for 67 days. Payment terms were 30 days.",
-    time: "1 day ago",
-  },
-  {
-    type: "info",
-    title: "GSTR-1 Due in 7 Days",
-    body: "Monthly GSTR-1 for May 2025 is due on 11 June 2025.",
-    time: "1 day ago",
-  },
-  {
-    type: "success",
-    title: "GSTR-3B Filed — April 2025",
-    body: "GSTR-3B for April 2025 was filed successfully. Tax paid: ₹4,12,500.",
-    time: "3 days ago",
-  },
-  {
-    type: "warning",
-    title: "Customer Collection Overdue — Croma",
-    body: "₹11,20,000 receivable from Croma is 78 days overdue. DSO target: 30 days.",
-    time: "5 days ago",
-  },
-];
-
-const ICON_MAP = {
-  warning: { icon: AlertTriangle, cls: "text-amber-600 bg-amber-50" },
-  error:   { icon: AlertTriangle, cls: "text-red-600 bg-red-50" },
-  info:    { icon: Info,          cls: "text-blue-600 bg-blue-50" },
-  success: { icon: CheckCircle,   cls: "text-green-600 bg-green-50" },
-};
+function StatTile({
+  label, count, cls,
+}: { label: string; count: number; cls: string }) {
+  return (
+    <div className={`rounded-xl border p-4 flex flex-col items-center justify-center gap-1 ${cls}`}>
+      <p className="text-2xl font-extrabold leading-none">{count}</p>
+      <p className="text-xs font-medium opacity-80">{label}</p>
+    </div>
+  );
+}
 
 export default async function AlertsPage() {
   await requireAuth();
 
+  const alerts = getAllAlerts();
+  const counts = alertCounts();
+
   return (
     <>
       <Header
-        title="Alerts"
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Alerts" }]}
+        title="Smart Alerts"
+        breadcrumbs={[
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Alerts" },
+        ]}
         showImport={false}
       />
-      <main className="flex-1 p-6 space-y-6">
 
-        <div className="flex items-start gap-3 bg-brand-yellow/20 border border-brand-yellow/40 rounded-xl p-4">
-          <Bell className="w-5 h-5 text-brand-maroon mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-brand-black">Smart Alerts & Notifications — coming on Day 12</p>
-            <p className="text-xs text-brand-gray-mid mt-0.5">
-              Real-time in-app alerts + optional WhatsApp notifications. Compliance reminders at
-              14 · 7 · 3 · 1 day before due. Automatic escalation if not actioned within 24 hours.
-            </p>
-          </div>
+      <main className="flex-1 p-4 sm:p-6 max-w-4xl space-y-5">
+
+        {/* Summary stat tiles */}
+        <div className="grid grid-cols-4 sm:grid-cols-4 gap-3">
+          <StatTile label="Critical"  count={counts.critical} cls="bg-red-50 border-red-200 text-red-700" />
+          <StatTile label="High"      count={counts.high}     cls="bg-orange-50 border-orange-200 text-orange-700" />
+          <StatTile label="Medium"    count={counts.medium}   cls="bg-amber-50 border-amber-200 text-amber-700" />
+          <StatTile label="Low"       count={counts.low}      cls="bg-blue-50 border-blue-200 text-blue-700" />
         </div>
 
-        {/* Alert feed */}
-        <div className="space-y-3">
-          {SAMPLE_ALERTS.map(({ type, title, body, time }) => {
-            const { icon: Icon, cls } = ICON_MAP[type as keyof typeof ICON_MAP];
-            return (
-              <div key={title} className="rounded-xl border border-border bg-white p-4 flex items-start gap-3">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${cls}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-brand-black">{title}</p>
-                  <p className="text-xs text-brand-gray-mid mt-0.5">{body}</p>
-                </div>
-                <span className="text-xs text-brand-gray-mid whitespace-nowrap">{time}</span>
+        {/* Category summary strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { cat: "compliance", icon: ShieldAlert,  label: "Compliance", count: counts.compliance, color: "text-purple-700" },
+            { cat: "ap",         icon: TrendingDown, label: "AP / Payables", count: counts.ap, color: "text-red-700" },
+            { cat: "ar",         icon: TrendingUp,   label: "AR / Receivables", count: counts.ar, color: "text-blue-700" },
+            { cat: "tasks",      icon: CheckSquare,  label: "Tasks", count: counts.tasks, color: "text-green-700" },
+          ].map(({ cat, icon: Icon, label, count, color }) => (
+            <div key={cat} className="bg-white rounded-xl border border-border p-3 flex items-center gap-3">
+              <Icon className={`w-5 h-5 shrink-0 ${color}`} />
+              <div>
+                <p className="text-xs text-brand-gray-mid">{label}</p>
+                <p className={`text-lg font-bold ${color}`}>{count} alert{count !== 1 ? "s" : ""}</p>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
+
+        {/* Interactive alert list (client component for dismiss/filter) */}
+        <AlertsClient alerts={alerts} />
 
       </main>
     </>
