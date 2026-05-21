@@ -27,12 +27,14 @@ import {
   applyMapping,
   validateRows,
   IMPORT_MODULES,
+  BANK_STATEMENT_MAPPING,
   type ParsedFile,
   type ColumnMapping,
   type ValidationResult,
 } from "@/lib/import-utils";
 import { importTransactions } from "@/app/actions/import";
 import type { ImportResult } from "@/app/actions/import";
+import { parsePDFBankStatement } from "@/app/actions/parse-pdf";
 import {
   CheckCircle,
   XCircle,
@@ -63,23 +65,45 @@ export default function ImportPage() {
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [importResult, setResult]   = useState<ImportResult | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [isPDF, setIsPDF]           = useState(false);
+  const [pdfPages, setPdfPages]     = useState<number | null>(null);
   const [isParsing, startParsing]   = useTransition();
   const [isImporting, startImport]  = useTransition();
 
-  // ── Step 1: File selected → parse client-side ────────────────────────────
+  // ── Step 1: File selected → parse (client-side for Excel, server-side for PDF)
   const handleFile = useCallback((f: File) => {
     setFile(f);
     setParseError(null);
     setParsed(null);
+    setPdfPages(null);
     setMapping({ transaction_date: null, voucher_number: null, voucher_type: null,
       ledger_name: null, dr_amount: null, cr_amount: null, narration: null });
 
+    const fileIsPDF = f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf";
+    setIsPDF(fileIsPDF);
+
     startParsing(async () => {
       try {
-        const result  = await parseExcelFile(f);
-        const detected = autoDetectColumns(result.headers);
-        setParsed(result);
-        setMapping(detected);
+        if (fileIsPDF) {
+          // PDF: send to server action — pdf-parse only runs on Node.js
+          const fd = new FormData();
+          fd.set("file", f);
+          const res = await parsePDFBankStatement(fd);
+          if (!res.success || !res.data) {
+            throw new Error(res.error ?? "PDF parsing failed.");
+          }
+          // Auto-select Bank Statement module for PDFs
+          setModule("bank_statement");
+          setPdfPages(res.pages ?? null);
+          setParsed(res.data);
+          setMapping(BANK_STATEMENT_MAPPING);
+        } else {
+          // Excel / CSV: parse entirely in the browser
+          const result  = await parseExcelFile(f);
+          const detected = autoDetectColumns(result.headers);
+          setParsed(result);
+          setMapping(detected);
+        }
       } catch (err) {
         setParseError(err instanceof Error ? err.message : "Failed to parse file");
       }
@@ -116,6 +140,8 @@ export default function ImportPage() {
     setValidation(null);
     setResult(null);
     setParseError(null);
+    setIsPDF(false);
+    setPdfPages(null);
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -187,21 +213,35 @@ export default function ImportPage() {
               <FileDropzone onFile={handleFile} disabled={isParsing} />
 
               {isParsing && (
-                <div className="flex items-center gap-2 text-sm text-brand-gray-mid">
-                  <Loader2 className="w-4 h-4 animate-spin text-brand-red" />
-                  Parsing file and auto-detecting columns…
+                <div className="flex items-center gap-2 text-sm text-brand-gray-mid bg-brand-gray-light/60 border border-border rounded-lg px-3 py-2.5">
+                  <Loader2 className="w-4 h-4 animate-spin text-brand-red shrink-0" />
+                  {isPDF
+                    ? "Sending PDF to server for parsing… (this may take a few seconds)"
+                    : "Parsing file and auto-detecting columns…"}
                 </div>
               )}
               {parseError && (
-                <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                  <XCircle className="w-4 h-4 shrink-0" /> {parseError}
+                <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-3 space-y-1">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <XCircle className="w-4 h-4 shrink-0" /> Failed to parse file
+                  </div>
+                  <p className="text-xs leading-relaxed">{parseError}</p>
+                  {isPDF && (
+                    <p className="text-xs text-red-600 mt-1">
+                      💡 Tip: Download the statement directly from your bank&apos;s net banking portal (not a forwarded/printed PDF) for best results. Alternatively, export as Excel/CSV.
+                    </p>
+                  )}
                 </div>
               )}
               {parsed && !isParsing && (
-                <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-                  <CheckCircle className="w-4 h-4 shrink-0" />
-                  Parsed <strong>{parsed.totalRows}</strong> rows from sheet &quot;{parsed.sheetName}&quot;
-                  · {parsed.headers.length} columns found
+                <div className="flex items-start gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
+                  <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>
+                    {isPDF
+                      ? <><strong>{parsed.totalRows}</strong> transactions extracted from PDF ({pdfPages} page{pdfPages !== 1 ? "s" : ""}). Column mapping set automatically.</>
+                      : <>Parsed <strong>{parsed.totalRows}</strong> rows from sheet &quot;{parsed.sheetName}&quot; · {parsed.headers.length} columns found</>
+                    }
+                  </div>
                 </div>
               )}
             </div>
@@ -228,13 +268,30 @@ export default function ImportPage() {
             </div>
 
             <div className="flex justify-end">
-              <Button
-                onClick={() => setStep("map")}
-                disabled={!parsed || isParsing}
-                className="bg-brand-red hover:bg-brand-maroon text-white"
-              >
-                Review Column Mapping <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
+              {/* PDF bank statements skip the column mapper (auto-mapped) */}
+              {isPDF ? (
+                <Button
+                  onClick={() => {
+                    if (!parsed) return;
+                    const { mapped } = applyMapping(parsed.rows, mapping);
+                    const result = validateRows(mapped);
+                    setValidation(result);
+                    setStep("validate");
+                  }}
+                  disabled={!parsed || isParsing}
+                  className="bg-brand-red hover:bg-brand-maroon text-white"
+                >
+                  Review Transactions <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setStep("map")}
+                  disabled={!parsed || isParsing}
+                  className="bg-brand-red hover:bg-brand-maroon text-white"
+                >
+                  Review Column Mapping <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              )}
             </div>
           </div>
         )}

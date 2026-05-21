@@ -71,12 +71,12 @@ export type ColumnMapping = {
  * Matching is case-insensitive and trims whitespace.
  */
 const BUSY_COLUMN_VARIANTS: Record<keyof ColumnMapping, string[]> = {
-  transaction_date: ["date", "voucher date", "trans date", "transaction date", "vch date", "entry date"],
-  voucher_number:   ["voucher no", "voucher number", "vch no", "vch number", "vchno", "invoice no", "bill no", "ref no"],
+  transaction_date: ["date", "tran date", "txn date", "trans date", "transaction date", "vch date", "voucher date", "entry date", "value dt", "value date"],
+  voucher_number:   ["voucher no", "voucher number", "vch no", "vch number", "vchno", "invoice no", "bill no", "ref no", "ref. no", "chq./ref.no.", "chq no", "cheque no", "reference"],
   voucher_type:     ["voucher type", "vch type", "type", "transaction type", "vch. type"],
-  ledger_name:      ["ledger name", "party name", "account name", "ledger", "account", "party", "name"],
-  dr_amount:        ["debit", "dr", "dr amount", "debit amount", "dr.", "debit (₹)", "dr (₹)", "amount (dr)"],
-  cr_amount:        ["credit", "cr", "cr amount", "credit amount", "cr.", "credit (₹)", "cr (₹)", "amount (cr)"],
+  ledger_name:      ["ledger name", "party name", "account name", "ledger", "account", "party", "name", "description", "particulars", "narration"],
+  dr_amount:        ["debit", "dr", "dr amount", "debit amount", "dr.", "debit (₹)", "dr (₹)", "amount (dr)", "withdrawal", "withdrawal amt.", "withdrawal amt"],
+  cr_amount:        ["credit", "cr", "cr amount", "credit amount", "cr.", "credit (₹)", "cr (₹)", "amount (cr)", "deposit", "deposit amt.", "deposit amt"],
   narration:        ["narration", "remarks", "description", "particulars", "note", "notes", "comment"],
 };
 
@@ -373,6 +373,13 @@ export type ImportModule = {
 
 export const IMPORT_MODULES: ImportModule[] = [
   {
+    id: "bank_statement",
+    label: "Bank Statement",
+    description: "PDF or Excel bank statement — HDFC, SBI, Axis, ICICI, Kotak, any bank",
+    icon: "🏦",
+    sampleColumns: ["Date", "Description", "Debit", "Credit", "Balance"],
+  },
+  {
     id: "transactions",
     label: "Sales / Purchase Transactions",
     description: "Day book, sales register, purchase register from Busy",
@@ -401,3 +408,17 @@ export const IMPORT_MODULES: ImportModule[] = [
     sampleColumns: ["Type", "Period", "Due Date", "Amount", "Status", "Challan No"],
   },
 ];
+
+/**
+ * Pre-built column mapping for bank statement PDFs.
+ * Applied automatically after PDF parsing so users skip the mapper step.
+ */
+export const BANK_STATEMENT_MAPPING: ColumnMapping = {
+  transaction_date: "Date",
+  voucher_number:   null,
+  voucher_type:     null,
+  ledger_name:      "Description",
+  dr_amount:        "Debit",
+  cr_amount:        "Credit",
+  narration:        "Description",
+};
