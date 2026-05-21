@@ -10,6 +10,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Sidebar } from "./sidebar";
 import { SidebarProvider, useSidebar } from "./sidebar-context";
 import { CompanyProvider } from "./company-context";
+import { InstallPrompt } from "@/components/pwa/install-prompt";
 import type { Database } from "@/types/database";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -51,6 +52,7 @@ function ShellInner({ profile, children }: { profile: UserRow; children: React.R
       </div>
 
       <Toaster position="top-right" richColors />
+      <InstallPrompt />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -15,9 +15,32 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: {
     template: "%s | Robotek FinOS",
-    default: "Robotek FinOS",
+    default:  "Robotek FinOS",
   },
-  description: "Integrated Finance and Compliance Operating System for Robotek India",
+  description: "Integrated Finance and Compliance Operating System for Robotek Group",
+  manifest: "/manifest.webmanifest",
+
+  // iOS "Add to Home Screen" support
+  appleWebApp: {
+    capable:        true,
+    statusBarStyle: "black-translucent",
+    title:          "FinOS",
+  },
+
+  icons: {
+    icon:  [{ url: "/favicon.svg",         type: "image/svg+xml" }],
+    apple: [{ url: "/apple-touch-icon.svg", sizes: "180x180", type: "image/svg+xml" }],
+  },
+};
+
+/** Viewport export — themeColor here avoids Next.js deprecation warning */
+export const viewport: Viewport = {
+  themeColor:   "#E52D31",
+  width:        "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  maximumScale: 5,
+  viewportFit:  "cover",   // respects iPhone notch / Dynamic Island safe area
 };
 
 export default function RootLayout({
