@@ -15,9 +15,11 @@
  * Import this action from the "use client" import page and call it for PDFs.
  */
 
-// pdf-parse v2 — listed in serverExternalPackages so it runs on Node.js only.
-import { PDFParse } from "pdf-parse";
-
+// NOTE: pdf-parse is NOT imported at the top of this file.
+// We use a dynamic import() inside the server action so that any module-load
+// failure (e.g. pdfjs-dist not loading in Vercel's Lambda cold start) is caught
+// by our own try-catch instead of crashing the entire Server Action call and
+// returning Next.js's generic "Server Components render" error.
 import type { ParsedFile, RawRow } from "@/lib/import-utils";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
@@ -218,13 +220,18 @@ export async function parsePDFBankStatement(formData: FormData): Promise<{
     let text: string;
     let numpages: number;
     try {
-      // PDFParse v2 API: new PDFParse({ data: Uint8Array }) then .getText()
+      // Dynamic import keeps the module-load inside our try-catch.
+      // If pdf-parse or pdfjs-dist fails to initialise in Vercel's Lambda,
+      // the error is caught here and returned as a user-friendly message
+      // instead of crashing the Server Action with a generic Next.js error.
+      const { PDFParse } = await import("pdf-parse");
       const parser = new PDFParse({ data: uint8 });
       const result = await parser.getText();
       text     = result.text;
       numpages = result.total;
       await parser.destroy();
-    } catch {
+    } catch (loadErr) {
+      console.error("[parse-pdf] pdf-parse load/parse error:", loadErr);
       return {
         success: false,
         error:

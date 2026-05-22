@@ -105,7 +105,19 @@ export default function ImportPage() {
           setMapping(detected);
         }
       } catch (err) {
-        setParseError(err instanceof Error ? err.message : "Failed to parse file");
+        // Next.js wraps unhandled server-action errors in a generic "Server Components
+        // render" message (digest error). Detect that and show a meaningful fallback
+        // so the user knows what to do rather than seeing an internal error string.
+        const raw = err instanceof Error ? err.message : String(err);
+        const isNextjsDigest =
+          raw.includes("Server Components") ||
+          raw.includes("digest") ||
+          raw.includes("omitted in production");
+        setParseError(
+          isNextjsDigest
+            ? "PDF parsing failed on the server. Please try a different PDF, or export the statement as Excel/CSV from your bank's net banking portal."
+            : raw
+        );
       }
     });
   }, []);

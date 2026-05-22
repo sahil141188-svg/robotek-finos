@@ -13,8 +13,9 @@ const withPWA = withPWAInit({
 });
 
 const nextConfig: NextConfig = {
-  // pdf-parse uses Node.js internals — must not be bundled for the browser
-  serverExternalPackages: ["pdf-parse"],
+  // pdf-parse and its underlying engine (pdfjs-dist) must run on Node.js only.
+  // Listed here so neither package is bundled for the browser by Turbopack.
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist"],
   // Turbopack is the default in Next.js 16; PWA plugin injects a webpack config
   // so we must declare an explicit (empty) turbopack section to silence the error.
   turbopack: {},
