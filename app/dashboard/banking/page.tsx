@@ -13,14 +13,12 @@ import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { CashflowChart } from "@/components/banking/cashflow-chart";
 import { TransactionTable } from "@/components/banking/transaction-table";
-import {
-  BANK_TRANSACTIONS, WEEKLY_CASHFLOW,
-  OUTFLOW_CATEGORIES, fmtAmt, fmtD,
-} from "@/lib/bank-data";
+import { fmtAmt } from "@/lib/bank-data";
 import {
   fetchBankAccounts,
   fetchRecentBankStatements,
   calculateBankingSummary,
+  fetchCashflowStats,
 } from "@/lib/supabase/banking-queries";
 import type { TxnCategory } from "@/lib/bank-data";
 import {
@@ -47,6 +45,15 @@ export default async function BankingPage() {
   const bankAccounts = await fetchBankAccounts();
   const recentStatements = await fetchRecentBankStatements(15);
   const { total_liquidity, total_accounts, net_change } = await calculateBankingSummary(bankAccounts);
+
+  // Current FY period: Apr 1 to today
+  const today = new Date();
+  const fyStart = today.getMonth() >= 3
+    ? `${today.getFullYear()}-04-01`
+    : `${today.getFullYear() - 1}-04-01`;
+  const fyEnd = today.toISOString().split("T")[0];
+  const { total_inflow, total_outflow, weekly, outflow_by_category } =
+    await fetchCashflowStats(fyStart, fyEnd);
 
   // Convert database statements to transaction format for display
   const recentTxns = recentStatements.map((stmt) => {
@@ -78,8 +85,8 @@ export default async function BankingPage() {
     };
   });
 
-  // Total outflow this period
-  const totalOutflow = OUTFLOW_CATEGORIES.reduce((s, c) => s + c.total_out, 0);
+  // Total outflow for percentage calc
+  const totalOutflow = outflow_by_category.reduce((s, c) => s + c.total_out, 0);
 
   return (
     <>
@@ -112,16 +119,16 @@ export default async function BankingPage() {
           />
           <KpiTile
             icon={<TrendingUp className="w-5 h-5 text-green-600" />}
-            label="Total Inflow (Apr–May)"
-            value={fmtAmt(WEEKLY_CASHFLOW.reduce((s, w) => s + w.inflow, 0))}
+            label={`Total Inflow (${fyStart.slice(0,7).replace("-","/")})`}
+            value={fmtAmt(total_inflow)}
             sub="customer receipts + interest"
             className="bg-green-50 border-green-200"
             valueClass="text-green-700"
           />
           <KpiTile
             icon={<Banknote className="w-5 h-5 text-red-600" />}
-            label="Total Outflow (Apr–May)"
-            value={fmtAmt(WEEKLY_CASHFLOW.reduce((s, w) => s + w.outflow, 0))}
+            label={`Total Outflow (${fyStart.slice(0,7).replace("-","/")})`}
+            value={fmtAmt(total_outflow)}
             sub="vendors, payroll, taxes"
             className="bg-red-50 border-red-200"
             valueClass="text-red-700"
@@ -186,8 +193,16 @@ export default async function BankingPage() {
         {/* ── Cash flow chart ───────────────────────────────────────── */}
         <div className="bg-white rounded-xl border border-border p-5">
           <h3 className="text-sm font-semibold text-brand-black mb-1">Weekly Cash Flow — All Accounts</h3>
-          <p className="text-xs text-brand-gray-mid mb-4">Apr 1 – May 22, 2026</p>
-          <CashflowChart data={WEEKLY_CASHFLOW} />
+          <p className="text-xs text-brand-gray-mid mb-4">
+            {fyStart.slice(0,10)} – {fyEnd}
+          </p>
+          {weekly.length > 0 ? (
+            <CashflowChart data={weekly} />
+          ) : (
+            <div className="h-40 flex items-center justify-center text-xs text-brand-gray-mid">
+              No transactions yet — import a bank statement to see cash flow
+            </div>
+          )}
         </div>
 
         {/* ── Outflow breakdown + Recent transactions ───────────────── */}
@@ -196,26 +211,32 @@ export default async function BankingPage() {
           {/* Outflow by category */}
           <div className="bg-white rounded-xl border border-border p-5 lg:col-span-1">
             <h3 className="text-sm font-semibold text-brand-black mb-4">Outflow Breakdown</h3>
-            <div className="space-y-3">
-              {OUTFLOW_CATEGORIES.map((cat) => {
-                const pct = Math.round((cat.total_out / totalOutflow) * 100);
-                return (
-                  <div key={cat.category}>
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <span className="text-brand-gray-mid">{cat.label}</span>
-                      <span className="font-semibold text-brand-black">{fmtAmt(cat.total_out)}</span>
+            {outflow_by_category.length > 0 ? (
+              <div className="space-y-3">
+                {outflow_by_category.map((cat) => {
+                  const pct = totalOutflow > 0 ? Math.round((cat.total_out / totalOutflow) * 100) : 0;
+                  return (
+                    <div key={cat.category}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-brand-gray-mid">{cat.label}</span>
+                        <span className="font-semibold text-brand-black">{fmtAmt(cat.total_out)}</span>
+                      </div>
+                      <div className="h-2 bg-brand-gray-light rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${pct}%`, backgroundColor: cat.color }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-brand-gray-mid mt-0.5 text-right">{pct}%</p>
                     </div>
-                    <div className="h-2 bg-brand-gray-light rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full"
-                        style={{ width: `${pct}%`, backgroundColor: cat.color }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-brand-gray-mid mt-0.5 text-right">{pct}%</p>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="h-32 flex items-center justify-center text-xs text-brand-gray-mid text-center">
+                No outflow data yet.<br />Import a bank statement to see breakdown.
+              </div>
+            )}
           </div>
 
           {/* Recent transactions */}

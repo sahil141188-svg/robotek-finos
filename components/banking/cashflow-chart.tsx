@@ -9,10 +9,14 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
 } from "recharts";
-import type { WEEKLY_CASHFLOW } from "@/lib/bank-data";
+interface WeeklyBucket {
+  week: string;
+  inflow: number;
+  outflow: number;
+}
 
 interface Props {
-  data: typeof WEEKLY_CASHFLOW;
+  data: WeeklyBucket[];
 }
 
 function formatK(v: number) {
