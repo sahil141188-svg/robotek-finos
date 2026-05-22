@@ -4,6 +4,47 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── PWA / Home Screen Responsive Fix ────────────────────────────────────── */
+/* Critical for mobile home screen (installed PWA) responsiveness */
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+html {
+  /* Support dynamic viewport height on mobile (address bar height changes) */
+  height: 100dvh;
+  height: 100vh;
+}
+
+body {
+  /* Respect safe area insets for notch/Dynamic Island */
+  padding:
+    max(0px, env(safe-area-inset-top))
+    max(0px, env(safe-area-inset-right))
+    max(0px, env(safe-area-inset-bottom))
+    max(0px, env(safe-area-inset-left));
+
+  /* Prevent content from being hidden behind notch/home indicator */
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Allow scrolling in main content area */
+main {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;  /* iOS momentum scrolling */
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
