@@ -134,7 +134,8 @@ export class GenericBankParser implements BankStatementParser {
       indusind: "IndusInd Bank",
     };
 
-    const searchText = text.substring(0, 500).toLowerCase();
+    // Search first 2000 chars so we catch banks whose name appears after the header
+    const searchText = text.substring(0, 2000).toLowerCase();
     for (const [key, bankName] of Object.entries(bankNames)) {
       if (searchText.includes(key)) {
         return bankName;

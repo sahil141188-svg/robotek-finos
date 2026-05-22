@@ -11,7 +11,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 import {
   LayoutDashboard, Upload, CalendarCheck, CheckSquare,
   TrendingDown, TrendingUp, FileText, Bell, LogOut,
-  Building2, ShieldCheck, X, Landmark, LayoutGrid,
+  Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -25,6 +25,7 @@ const NAV_ITEMS: {
 }[] = [
   { href: "/dashboard",              label: "CFO Dashboard",         icon: LayoutDashboard, permKey: "view_dashboard" },
   { href: "/dashboard/import",       label: "Import Data",           icon: Upload,          permKey: "import_data" },
+  { href: "/dashboard/imports",      label: "Imported Data",         icon: FolderOpen,      permKey: "import_data" },
   { href: "/dashboard/compliance",   label: "Compliance Calendar",   icon: CalendarCheck,   permKey: "view_compliance" },
   { href: "/dashboard/tasks",        label: "Task Management",       icon: CheckSquare,     permKey: "manage_tasks" },
   { href: "/dashboard/payables",     label: "Accounts Payable",      icon: TrendingDown,    permKey: "view_payables" },

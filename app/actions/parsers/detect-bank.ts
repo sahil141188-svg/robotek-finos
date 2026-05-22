@@ -47,6 +47,8 @@ const BANK_PATTERNS: BankPattern[] = [
       /idbi\s+bank/i,
       /idbi\s+account/i,
       /www\.idbibank\.in/i,
+      /ibkl\d{7}/i,  // IDBI IFSC code starts with IBKL
+      /idbi\b/i,     // Any standalone IDBI mention
     ],
   },
   {
@@ -120,8 +122,8 @@ const BANK_PATTERNS: BankPattern[] = [
  * Scans first 1000 chars for bank identifiers
  */
 export function detectBank(text: string): BankCode {
-  // Only scan first 1000 chars for performance
-  const searchText = text.substring(0, 1000);
+  // Scan first 2000 chars — IDBI/some banks have header on second page
+  const searchText = text.substring(0, 2000);
 
   for (const bank of BANK_PATTERNS) {
     for (const pattern of bank.patterns) {
