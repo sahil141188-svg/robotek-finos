@@ -147,16 +147,21 @@ export async function updateUser(
     role?: UserRole;
     is_active?: boolean;
     permissions?: UserPermissions;
+    email?: string;
   }
 ) {
   await assertCEO();
 
-  const supabase = await createClient();
+  // Use admin client so the upsert works even if the profile row is missing
+  // (handles the case where auth user exists but public.users row was never created)
+  const admin = getAdminClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await (admin as any)
     .from("users")
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq("id", userId);
+    .upsert(
+      { id: userId, ...updates, updated_at: new Date().toISOString() },
+      { onConflict: "id" }
+    );
 
   if (error) throw new Error(error.message);
 
@@ -241,16 +246,59 @@ export async function getTeamUsers(): Promise<TeamUser[]> {
 
 // ─────────────────────────────────────────────────────────
 // Fetch all users (server action for the admin table)
+//
+// Strategy: use auth.admin.listUsers() as the source of truth
+// (every account ever created), then merge with public.users
+// profile rows.  This way users who were added via the Supabase
+// dashboard (or whose trigger-created profile row failed) are
+// always visible.
 // ─────────────────────────────────────────────────────────
 export async function getAllUsers(): Promise<UserRow[]> {
   await assertCEO();
+  const admin = getAdminClient();
 
-  const supabase = await createClient();
-  const { data, error } = await supabase
+  // 1. Auth users — canonical list; no RLS, no missing rows
+  const { data: authData, error: authErr } = await admin.auth.admin.listUsers({
+    perPage: 1000,
+  });
+  if (authErr) throw new Error(authErr.message);
+  const authUsers = authData?.users ?? [];
+
+  // 2. Profile rows — bypass RLS via service-role client
+  const { data: profileRows, error: profileErr } = await admin
     .from("users")
-    .select("id, email, full_name, role, is_active, permissions, created_at, updated_at, whatsapp_number, notify_whatsapp, notify_email")
+    .select("*")
     .order("created_at", { ascending: true });
+  if (profileErr) throw new Error(profileErr.message);
 
-  if (error) throw new Error(error.message);
-  return (data ?? []) as UserRow[];
+  // 3. Build lookup map  id → profile
+  const profileMap = new Map<string, UserRow>(
+    ((profileRows ?? []) as UserRow[]).map((p) => [p.id, p])
+  );
+
+  // 4. Merge: prefer existing profile; synthesise one for orphaned auth users
+  return authUsers.map((authUser) => {
+    const profile = profileMap.get(authUser.id);
+    if (profile) return profile;
+
+    // Auth account exists but public.users row is missing.
+    // Build a synthetic row from auth metadata so they appear in the table
+    // and can be edited/assigned a real profile via the Edit sheet.
+    const role = ((authUser.app_metadata?.role as UserRole | undefined) ?? "accounts");
+    return {
+      id:              authUser.id,
+      email:           authUser.email ?? "",
+      full_name:       (authUser.user_metadata?.full_name as string | undefined)
+                         ?? authUser.email
+                         ?? "Unknown",
+      role,
+      permissions:     DEFAULT_PERMISSIONS[role] ?? DEFAULT_PERMISSIONS["accounts"],
+      is_active:       authUser.banned_until == null,
+      created_at:      authUser.created_at,
+      updated_at:      authUser.updated_at ?? authUser.created_at,
+      whatsapp_number: null,
+      notify_whatsapp: false,
+      notify_email:    true,
+    } as UserRow;
+  });
 }
