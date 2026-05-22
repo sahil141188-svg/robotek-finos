@@ -8,7 +8,8 @@
 import { requireAuth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import { COMPANIES, GROUP_TOTALS } from "@/lib/companies-data";
+import { getCompanies } from "@/app/actions/companies";
+import { COMPANIES } from "@/lib/companies-data";
 import { fmtAmt } from "@/lib/bank-data";
 import {
   TrendingUp, TrendingDown, Wallet, ShieldCheck,
@@ -75,8 +76,27 @@ export default async function ConsolidatedDashboardPage() {
     redirect("/dashboard");
   }
 
-  const net = GROUP_TOTALS.net_pl_monthly;
-  const netPct = Math.round((net / GROUP_TOTALS.monthly_revenue) * 100);
+  // Fetch live companies from DB; fall back to static list if table isn't set up yet
+  const dbCompanies = await getCompanies();
+  const allCompanies = dbCompanies.length > 0 ? dbCompanies : COMPANIES;
+
+  // Compute group totals from whichever source we have
+  const GROUP_TOTALS = {
+    monthly_revenue:  allCompanies.reduce((s, c) => s + c.monthly_revenue,  0),
+    ap_outstanding:   allCompanies.reduce((s, c) => s + c.ap_outstanding,   0),
+    ar_outstanding:   allCompanies.reduce((s, c) => s + c.ar_outstanding,   0),
+    cash_balance:     allCompanies.reduce((s, c) => s + c.cash_balance,     0),
+    net_pl_monthly:   allCompanies.reduce((s, c) => s + c.net_pl_monthly,   0),
+    compliance_score: allCompanies.length
+      ? Math.round(allCompanies.reduce((s, c) => s + c.compliance_score, 0) / allCompanies.length)
+      : 0,
+    employee_count:   allCompanies.reduce((s, c) => s + c.employee_count,   0),
+  };
+
+  const net    = GROUP_TOTALS.net_pl_monthly;
+  const netPct = GROUP_TOTALS.monthly_revenue
+    ? Math.round((net / GROUP_TOTALS.monthly_revenue) * 100)
+    : 0;
 
   return (
     <>
@@ -95,7 +115,7 @@ export default async function ConsolidatedDashboardPage() {
           <div className="flex items-center gap-2 bg-brand-red/10 border border-brand-red/20 rounded-lg px-3 py-1.5">
             <Building2 className="w-4 h-4 text-brand-red" />
             <span className="text-sm font-semibold text-brand-red">Robotek Group</span>
-            <span className="text-xs text-brand-gray-mid">— {COMPANIES.length} companies · {GROUP_TOTALS.employee_count.toLocaleString("en-IN")} employees</span>
+            <span className="text-xs text-brand-gray-mid">— {allCompanies.length} companies · {GROUP_TOTALS.employee_count.toLocaleString("en-IN")} employees</span>
           </div>
         </div>
 
@@ -152,7 +172,7 @@ export default async function ConsolidatedDashboardPage() {
               <Users className="w-4 h-4 text-brand-gray-mid" />
               <h2 className="text-sm font-semibold text-brand-black">Company-wise Breakdown</h2>
             </div>
-            <span className="text-xs text-brand-gray-mid">{COMPANIES.length} entities</span>
+            <span className="text-xs text-brand-gray-mid">{allCompanies.length} entities</span>
           </div>
 
           {/* Desktop table */}
@@ -172,7 +192,7 @@ export default async function ConsolidatedDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {COMPANIES.map((co) => (
+                {allCompanies.map((co) => (
                   <tr key={co.id} className="hover:bg-brand-gray-light/30 transition-colors group">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
@@ -254,7 +274,7 @@ export default async function ConsolidatedDashboardPage() {
 
           {/* Mobile card list */}
           <div className="sm:hidden divide-y divide-border">
-            {COMPANIES.map((co) => (
+            {allCompanies.map((co) => (
               <div key={co.id} className="p-4 space-y-2">
                 <div className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${co.color_class}`}>
@@ -289,7 +309,7 @@ export default async function ConsolidatedDashboardPage() {
         <div>
           <h2 className="text-sm font-semibold text-brand-black mb-3">Company Health Snapshot</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {COMPANIES.map((co) => {
+            {allCompanies.map((co) => {
               const margin = Math.round((co.net_pl_monthly / co.monthly_revenue) * 100);
               const arTurnover = co.monthly_revenue > 0
                 ? Math.round((co.ar_outstanding / co.monthly_revenue) * 30)

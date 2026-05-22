@@ -12,18 +12,21 @@ import { SidebarProvider, useSidebar } from "./sidebar-context";
 import { CompanyProvider } from "./company-context";
 import { InstallPrompt } from "@/components/pwa/install-prompt";
 import type { Database } from "@/types/database";
+import type { Company } from "@/lib/companies-data";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
 export function DashboardShell({
   profile,
+  companies,
   children,
 }: {
-  profile:  UserRow;
-  children: React.ReactNode;
+  profile:   UserRow;
+  companies: Company[];
+  children:  React.ReactNode;
 }) {
   return (
-    <CompanyProvider>
+    <CompanyProvider companies={companies}>
       <SidebarProvider>
         <ShellInner profile={profile}>{children}</ShellInner>
       </SidebarProvider>

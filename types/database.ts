@@ -58,6 +58,64 @@ export type Database = {
           updated_at?: string;
         };
       };
+      companies: {
+        Row: {
+          id:               string;
+          name:             string;
+          short_name:       string;
+          type:             string;
+          city:             string;
+          gstin:            string;
+          color_class:      string;
+          status:           "active" | "dormant";
+          monthly_revenue:  number;
+          ap_outstanding:   number;
+          ar_outstanding:   number;
+          cash_balance:     number;
+          net_pl_monthly:   number;
+          compliance_score: number;
+          employee_count:   number;
+          sort_order:       number;
+          created_at:       string;
+          updated_at:       string;
+        };
+        Insert: {
+          id?:              string;
+          name:             string;
+          short_name:       string;
+          type?:            string;
+          city?:            string;
+          gstin?:           string;
+          color_class?:     string;
+          status?:          "active" | "dormant";
+          monthly_revenue?: number;
+          ap_outstanding?:  number;
+          ar_outstanding?:  number;
+          cash_balance?:    number;
+          net_pl_monthly?:  number;
+          compliance_score?:number;
+          employee_count?:  number;
+          sort_order?:      number;
+        };
+        Update: {
+          name?:            string;
+          short_name?:      string;
+          type?:            string;
+          city?:            string;
+          gstin?:           string;
+          color_class?:     string;
+          status?:          "active" | "dormant";
+          monthly_revenue?: number;
+          ap_outstanding?:  number;
+          ar_outstanding?:  number;
+          cash_balance?:    number;
+          net_pl_monthly?:  number;
+          compliance_score?:number;
+          employee_count?:  number;
+          sort_order?:      number;
+          updated_at?:      string;
+        };
+      };
       transactions: {
         Row: {
           id: string;

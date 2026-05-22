@@ -1,8 +1,10 @@
 import { requireAuth } from "@/lib/auth";
 import { getAllUsers } from "@/app/actions/users";
+import { getCompanies } from "@/app/actions/companies";
 import { Header } from "@/components/layout/header";
 import { UserTable } from "@/components/admin/user-table";
 import { UserForm } from "@/components/admin/user-form";
+import { CompaniesSection } from "@/components/admin/companies-section";
 import {
   Sheet,
   SheetContent,
@@ -26,7 +28,7 @@ export default async function AdminPage() {
   // Only CEO can access the admin panel
   if (profile.role !== "ceo") redirect("/dashboard");
 
-  const users = await getAllUsers();
+  const [users, companies] = await Promise.all([getAllUsers(), getCompanies()]);
 
   return (
     <>
@@ -92,6 +94,9 @@ export default async function AdminPage() {
 
           <UserTable users={users} />
         </div>
+
+        {/* ── Companies ───────────────────────────────────────────────── */}
+        <CompaniesSection initialCompanies={companies} />
 
         {/* Notification settings shortcut */}
         <div className="flex justify-end">
