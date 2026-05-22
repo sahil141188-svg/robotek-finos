@@ -39,3 +39,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local dev/test files (not for production)
+app/api/test/
+analyze_pdfs.js
+analyze_pdfs.mjs
+BANKING_MODULE_IMPLEMENTATION.md
+BANKING_QUICK_START.md
+supabase/APPLY_MIGRATION_005.md
