@@ -8,6 +8,8 @@
  * heuristics common across Indian bank statement formats:
  *   HDFC, SBI, Axis Bank, ICICI, Kotak, Yes Bank, IndusInd
  *
+ * For scanned/image-based PDFs, falls back to Tesseract OCR.
+ *
  * Returns a ParsedFile identical in shape to what parseExcelFile returns, so
  * the rest of the import wizard (column mapper → validate → import) works
  * without any changes.
@@ -21,6 +23,11 @@
 // by our own try-catch instead of crashing the entire Server Action call and
 // returning Next.js's generic "Server Components render" error.
 import type { ParsedFile, RawRow } from "@/lib/import-utils";
+import type { BankAccountMetadata } from "./parsers/types";
+import { extractBankAccountMetadata } from "./parsers";
+import { writeFileSync, unlinkSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 
@@ -207,6 +214,7 @@ function parseBankStatementText(text: string): ParsedFile {
 export async function parsePDFBankStatement(formData: FormData): Promise<{
   success: boolean;
   data?:   ParsedFile;
+  bankMetadata?: BankAccountMetadata;  // Extracted bank account details
   error?:  string;
   pages?:  number;
 }> {
@@ -233,6 +241,8 @@ export async function parsePDFBankStatement(formData: FormData): Promise<{
 
     let text: string;
     let numpages: number;
+    let usedOCR = false;
+
     try {
       // Dynamic import keeps the module-load inside our try-catch.
       // If pdf-parse or pdfjs-dist fails to initialise in Vercel's Lambda,
@@ -254,16 +264,72 @@ export async function parsePDFBankStatement(formData: FormData): Promise<{
       };
     }
 
+    // If text extraction returned minimal content, try OCR for scanned PDFs
+    if (!text || text.trim().length < 50) {
+      console.log("[parse-pdf] Minimal text extracted, attempting OCR...");
+      let tempFilePath: string | null = null;
+      try {
+        // Write PDF to temporary file for Tesseract to process
+        tempFilePath = join(tmpdir(), `pdf-${Date.now()}.pdf`);
+        writeFileSync(tempFilePath, Buffer.from(uint8));
+
+        // Import Tesseract for OCR of scanned documents
+        const { default: Tesseract } = await import("tesseract.js");
+        console.log("[parse-pdf] Starting Tesseract OCR...");
+        const result = await Tesseract.recognize(tempFilePath, "eng");
+        text = result.data.text;
+        usedOCR = true;
+        console.log(`[parse-pdf] OCR completed: ${text.length} chars extracted`);
+      } catch (ocrErr) {
+        console.error("[parse-pdf] OCR failed:", ocrErr);
+        return {
+          success: false,
+          error:
+            "This PDF appears to be image-based (scanned) and OCR extraction failed. " +
+            "Please try one of these alternatives:\n\n" +
+            "1. Download a fresh statement from your bank's internet banking portal (usually in PDF format with embedded text)\n" +
+            "2. Export as Excel or CSV from your bank's portal\n" +
+            "3. Export from Busy Accounting Software as .xlsx file\n\n" +
+            "If your bank only provides scanned PDFs, contact us and we can help manually import the data.",
+        };
+      } finally {
+        // Clean up temporary file
+        if (tempFilePath) {
+          try {
+            unlinkSync(tempFilePath);
+          } catch (e) {
+            console.warn(`[parse-pdf] Failed to clean up temp file: ${tempFilePath}`, e);
+          }
+        }
+      }
+    }
+
     if (!text || text.trim().length < 50) {
       return {
         success: false,
         error:
-          "This PDF appears to be image-based (scanned). We can only parse text-based PDFs. " +
-          "Download a fresh statement from your bank's net banking or mobile app.",
+          "Could not extract text from PDF even after OCR. The file may be corrupted or in an unsupported format. " +
+          "Please try downloading a fresh statement or exporting as Excel/CSV instead.",
       };
     }
 
     const parsed = parseBankStatementText(text);
+
+    // Try to extract bank account metadata
+    let bankMetadata: BankAccountMetadata | null = null;
+    try {
+      bankMetadata = await extractBankAccountMetadata(text);
+      if (bankMetadata) {
+        console.log("[parse-pdf] ✓ Extracted bank metadata:", {
+          bank: bankMetadata.bankName,
+          account: bankMetadata.accountNumber,
+          period: `${bankMetadata.periodStart} to ${bankMetadata.periodEnd}`,
+        });
+      }
+    } catch (metaErr) {
+      console.warn("[parse-pdf] Bank metadata extraction failed (non-fatal):", metaErr);
+      // Continue anyway — metadata extraction is optional
+    }
 
     if (parsed.totalRows === 0) {
       return {
@@ -275,7 +341,12 @@ export async function parsePDFBankStatement(formData: FormData): Promise<{
       };
     }
 
-    return { success: true, data: parsed, pages: numpages };
+    return {
+      success: true,
+      data: parsed,
+      bankMetadata: bankMetadata || undefined,
+      pages: numpages
+    };
   } catch (err) {
     return {
       success: false,

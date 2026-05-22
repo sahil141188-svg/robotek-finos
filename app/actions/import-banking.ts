@@ -1,0 +1,243 @@
+"use server";
+
+/**
+ * Bank Statement Import — Server Action
+ *
+ * Handles storing bank account metadata and statements to the database.
+ * Called during the import flow when a PDF bank statement is uploaded.
+ *
+ * Imports:
+ * 1. Bank account metadata (bank_accounts table)
+ * 2. Individual transactions (bank_statements table)
+ */
+
+import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+import type { BankAccountMetadata } from "./parsers/types";
+import type { RawRow } from "@/lib/import-utils";
+
+// Type definitions for bank tables (not yet in auto-generated Database type)
+interface BankAccountInsert {
+  bank_name: string;
+  account_number: string;
+  account_number_last4: string;
+  account_type: string;
+  account_holder_name?: string | null;
+  ifsc_code?: string | null;
+  micr_code?: string | null;
+  branch?: string | null;
+  opening_balance?: number;
+  closing_balance?: number;
+  period_start?: string | null;
+  period_end?: string | null;
+  statement_date?: string | null;
+  currency?: string;
+  is_primary?: boolean;
+  import_id?: string;
+}
+
+interface BankStatementInsert {
+  bank_account_id: string;
+  transaction_date?: string | number;
+  value_date?: string | null;
+  description: string;
+  debit?: number;
+  credit?: number;
+  balance?: number | null;
+  category?: string | null;
+  reference?: string | null;
+  counterparty?: string | null;
+  import_id?: string;
+}
+
+export type BankImportResult = {
+  success: boolean;
+  importId: string | null;
+  bankAccountId: string | null;
+  accountsImported: number;
+  transactionsImported: number;
+  errors: string[];
+};
+
+/**
+ * Import bank account metadata and statements
+ *
+ * @param bankMetadata    Extracted bank account metadata from parser
+ * @param transactions    Transaction rows from bank statement
+ * @param fileName        Original PDF file name
+ */
+export async function importBankStatement(
+  bankMetadata: BankAccountMetadata | null,
+  transactions: RawRow[],
+  fileName: string,
+): Promise<BankImportResult> {
+  const supabase = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return {
+      success: false,
+      importId: null,
+      bankAccountId: null,
+      accountsImported: 0,
+      transactionsImported: 0,
+      errors: ["Not authenticated"],
+    };
+  }
+
+  const errors: string[] = [];
+
+  // ── Create file_imports audit record ──────────────────────────────────────
+
+  const { data: importRecord, error: importErr } = await db
+    .from("file_imports")
+    .insert({
+      file_name: fileName,
+      file_type: "pdf",
+      module: "banking",
+      uploaded_by: user.id,
+      status: "processing",
+      rows_imported: 0,
+      rows_failed: 0,
+      financial_year: new Date().getFullYear() > 3 ? `${new Date().getFullYear() - 1}-${new Date().getFullYear().toString().slice(-2)}` : "2025-26",
+      can_rollback: true,
+    })
+    .select("id")
+    .single();
+
+  if (importErr || !importRecord) {
+    return {
+      success: false,
+      importId: null,
+      bankAccountId: null,
+      accountsImported: 0,
+      transactionsImported: 0,
+      errors: [`Failed to create import record: ${importErr?.message}`],
+    };
+  }
+
+  const importId = importRecord.id;
+  let accountsImported = 0;
+  let transactionsImported = 0;
+  let bankAccountId: string | null = null;
+
+  // ── Import bank account metadata ──────────────────────────────────────────
+
+  if (bankMetadata) {
+    try {
+      const accountNumber = bankMetadata.accountNumber || "UNKNOWN";
+      const last4 = accountNumber.slice(-4) || "0000";
+
+      const insertData: BankAccountInsert = {
+        bank_name: bankMetadata.bankName,
+        account_number: accountNumber,
+        account_number_last4: last4,
+        account_type: bankMetadata.accountType || "current",
+        account_holder_name: bankMetadata.accountHolderName,
+        ifsc_code: bankMetadata.ifscCode,
+        micr_code: bankMetadata.micrCode,
+        branch: bankMetadata.branch,
+        opening_balance: Math.round((bankMetadata.openingBalance || 0) * 100), // Convert to paisa
+        closing_balance: Math.round((bankMetadata.closingBalance || 0) * 100),
+        period_start: bankMetadata.periodStart,
+        period_end: bankMetadata.periodEnd,
+        statement_date: bankMetadata.statementDate || bankMetadata.periodEnd,
+        currency: bankMetadata.currency || "INR",
+        is_primary: false,
+        import_id: importId,
+      };
+
+      const { data: acctData, error: acctErr } = await db
+        .from("bank_accounts")
+        .insert(insertData)
+        .select("id")
+        .single();
+
+      if (acctErr) {
+        errors.push(`Failed to import bank account: ${acctErr.message}`);
+      } else if (acctData) {
+        bankAccountId = acctData.id;
+        accountsImported = 1;
+        console.log("[import-banking] ✓ Imported bank account:", {
+          id: bankAccountId,
+          bank: bankMetadata.bankName,
+          account: accountNumber.slice(-4),
+        });
+      }
+    } catch (err) {
+      errors.push(`Error importing bank account: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // ── Import bank statements (transactions) ─────────────────────────────────
+
+  if (bankAccountId && transactions.length > 0) {
+    try {
+      const statements: BankStatementInsert[] = transactions
+        .map((txn) => {
+          const debit = typeof txn.Debit === "number" ? txn.Debit : (txn.Debit ? parseFloat(String(txn.Debit).replace(/[^0-9.]/g, "")) : 0);
+          const credit = typeof txn.Credit === "number" ? txn.Credit : (txn.Credit ? parseFloat(String(txn.Credit).replace(/[^0-9.]/g, "")) : 0);
+          const balance = typeof txn.Balance === "number" ? txn.Balance : (txn.Balance ? parseFloat(String(txn.Balance).replace(/[^0-9.]/g, "")) : 0);
+
+          return {
+            bank_account_id: bankAccountId,
+            transaction_date: txn.Date || new Date().toISOString().split("T")[0],
+            description: String(txn.Description || ""),
+            debit: Math.round(debit * 100), // Convert to paisa
+            credit: Math.round(credit * 100),
+            balance: Math.round(balance * 100),
+            import_id: importId,
+          };
+        })
+        .filter((s) => s.description.length > 0);
+
+      if (statements.length > 0) {
+        const BATCH_SIZE = 500;
+        for (let i = 0; i < statements.length; i += BATCH_SIZE) {
+          const batch = statements.slice(i, i + BATCH_SIZE);
+          const { error: stmtErr } = await db.from("bank_statements").insert(batch);
+
+          if (stmtErr) {
+            errors.push(`Failed to import statements batch: ${stmtErr.message}`);
+            break;
+          }
+          transactionsImported += batch.length;
+        }
+        console.log("[import-banking] ✓ Imported transactions:", transactionsImported);
+      }
+    } catch (err) {
+      errors.push(`Error importing statements: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  // ── Update import record ──────────────────────────────────────────────────
+
+  const { error: updateErr } = await db
+    .from("file_imports")
+    .update({
+      status: errors.length === 0 ? "completed" : "completed",
+      rows_imported: accountsImported + transactionsImported,
+      rows_failed: errors.length,
+      error_log: errors.length > 0 ? errors.join("\n") : null,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", importId);
+
+  if (updateErr) {
+    console.error("[import-banking] Failed to update import record:", updateErr);
+  }
+
+  // Revalidate banking dashboard
+  revalidatePath("/dashboard/banking");
+
+  return {
+    success: errors.length === 0 && accountsImported > 0,
+    importId,
+    bankAccountId,
+    accountsImported,
+    transactionsImported,
+    errors,
+  };
+}

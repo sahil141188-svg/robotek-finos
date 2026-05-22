@@ -108,6 +108,107 @@ export function autoDetectColumns(headers: string[]): ColumnMapping {
   return mapping;
 }
 
+// ─── Module auto-detection ────────────────────────────────────────────────────
+
+export type ModuleDetectionResult = {
+  moduleId: string;
+  confidence: "high" | "medium" | "low";
+  reason: string;
+};
+
+/**
+ * Inspect parsed file headers and return the best-matching import module.
+ * Uses keyword presence checks to distinguish between:
+ *   - Bank statements (Balance + Withdrawal/Deposit or Cheque)
+ *   - Busy day books (Voucher Type + Ledger Name)
+ *   - AP aging (Vendor + Due Date + Outstanding)
+ *   - AR aging (Customer + Due Date + Receivable)
+ *   - Compliance data (Challan / TDS / GST + Period)
+ * Falls back to "transactions" with low confidence when no clear match.
+ */
+export function autoDetectModule(headers: string[]): ModuleDetectionResult {
+  const h = headers.map((s) => s.toLowerCase().trim());
+  const has = (...terms: string[]) => terms.some((t) => h.some((col) => col.includes(t)));
+
+  // Bank statement — key signal is "balance" column + withdrawal/deposit or cheque
+  if (
+    has("balance", "closing balance") &&
+    (has("withdrawal", "deposit", "chq", "cheque") || has("credit", "debit"))
+  ) {
+    return {
+      moduleId:   "bank_statement",
+      confidence: "high",
+      reason:     "Balance column detected — looks like a bank statement",
+    };
+  }
+
+  // Busy day book / voucher register — voucher type + ledger name are unique to Busy
+  if (has("voucher type", "vch type") && has("ledger", "party name", "account name")) {
+    return {
+      moduleId:   "transactions",
+      confidence: "high",
+      reason:     "Voucher Type + Ledger Name detected — looks like a Busy day book",
+    };
+  }
+  if (has("voucher no", "vch no", "voucher number") && has("debit", "credit", "dr", "cr")) {
+    return {
+      moduleId:   "transactions",
+      confidence: "medium",
+      reason:     "Voucher number + DR/CR columns detected",
+    };
+  }
+
+  // Accounts Payable — vendor + due date + outstanding
+  if (
+    (has("vendor", "supplier") || has("party name")) &&
+    has("due date") &&
+    has("outstanding", "pending", "payable")
+  ) {
+    return {
+      moduleId:   "payables",
+      confidence: "high",
+      reason:     "Vendor + Due Date + Outstanding detected — looks like AP aging",
+    };
+  }
+
+  // Accounts Receivable — customer + due date + receivable
+  if (
+    (has("customer", "buyer") || has("party name")) &&
+    has("due date") &&
+    has("receivable", "outstanding", "pending")
+  ) {
+    return {
+      moduleId:   "receivables",
+      confidence: "high",
+      reason:     "Customer + Due Date + Receivable detected — looks like AR aging",
+    };
+  }
+
+  // Compliance / tax — challan, TDS, GST
+  if (has("challan", "tds", "gst", "advance tax") && has("due date", "period")) {
+    return {
+      moduleId:   "compliance",
+      confidence: "high",
+      reason:     "Tax/challan columns detected — looks like compliance data",
+    };
+  }
+
+  // Fallback — DR/CR present, probably transactions
+  if (has("debit", "dr") && has("credit", "cr") && has("date")) {
+    return {
+      moduleId:   "transactions",
+      confidence: "low",
+      reason:     "DR/CR + Date found — defaulting to transactions",
+    };
+  }
+
+  return {
+    moduleId:   "transactions",
+    confidence: "low",
+    reason:     "Could not detect type — defaulting to transactions",
+  };
+}
+
 // ─── File parsing ─────────────────────────────────────────────────────────────
 
 /**

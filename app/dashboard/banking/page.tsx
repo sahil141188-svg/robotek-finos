@@ -5,6 +5,8 @@
  * outflow breakdown, and recent transactions across all accounts.
  * RULE 1: Every account card links to /dashboard/banking/[accountId]
  * RULE 5: Indian number format (Lakhs / Crores)
+ *
+ * NOTE: Now fetches real imported bank data from database instead of sample data.
  */
 
 import Link from "next/link";
@@ -12,9 +14,15 @@ import { Header } from "@/components/layout/header";
 import { CashflowChart } from "@/components/banking/cashflow-chart";
 import { TransactionTable } from "@/components/banking/transaction-table";
 import {
-  BANK_ACCOUNTS, BANK_TRANSACTIONS, WEEKLY_CASHFLOW,
+  BANK_TRANSACTIONS, WEEKLY_CASHFLOW,
   OUTFLOW_CATEGORIES, fmtAmt, fmtD,
 } from "@/lib/bank-data";
+import {
+  fetchBankAccounts,
+  fetchRecentBankStatements,
+  calculateBankingSummary,
+} from "@/lib/supabase/banking-queries";
+import type { TxnCategory } from "@/lib/bank-data";
 import {
   Landmark, TrendingUp, TrendingDown, ArrowRight,
   CreditCard, Banknote, Building2,
@@ -34,15 +42,41 @@ const ACCOUNT_TYPE_LABEL: Record<string, string> = {
   cc:      "Credit Card",
 };
 
-export default function BankingPage() {
-  const totalLiquidity   = BANK_ACCOUNTS.reduce((s, a) => s + a.current_balance, 0);
-  const totalOpening     = BANK_ACCOUNTS.reduce((s, a) => s + a.opening_balance, 0);
-  const netChange        = totalLiquidity - totalOpening;
+export default async function BankingPage() {
+  // Fetch real data from database
+  const bankAccounts = await fetchBankAccounts();
+  const recentStatements = await fetchRecentBankStatements(15);
+  const { total_liquidity, total_accounts, net_change } = await calculateBankingSummary(bankAccounts);
 
-  // Recent transactions across all accounts (sorted by date, newest first)
-  const recentTxns = [...BANK_TRANSACTIONS]
-    .sort((a, b) => b.txn_date.localeCompare(a.txn_date))
-    .slice(0, 15);
+  // Convert database statements to transaction format for display
+  const recentTxns = recentStatements.map((stmt) => {
+    const categoryMap: Record<string, TxnCategory> = {
+      "customer_receipt": "customer_receipt",
+      "vendor_payment": "vendor_payment",
+      "payroll": "payroll",
+      "tax_payment": "tax_payment",
+      "bank_charges": "bank_charges",
+      "interest_income": "interest_income",
+      "inter_account_transfer": "inter_account_transfer",
+      "other_debit": "other_debit",
+      "other_credit": "other_credit",
+    };
+    const category: TxnCategory = (stmt.category && categoryMap[stmt.category]) || "other_debit";
+
+    return {
+      id: stmt.id,
+      account_id: stmt.bank_account_id,
+      txn_date: String(stmt.transaction_date),
+      value_date: stmt.value_date || "",
+      description: stmt.description,
+      debit: (stmt.debit || 0) / 100,  // Convert from paisa
+      credit: (stmt.credit || 0) / 100,
+      balance: (stmt.balance || 0) / 100,
+      category,
+      reference: stmt.reference || null,
+      counterparty: stmt.counterparty || null,
+    };
+  });
 
   // Total outflow this period
   const totalOutflow = OUTFLOW_CATEGORIES.reduce((s, c) => s + c.total_out, 0);
@@ -65,16 +99,16 @@ export default function BankingPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <KpiTile
             icon={<Landmark className="w-5 h-5 text-brand-red" />}
-            label="Total Liquidity" value={fmtAmt(totalLiquidity)}
-            sub={`${BANK_ACCOUNTS.length} accounts`}
+            label="Total Liquidity" value={fmtAmt(total_liquidity * 100)}
+            sub={`${total_accounts} account${total_accounts !== 1 ? "s" : ""}`}
             className="bg-white border-border"
           />
           <KpiTile
             icon={<TrendingDown className="w-5 h-5 text-red-600" />}
-            label="Net Change (Apr–May)" value={fmtAmt(Math.abs(netChange))}
-            sub={netChange >= 0 ? "increase" : "decrease from Apr 1"}
-            className={netChange >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}
-            valueClass={netChange >= 0 ? "text-green-700" : "text-red-700"}
+            label="Net Change" value={fmtAmt(Math.abs(net_change * 100))}
+            sub={net_change >= 0 ? "increase since opening" : "decrease since opening"}
+            className={net_change >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}
+            valueClass={net_change >= 0 ? "text-green-700" : "text-red-700"}
           />
           <KpiTile
             icon={<TrendingUp className="w-5 h-5 text-green-600" />}
@@ -95,54 +129,59 @@ export default function BankingPage() {
         </div>
 
         {/* ── Account cards ─────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {BANK_ACCOUNTS.map((acct) => {
-            const Icon       = ACCOUNT_TYPE_ICON[acct.account_type] ?? Landmark;
-            const change     = acct.current_balance - acct.opening_balance;
-            const changePct  = Math.round((change / acct.opening_balance) * 100);
-            return (
-              <Link
-                key={acct.id}
-                href={`/dashboard/banking/${acct.id}`}
-                className="bg-white rounded-xl border border-border p-4 hover:border-brand-red/40 hover:shadow-sm transition-all group"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-lg bg-brand-gray-light flex items-center justify-center shrink-0">
-                      <Icon className="w-5 h-5 text-brand-gray-mid" />
+        {bankAccounts.length === 0 ? (
+          <div className="bg-white rounded-xl border border-border p-8 text-center">
+            <p className="text-sm text-brand-gray-mid mb-2">No bank accounts imported yet</p>
+            <p className="text-xs text-brand-gray-mid">Import a bank statement to see your accounts and transactions here</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {bankAccounts.map((acct) => {
+              const Icon = ACCOUNT_TYPE_ICON[acct.account_type] ?? Landmark;
+              const opening = (acct.opening_balance || 0) / 100;
+              const closing = (acct.closing_balance || 0) / 100;
+              const change = closing - opening;
+              const changePct = opening > 0 ? Math.round((change / opening) * 100) : 0;
+              return (
+                <Link
+                  key={acct.id}
+                  href={`/dashboard/banking/${acct.id}`}
+                  className="bg-white rounded-xl border border-border p-4 hover:border-brand-red/40 hover:shadow-sm transition-all group"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 rounded-lg bg-brand-gray-light flex items-center justify-center shrink-0">
+                        <Icon className="w-5 h-5 text-brand-gray-mid" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-brand-black leading-tight">{acct.bank_name}</p>
+                        <p className="text-[10px] text-brand-gray-mid">
+                          {ACCOUNT_TYPE_LABEL[acct.account_type] || "Unknown"} ···{acct.account_number_last4}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-brand-black leading-tight">{acct.bank_name}</p>
-                      <p className="text-[10px] text-brand-gray-mid">
-                        {ACCOUNT_TYPE_LABEL[acct.account_type]} ···{acct.account_number_last4}
-                      </p>
+                    {acct.is_primary && (
+                      <span className="text-[9px] font-semibold bg-brand-red/10 text-brand-red px-1.5 py-0.5 rounded-full">PRIMARY</span>
+                    )}
+                  </div>
+
+                  <p className="text-xs text-brand-gray-mid mb-0.5">Closing Balance</p>
+                  <p className="text-xl font-bold text-brand-black">{fmtAmt(closing * 100)}</p>
+
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
+                    <div className={`flex items-center gap-1 text-xs ${change >= 0 ? "text-green-700" : "text-red-700"}`}>
+                      {change >= 0
+                        ? <TrendingUp className="w-3 h-3" />
+                        : <TrendingDown className="w-3 h-3" />}
+                      {change >= 0 ? "+" : ""}{changePct}% since {acct.period_start ? acct.period_start.split('-')[2] : "period start"}
                     </div>
+                    <ArrowRight className="w-3.5 h-3.5 text-brand-gray-mid group-hover:text-brand-red transition-colors" />
                   </div>
-                  {acct.is_primary && (
-                    <span className="text-[9px] font-semibold bg-brand-red/10 text-brand-red px-1.5 py-0.5 rounded-full">PRIMARY</span>
-                  )}
-                </div>
-
-                <p className="text-xs text-brand-gray-mid mb-0.5">Current Balance</p>
-                <p className="text-xl font-bold text-brand-black">{fmtAmt(acct.current_balance)}</p>
-
-                {acct.od_limit && (
-                  <p className="text-[10px] text-brand-gray-mid mt-0.5">OD limit: {fmtAmt(acct.od_limit)}</p>
-                )}
-
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                  <div className={`flex items-center gap-1 text-xs ${change >= 0 ? "text-green-700" : "text-red-700"}`}>
-                    {change >= 0
-                      ? <TrendingUp className="w-3 h-3" />
-                      : <TrendingDown className="w-3 h-3" />}
-                    {change >= 0 ? "+" : ""}{changePct}% since Apr 1
-                  </div>
-                  <ArrowRight className="w-3.5 h-3.5 text-brand-gray-mid group-hover:text-brand-red transition-colors" />
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
         {/* ── Cash flow chart ───────────────────────────────────────── */}
         <div className="bg-white rounded-xl border border-border p-5">

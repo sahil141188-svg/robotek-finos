@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import {
   parseExcelFile,
   autoDetectColumns,
+  autoDetectModule,
   applyMapping,
   validateRows,
   IMPORT_MODULES,
@@ -31,10 +32,15 @@ import {
   type ParsedFile,
   type ColumnMapping,
   type ValidationResult,
+  type ModuleDetectionResult,
 } from "@/lib/import-utils";
 import { importTransactions } from "@/app/actions/import";
 import type { ImportResult } from "@/app/actions/import";
+import { importBankStatement } from "@/app/actions/import-banking";
+import type { BankImportResult } from "@/app/actions/import-banking";
 import { parsePDFBankStatement } from "@/app/actions/parse-pdf";
+import type { BankAccountMetadata } from "@/app/actions/parsers/types";
+import type { RawRow } from "@/lib/import-utils";
 import {
   CheckCircle,
   XCircle,
@@ -63,10 +69,12 @@ export default function ImportPage() {
     ledger_name: null, dr_amount: null, cr_amount: null, narration: null,
   });
   const [validation, setValidation] = useState<ValidationResult | null>(null);
-  const [importResult, setResult]   = useState<ImportResult | null>(null);
+  const [importResult, setResult]   = useState<ImportResult | BankImportResult | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [isPDF, setIsPDF]           = useState(false);
   const [pdfPages, setPdfPages]     = useState<number | null>(null);
+  const [bankMetadata, setBankMetadata] = useState<BankAccountMetadata | null>(null);
+  const [autoDetected, setAutoDetected] = useState<ModuleDetectionResult | null>(null);
   const [isParsing, startParsing]   = useTransition();
   const [isImporting, startImport]  = useTransition();
 
@@ -76,6 +84,7 @@ export default function ImportPage() {
     setParseError(null);
     setParsed(null);
     setPdfPages(null);
+    setAutoDetected(null);
     setMapping({ transaction_date: null, voucher_number: null, voucher_type: null,
       ledger_name: null, dr_amount: null, cr_amount: null, narration: null });
 
@@ -92,17 +101,28 @@ export default function ImportPage() {
           if (!res.success || !res.data) {
             throw new Error(res.error ?? "PDF parsing failed.");
           }
-          // Auto-select Bank Statement module for PDFs
+          // PDFs always resolve to bank_statement — set a high-confidence result
           setModule("bank_statement");
+          setAutoDetected({
+            moduleId:   "bank_statement",
+            confidence: "high",
+            reason:     res.bankMetadata
+              ? `${res.bankMetadata.bankName} account ending ···${res.bankMetadata.accountNumber?.slice(-4) ?? "????"}  detected`
+              : "PDF bank statement detected",
+          });
           setPdfPages(res.pages ?? null);
           setParsed(res.data);
+          setBankMetadata(res.bankMetadata ?? null);
           setMapping(BANK_STATEMENT_MAPPING);
         } else {
-          // Excel / CSV: parse entirely in the browser
-          const result  = await parseExcelFile(f);
+          // Excel / CSV: parse client-side then run module + column detection
+          const result   = await parseExcelFile(f);
           const detected = autoDetectColumns(result.headers);
+          const mod      = autoDetectModule(result.headers);
           setParsed(result);
           setMapping(detected);
+          setAutoDetected(mod);
+          setModule(mod.moduleId);
         }
       } catch (err) {
         // Next.js wraps unhandled server-action errors in a generic "Server Components
@@ -133,12 +153,20 @@ export default function ImportPage() {
 
   // ── Step 3 → 4: Run server action import ─────────────────────────────────
   const handleImport = () => {
-    if (!validation || !file) return;
+    if (!validation || !file || !parsed) return;
     startImport(async () => {
       const ext = (file.name.split(".").pop()?.toLowerCase() ?? "xlsx") as
         "xlsx" | "xls" | "csv" | "pdf";
-      const result = await importTransactions(validation.valid, file.name, ext, selectedModule);
-      setResult(result);
+
+      // For bank statements, use the specialized import action
+      if (selectedModule === "bank_statement" && isPDF && bankMetadata !== undefined) {
+        const result = await importBankStatement(bankMetadata, parsed.rows as RawRow[], file.name);
+        setResult(result);
+      } else {
+        // For other modules, use the standard import action
+        const result = await importTransactions(validation.valid, file.name, ext, selectedModule);
+        setResult(result);
+      }
       setStep("import");
     });
   };
@@ -147,6 +175,8 @@ export default function ImportPage() {
     setStep("select");
     setFile(null);
     setParsed(null);
+    setBankMetadata(null);
+    setAutoDetected(null);
     setMapping({ transaction_date: null, voucher_number: null, voucher_type: null,
       ledger_name: null, dr_amount: null, cr_amount: null, narration: null });
     setValidation(null);
@@ -212,6 +242,40 @@ export default function ImportPage() {
                   </button>
                 ))}
               </div>
+
+              {/* Auto-detection hint — shown after a file is parsed */}
+              {autoDetected && (
+                <div className={`flex items-start gap-2 rounded-lg border px-3 py-2.5 text-xs ${
+                  autoDetected.confidence === "high"
+                    ? "bg-green-50 border-green-200 text-green-800"
+                    : autoDetected.confidence === "medium"
+                    ? "bg-blue-50 border-blue-200 text-blue-800"
+                    : "bg-amber-50 border-amber-200 text-amber-800"
+                }`}>
+                  <span className="text-base leading-none mt-0.5">
+                    {autoDetected.confidence === "high" ? "✓" : autoDetected.confidence === "medium" ? "~" : "?"}
+                  </span>
+                  <span>
+                    <span className="font-semibold">
+                      Auto-detected:{" "}
+                      {IMPORT_MODULES.find((m) => m.id === autoDetected.moduleId)?.label ?? autoDetected.moduleId}
+                    </span>
+                    {" "}
+                    <span className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-medium leading-none ${
+                      autoDetected.confidence === "high"
+                        ? "bg-green-200 text-green-900"
+                        : autoDetected.confidence === "medium"
+                        ? "bg-blue-200 text-blue-900"
+                        : "bg-amber-200 text-amber-900"
+                    }`}>
+                      {autoDetected.confidence} confidence
+                    </span>
+                    {" — "}
+                    {autoDetected.reason}
+                    <span className="ml-1 text-[10px] opacity-70">(you can override above)</span>
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Dropzone */}
@@ -411,11 +475,28 @@ export default function ImportPage() {
                   <div>
                     <h3 className="text-2xl font-bold text-brand-black">Import Complete!</h3>
                     <p className="text-brand-gray-mid mt-2">
-                      <span className="text-3xl font-extrabold text-green-600">{importResult.rowsImported}</span>
-                      <span className="text-sm ml-2">transactions written to the database</span>
+                      {selectedModule === "bank_statement" ? (
+                        <>
+                          <span className="text-3xl font-extrabold text-green-600">
+                            {(importResult as BankImportResult).transactionsImported}
+                          </span>
+                          <span className="text-sm ml-2">transactions from</span>
+                          <span className="text-3xl font-extrabold text-green-600 ml-2">
+                            {(importResult as BankImportResult).accountsImported}
+                          </span>
+                          <span className="text-sm ml-2">bank account{(importResult as BankImportResult).accountsImported !== 1 ? "s" : ""}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-3xl font-extrabold text-green-600">
+                            {(importResult as ImportResult).rowsImported}
+                          </span>
+                          <span className="text-sm ml-2">transactions written to the database</span>
+                        </>
+                      )}
                     </p>
-                    {importResult.rowsFailed > 0 && (
-                      <p className="text-sm text-red-600 mt-1">{importResult.rowsFailed} rows failed</p>
+                    {importResult.errors.length > 0 && (
+                      <p className="text-sm text-red-600 mt-1">{importResult.errors.length} row{importResult.errors.length !== 1 ? "s" : ""} failed</p>
                     )}
                   </div>
                   <p className="text-xs text-brand-gray-mid">
@@ -439,7 +520,13 @@ export default function ImportPage() {
               <Button variant="outline" onClick={reset}>
                 <RotateCcw className="w-4 h-4 mr-2" /> Import another file
               </Button>
-              <Button onClick={() => (window.location.href = "/dashboard")} className="bg-brand-red hover:bg-brand-maroon text-white">
+              <Button
+                onClick={() => {
+                  const url = selectedModule === "bank_statement" ? "/dashboard/banking" : "/dashboard";
+                  window.location.href = url;
+                }}
+                className="bg-brand-red hover:bg-brand-maroon text-white"
+              >
                 <FileSpreadsheet className="w-4 h-4 mr-2" /> View Dashboard
               </Button>
             </div>
