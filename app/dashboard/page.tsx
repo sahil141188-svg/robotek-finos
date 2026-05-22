@@ -12,7 +12,10 @@
  * RULE 5: Indian number format (Lakhs / Crores).
  */
 
+import type { DashboardKPI } from "@/app/actions/dashboard-kpis";
+import type { KpiSummary } from "@/lib/dashboard-data";
 import { requireAuth } from "@/lib/auth";
+import { fetchDashboardKPIs } from "@/app/actions/dashboard-kpis";
 import { Header } from "@/components/layout/header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { HealthBanner } from "@/components/dashboard/health-banner";
@@ -30,11 +33,53 @@ import {
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 
+function transformDashboardKPI(dkpi: DashboardKPI): KpiSummary {
+  return {
+    revenue: {
+      mtd: dkpi.revenue.current / 100000,  // Convert to Lakhs
+      ytd: dkpi.revenue.current / 100000,  // For now, use MTD as YTD (would come from full FY query)
+      vs_last_month_pct: dkpi.revenue.vs_last_month_pct,
+      vs_last_year_pct: 0,  // Would require previous FY data
+    },
+    cogs: {
+      mtd: dkpi.cogs.current / 100000,
+      ytd: dkpi.cogs.current / 100000,
+      vs_last_month_pct: dkpi.cogs.vs_last_month_pct,
+    },
+    gross_margin: {
+      pct: dkpi.gross_margin.current,
+      vs_last_month_pp: dkpi.gross_margin.vs_last_month_pct,
+      vs_last_year_pp: 0,
+    },
+    ap: {
+      total: dkpi.ap.total / 100000,
+      overdue: dkpi.ap.overdue / 100000,
+    },
+    ar: {
+      total: dkpi.ar.total / 100000,
+      overdue: dkpi.ar.overdue / 100000,
+    },
+    cash: {
+      balance: dkpi.cash.current / 100000,
+      vs_last_month_pct: dkpi.cash.vs_last_month_pct,
+    },
+    tax: {
+      gst: 0,  // Would require additional ledger analysis
+      tds: 0,  // Would require additional ledger analysis
+      total: dkpi.tax.total / 100000,
+    },
+    opex: {
+      mtd: dkpi.opex.current / 100000,
+      vs_last_month_pct: dkpi.opex.vs_last_month_pct,
+    },
+  };
+}
+
 /**
  * Derives an overall business health score (0-100) from key KPI signals.
  * Higher score = healthier business. Used by the HealthBanner component.
  */
-function computeHealthScore(kpi: typeof SAMPLE_KPI): number {
+function computeHealthScore(kpi: KpiSummary): number {
   let score = 100;
 
   // Revenue growth: positive = good
@@ -60,7 +105,14 @@ function computeHealthScore(kpi: typeof SAMPLE_KPI): number {
 
 export default async function DashboardPage() {
   const { profile } = await requireAuth();
-  const healthScore = computeHealthScore(SAMPLE_KPI);
+
+  // Fetch live KPI data from transactions table
+  const liveKPI = await fetchDashboardKPIs();
+
+  // Use live data if available, fallback to sample data
+  const kpi: KpiSummary = liveKPI ? transformDashboardKPI(liveKPI) : SAMPLE_KPI;
+  const isShowingSampleData = !liveKPI;
+  const healthScore = computeHealthScore(kpi);
 
   return (
     <>
@@ -73,20 +125,22 @@ export default async function DashboardPage() {
 
       <main className="flex-1 p-6 space-y-5">
 
-        {/* ── Demo-data notice — shown until real data is imported ─────── */}
-        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <div className="flex-1 text-xs text-amber-800">
-            <strong>Showing sample data.</strong> These numbers are illustrative only and do not reflect your actual financials.{" "}
-            <Link href="/dashboard/import" className="underline font-semibold hover:text-amber-900">
-              Import your Busy / bank data →
-            </Link>
-            {" "}to see real figures on this dashboard.
+        {/* ── Demo-data notice — shown only when no real data is imported ─────── */}
+        {isShowingSampleData && (
+          <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1 text-xs text-amber-800">
+              <strong>Showing sample data.</strong> These numbers are illustrative only and do not reflect your actual financials.{" "}
+              <Link href="/dashboard/import" className="underline font-semibold hover:text-amber-900">
+                Import your Busy / bank data →
+              </Link>
+              {" "}to see real figures on this dashboard.
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── 1. Business Health Banner ─────────────────────────────────── */}
-        <HealthBanner kpi={SAMPLE_KPI} healthScore={healthScore} />
+        <HealthBanner kpi={kpi} healthScore={healthScore} />
 
         {/* ── 2. KPI Tiles ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
