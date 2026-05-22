@@ -71,7 +71,8 @@ function dd(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-const TODAY = "2026-05-21";
+// Dynamic today — computed at runtime so overdue detection stays accurate
+const TODAY = new Date().toISOString().slice(0, 10);
 
 /** Auto-assign status: if due date is past and we haven't marked it filed, it's overdue. */
 function autoStatus(

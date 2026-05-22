@@ -81,14 +81,17 @@ export default async function ConsolidatedDashboardPage() {
   const allCompanies = dbCompanies.length > 0 ? dbCompanies : COMPANIES;
 
   // Compute group totals from whichever source we have
+  // Only average compliance score over active companies that actually have data (score > 0)
+  // — dormant / empty companies would otherwise drag the average down to near-zero
+  const activeWithData = allCompanies.filter(c => c.status === "active" && c.compliance_score > 0);
   const GROUP_TOTALS = {
     monthly_revenue:  allCompanies.reduce((s, c) => s + c.monthly_revenue,  0),
     ap_outstanding:   allCompanies.reduce((s, c) => s + c.ap_outstanding,   0),
     ar_outstanding:   allCompanies.reduce((s, c) => s + c.ar_outstanding,   0),
     cash_balance:     allCompanies.reduce((s, c) => s + c.cash_balance,     0),
     net_pl_monthly:   allCompanies.reduce((s, c) => s + c.net_pl_monthly,   0),
-    compliance_score: allCompanies.length
-      ? Math.round(allCompanies.reduce((s, c) => s + c.compliance_score, 0) / allCompanies.length)
+    compliance_score: activeWithData.length
+      ? Math.round(activeWithData.reduce((s, c) => s + c.compliance_score, 0) / activeWithData.length)
       : 0,
     employee_count:   allCompanies.reduce((s, c) => s + c.employee_count,   0),
   };
@@ -130,10 +133,10 @@ export default async function ConsolidatedDashboardPage() {
           />
           <KpiTile
             label="Net P&L (May)"
-            value={`+${fmtAmt(net)}`}
+            value={net >= 0 ? `+${fmtAmt(net)}` : `-${fmtAmt(Math.abs(net))}`}
             sub={`${netPct}% margin`}
-            icon={TrendingUp}
-            color="bg-green-600"
+            icon={net >= 0 ? TrendingUp : TrendingDown}
+            color={net >= 0 ? "bg-green-600" : "bg-red-600"}
           />
           <KpiTile
             label="AP Outstanding"
@@ -246,7 +249,9 @@ export default async function ConsolidatedDashboardPage() {
                     <p className="text-xs font-bold text-brand-black">{fmtAmt(GROUP_TOTALS.monthly_revenue)}</p>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <p className="text-xs font-bold text-green-700">+{fmtAmt(GROUP_TOTALS.net_pl_monthly)}</p>
+                    <p className={`text-xs font-bold ${GROUP_TOTALS.net_pl_monthly >= 0 ? "text-green-700" : "text-red-700"}`}>
+                      {GROUP_TOTALS.net_pl_monthly >= 0 ? "+" : "-"}{fmtAmt(Math.abs(GROUP_TOTALS.net_pl_monthly))}
+                    </p>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <p className="text-xs font-bold text-red-700">{fmtAmt(GROUP_TOTALS.ap_outstanding)}</p>
@@ -310,10 +315,14 @@ export default async function ConsolidatedDashboardPage() {
           <h2 className="text-sm font-semibold text-brand-black mb-3">Company Health Snapshot</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {allCompanies.map((co) => {
-              const margin = Math.round((co.net_pl_monthly / co.monthly_revenue) * 100);
+              const margin = co.monthly_revenue > 0
+                ? Math.round((co.net_pl_monthly / co.monthly_revenue) * 100)
+                : 0;
+              // DSO = AR Outstanding / (Monthly Revenue / 30)  — rough days-sales-outstanding
+              // Zero-revenue companies show "—" rather than a misleading 0-day green metric
               const arTurnover = co.monthly_revenue > 0
                 ? Math.round((co.ar_outstanding / co.monthly_revenue) * 30)
-                : 0; // rough DSO in days
+                : null;
               return (
                 <div
                   key={co.id}
@@ -352,9 +361,13 @@ export default async function ConsolidatedDashboardPage() {
                     </div>
                     <div className="rounded-lg bg-brand-gray-light/50 px-3 py-2">
                       <p className="text-brand-gray-mid text-[10px]">DSO (approx)</p>
-                      <p className={`font-bold ${arTurnover <= 30 ? "text-green-700" : arTurnover <= 45 ? "text-yellow-700" : "text-red-700"}`}>
-                        {arTurnover} days
-                      </p>
+                      {arTurnover === null ? (
+                        <p className="font-bold text-brand-gray-mid">No data</p>
+                      ) : (
+                        <p className={`font-bold ${arTurnover <= 30 ? "text-green-700" : arTurnover <= 45 ? "text-yellow-700" : "text-red-700"}`}>
+                          {arTurnover} days
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div>

@@ -67,6 +67,17 @@ export async function importTransactions(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, importId: null, rowsImported: 0, rowsFailed: 0, errors: ["Not authenticated"] };
 
+  // Permission check — only users with import_data = true may write data
+  const { data: profile } = await supabase
+    .from("users")
+    .select("permissions")
+    .eq("id", user.id)
+    .single();
+  const perms = (profile as { permissions: Record<string, boolean> } | null)?.permissions;
+  if (!perms?.import_data) {
+    return { success: false, importId: null, rowsImported: 0, rowsFailed: 0, errors: ["You do not have permission to import data."] };
+  }
+
   // Infer financial year from majority of rows
   const fyMap = new Map<string, number>();
   rows.forEach((r) => fyMap.set(r.financial_year, (fyMap.get(r.financial_year) ?? 0) + 1));
@@ -97,10 +108,39 @@ export async function importTransactions(
   let rowsFailed = 0;
   const errors: string[] = [];
 
-  // Bulk insert in batches of 500 to avoid Supabase payload limits
+  // ── Cross-import duplicate detection ──────────────────────────────────────
+  // Collect all non-null voucher numbers in this import and check the DB.
+  // This prevents double-importing the same Busy export file.
+  const voucherNumbers = rows
+    .map((r) => r.voucher_number)
+    .filter((v): v is string => !!v);
+
+  let existingVouchers = new Set<string>();
+  if (voucherNumbers.length > 0) {
+    // Check in chunks to avoid Supabase "in" query limits
+    const CHUNK = 200;
+    for (let c = 0; c < voucherNumbers.length; c += CHUNK) {
+      const chunk = voucherNumbers.slice(c, c + CHUNK);
+      const { data: existing } = await db
+        .from("transactions")
+        .select("voucher_number")
+        .in("voucher_number", chunk)
+        .eq("financial_year", financialYear) as { data: { voucher_number: string }[] | null };
+      if (existing) existing.forEach((r) => existingVouchers.add(r.voucher_number));
+    }
+  }
+
+  // Filter out duplicates and report them
+  const deduped = rows.filter((r) => !r.voucher_number || !existingVouchers.has(r.voucher_number));
+  const skippedDuplicates = rows.length - deduped.length;
+  if (skippedDuplicates > 0) {
+    errors.push(`Skipped ${skippedDuplicates} row(s) that already exist in the database (same voucher number + financial year). Re-importing the same file will not create duplicates.`);
+  }
+
+  // ── Bulk insert in batches of 500 to avoid Supabase payload limits ────────
   const BATCH_SIZE = 500;
-  for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-    const batch = rows.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
+    const batch = deduped.slice(i, i + BATCH_SIZE);
 
     const inserts: TransactionInsert[] = batch.map((r) => ({
       transaction_date: r.transaction_date,
@@ -171,7 +211,15 @@ export async function rollbackImport(importId: string): Promise<{ success: boole
     .single() as { data: Pick<FileImportRow, "id" | "can_rollback" | "uploaded_by" | "created_at"> | null; error: unknown };
 
   if (fetchErr || !record) return { success: false, message: "Import record not found" };
-  if (!record.can_rollback) return { success: false, message: "This import can no longer be rolled back (>24 hours)" };
+  if (!record.can_rollback) return { success: false, message: "This import has already been rolled back." };
+
+  // Enforce the 24-hour window using the actual timestamp
+  const hoursSince = (Date.now() - new Date(record.created_at).getTime()) / 3_600_000;
+  if (hoursSince > 24) {
+    // Mark the flag false so future attempts are blocked without the timestamp check
+    await db.from("file_imports").update({ can_rollback: false }).eq("id", importId);
+    return { success: false, message: `Rollback window expired — this import was ${Math.floor(hoursSince)} hours ago (limit: 24 hours).` };
+  }
 
   // Delete transactions linked to this import
   const { error: deleteErr } = await db

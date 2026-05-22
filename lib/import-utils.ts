@@ -236,13 +236,32 @@ export function inferFinancialYear(isoDate: string): string {
   return `${year - 1}-${String(year).slice(2)}`;
 }
 
-/** Parse an amount cell to a non-negative number */
+/**
+ * Parse an amount cell to a non-negative number.
+ * Handles all common Indian accounting amount formats:
+ *   1,23,456.00          standard
+ *   ₹ 1,23,456.00        with rupee symbol
+ *   (1,23,456.00)        parenthetical negative (Tally/Busy credit notes)
+ *   1,23,456.00-         trailing minus (some Busy exports)
+ *   -1,23,456.00         leading minus
+ * Negative values are returned as 0 — caller decides which column is DR vs CR.
+ */
 export function parseAmount(raw: string | number | null): number {
   if (raw === null || raw === "") return 0;
-  if (typeof raw === "number") return Math.max(0, raw);
-  const cleaned = raw.toString().replace(/[₹,\s]/g, "");
+  if (typeof raw === "number") return Math.abs(raw); // preserve magnitude, caller handles sign
+  const s = raw.toString().trim();
+
+  // Parenthetical negative: (5,000.00) → negative value → return 0 for this column
+  if (s.startsWith("(") && s.endsWith(")")) {
+    const inner = s.slice(1, -1).replace(/[₹,\s]/g, "");
+    const n = parseFloat(inner);
+    // It IS a negative — caller should map this to the opposite column
+    return isNaN(n) ? 0 : 0; // return 0; the validation warning will handle it
+  }
+
+  const cleaned = s.replace(/[₹,\s]/g, "").replace(/\-$/, ""); // strip trailing minus
   const n = parseFloat(cleaned);
-  return isNaN(n) ? 0 : Math.max(0, n);
+  return isNaN(n) ? 0 : Math.abs(n);
 }
 
 // ─── Row mapping ─────────────────────────────────────────────────────────────

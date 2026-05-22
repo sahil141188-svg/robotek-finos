@@ -16,7 +16,8 @@ import { SAMPLE_VENDORS, SAMPLE_AP_INVOICES, vendorTotal, fmtAmt } from "./payab
 import { SAMPLE_CUSTOMERS, SAMPLE_AR_INVOICES, customerTotal } from "./receivables-data";
 import { SAMPLE_TASKS, effectiveStatus } from "./tasks-data";
 
-const TODAY = "2026-05-22";
+// Dynamic today — computed at runtime so alerts never become stale
+const TODAY = new Date().toISOString().slice(0, 10);
 
 export type AlertPriority = "critical" | "high" | "medium" | "low";
 export type AlertCategory = "compliance" | "ap" | "ar" | "tasks" | "banking";

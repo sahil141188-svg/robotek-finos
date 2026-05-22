@@ -111,15 +111,39 @@ export const AGING_DATA: AgingBucket[] = [
   { bucket: "90+ days",   ap:  4.5, ar: 10.15 },
 ];
 
-// ─── Compliance Upcoming (as of May 21, 2026) ────────────────────────────────
+// ─── Compliance Upcoming — days_remaining computed dynamically ───────────────
 
+function daysUntil(dateStr: string): number {
+  const due  = new Date(dateStr);
+  const now  = new Date();
+  now.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - now.getTime()) / 86_400_000);
+}
+
+function complianceStatus(days: number): "overdue" | "critical" | "upcoming" {
+  if (days < 0)  return "overdue";
+  if (days <= 7) return "critical";
+  return "upcoming";
+}
+
+// Due dates are real; days_remaining + status update automatically every day
 export const UPCOMING_COMPLIANCE: ComplianceItem[] = [
-  { title: "PF Deposit (Apr '26)",  due_date: "15 May 2026", days_remaining: -6,  status: "overdue"  },
-  { title: "TDS Deposit (May '26)", due_date: "7 Jun 2026",  days_remaining: 17,  status: "critical" },
-  { title: "GSTR-1 (May '26)",      due_date: "11 Jun 2026", days_remaining: 21,  status: "upcoming" },
-  { title: "ESI Deposit (May '26)", due_date: "15 Jun 2026", days_remaining: 25,  status: "upcoming" },
-  { title: "GSTR-3B (May '26)",     due_date: "20 Jun 2026", days_remaining: 30,  status: "upcoming" },
-];
+  "2026-05-15", // PF Deposit (Apr '26)
+  "2026-06-07", // TDS Deposit (May '26)
+  "2026-06-11", // GSTR-1 (May '26)
+  "2026-06-15", // ESI Deposit (May '26)
+  "2026-06-20", // GSTR-3B (May '26)
+].map((due, i) => {
+  const labels = [
+    "PF Deposit (Apr '26)",
+    "TDS Deposit (May '26)",
+    "GSTR-1 (May '26)",
+    "ESI Deposit (May '26)",
+    "GSTR-3B (May '26)",
+  ];
+  const days = daysUntil(due);
+  return { title: labels[i], due_date: new Date(due).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }), days_remaining: days, status: complianceStatus(days) };
+});
 
 // ─── Layer 2 Drill — Full FY 2025-26 Monthly Breakdown ───────────────────────
 
@@ -138,10 +162,16 @@ export const DRILL_REVENUE: MonthlyBreakdown[] = [
   { month: "Mar 2026", period: "mar-2026", value: 184.0, count: 158, vs_prev_pct: 7.0  },
 ];
 
-/** Derive COGS / Gross-Margin / OpEx drill from revenue base */
-export const DRILL_COGS: MonthlyBreakdown[] = DRILL_REVENUE.map(d => ({
+/**
+ * COGS ratios per month — realistic variation matching mobile accessories
+ * manufacturing (raw material price fluctuations, production yield, freight costs).
+ * Apr=61.8% … Mar=60.9%  →  gross margins range from 37.8% to 39.4%
+ */
+const MONTHLY_COGS_RATIO = [0.618, 0.612, 0.615, 0.622, 0.608, 0.614, 0.616, 0.605, 0.609, 0.620, 0.611, 0.609];
+
+export const DRILL_COGS: MonthlyBreakdown[] = DRILL_REVENUE.map((d, i) => ({
   ...d,
-  value: parseFloat((d.value * 0.609).toFixed(1)),
+  value: parseFloat((d.value * MONTHLY_COGS_RATIO[i]).toFixed(1)),
 }));
 
 export const DRILL_OPEX: MonthlyBreakdown[] = DRILL_REVENUE.map(d => ({
@@ -149,10 +179,12 @@ export const DRILL_OPEX: MonthlyBreakdown[] = DRILL_REVENUE.map(d => ({
   value: parseFloat((d.value * 0.186).toFixed(1)),
 }));
 
-export const DRILL_GROSS_MARGIN: MonthlyBreakdown[] = DRILL_REVENUE.map(d => ({
-  ...d,
-  value: parseFloat(((1 - 0.609) * 100).toFixed(1)),
-}));
+/** Gross margin % derived from actual revenue and COGS — no longer a flat 39.1% */
+export const DRILL_GROSS_MARGIN: MonthlyBreakdown[] = DRILL_REVENUE.map((d, i) => {
+  const cogsVal = d.value * MONTHLY_COGS_RATIO[i];
+  const gm = ((d.value - cogsVal) / d.value) * 100;
+  return { ...d, value: parseFloat(gm.toFixed(1)) };
+});
 
 export const DRILL_CASH: MonthlyBreakdown[] = [
   { month: "Apr 2025", period: "apr-2025", value: 31.2, count: 48, vs_prev_pct: 0    },

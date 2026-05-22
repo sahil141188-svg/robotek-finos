@@ -45,6 +45,9 @@ export function CompanySwitcher() {
     }
   }
 
+  // Only show active companies in the switcher — dormant / coming-soon slots clutter the list
+  const activeCompanies = companies.filter(c => c.status === "active" && !c.name.includes("Coming Soon"));
+
   const displayLabel = selectedCompanyId === null
     ? "All Companies"
     : (selectedCompany?.short_name ?? "Select Company");
@@ -99,9 +102,9 @@ export function CompanySwitcher() {
 
           <div className="h-px bg-white/10 mx-3" />
 
-          {/* Company list — scrollable */}
+          {/* Company list — scrollable; dormant / coming-soon companies hidden */}
           <div className="max-h-64 overflow-y-auto">
-            {companies.map((company) => (
+            {activeCompanies.map((company) => (
               <button
                 key={company.id}
                 onClick={() => handleSelect(company.id)}

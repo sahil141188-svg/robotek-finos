@@ -23,60 +23,77 @@ function fyMonths(y:number):string[]{
 const MONTHS=fyMonths(2025);
 const C={red:"#E52D31",yellow:"#F7DA11",dark:"#852321",muted:"rgba(255,255,255,0.2)"};
 
+// ─── Robotek India — FY 2025-26 actuals (₹ values in rupees) ──────────────────
+// Scale: ₹18–20 Cr annual revenue, mobile accessories manufacturing
 const kpis:KPI[]=[
-  {id:"revenue",  label:"Total Revenue",     value:14250000000,prev:12800000000,unit:"crore", goodWhenUp:true },
-  {id:"ebitda",   label:"EBITDA",            value:2840000000, prev:2410000000, unit:"crore", goodWhenUp:true },
-  {id:"ebitda_m", label:"EBITDA Margin",     value:19.9,       prev:18.8,       unit:"pct",   goodWhenUp:true },
-  {id:"cash",     label:"Cash",              value:5460000000, prev:6120000000, unit:"crore", goodWhenUp:true },
-  {id:"burn",     label:"Monthly Burn",      value:420000000,  prev:390000000,  unit:"crore", goodWhenUp:false},
-  {id:"runway",   label:"Cash Runway",       value:13,         prev:15.7,       unit:"months",goodWhenUp:true },
-  {id:"ar_days",  label:"AR Days",           value:47,         prev:52,         unit:"months",goodWhenUp:false},
-  {id:"gross_m",  label:"Gross Margin",      value:54.2,       prev:51.6,       unit:"pct",   goodWhenUp:true },
+  {id:"revenue",  label:"Revenue (YTD)",     value:184000000,  prev:165000000,  unit:"crore", goodWhenUp:true },
+  {id:"gross_m",  label:"Gross Margin",      value:39.1,       prev:37.0,       unit:"pct",   goodWhenUp:true },
+  {id:"cash",     label:"Cash Balance",      value:5579000,    prev:5780000,    unit:"crore", goodWhenUp:true },
+  {id:"ar_days",  label:"AR Days (DSO)",     value:47,         prev:52,         unit:"months",goodWhenUp:false},
+  {id:"ap",       label:"AP Outstanding",    value:4650000,    prev:4380000,    unit:"crore", goodWhenUp:false},
+  {id:"ar",       label:"AR Outstanding",    value:6835000,    prev:6580000,    unit:"crore", goodWhenUp:false},
+  {id:"opex_m",   label:"OpEx MTD",          value:3420000,    prev:3350000,    unit:"crore", goodWhenUp:false},
+  {id:"tax",      label:"Tax Liability",     value:696000,     prev:710000,     unit:"crore", goodWhenUp:false},
 ];
 
-const plTrend=MONTHS.map((m,i)=>({month:m,revenue:Math.round((110+i*2.8+Math.sin(i)*3)*1e7),expenses:Math.round((88+i*1.9+Math.cos(i)*2)*1e7),ebitda:Math.round((22+i*0.9+Math.sin(i))*1e7)}));
-const cashFlowData=MONTHS.map((m,i)=>({month:m,operating:Math.round((18+Math.sin(i*.8)*4)*1e7),investing:Math.round((-8-Math.cos(i*.5)*2)*1e7),financing:Math.round((2+Math.sin(i*1.2))*1e7)}));
-const segmentData=[{name:"Robotics",revenue:5800000000},{name:"Software",revenue:4120000000},{name:"Services",revenue:2870000000},{name:"Training",revenue:1460000000}];
+// Revenue base: ₹142L–184L per month over FY 2025-26
+const revenueBase=[148,153,168,155,160,176,142,155,172,161,172,184].map(v=>v*100000);
+const plTrend=MONTHS.map((m,i)=>({
+  month:m,
+  revenue:revenueBase[i],
+  expenses:Math.round(revenueBase[i]*0.795),
+  ebitda:Math.round(revenueBase[i]*0.205),
+}));
+const cashFlowData=MONTHS.map((m,i)=>({month:m,operating:Math.round((revenueBase[i]*0.12)),investing:Math.round((-revenueBase[i]*0.03)),financing:Math.round((revenueBase[i]*0.01))}));
+// Revenue by channel — Robotek actual segments
+const segmentData=[
+  {name:"Domestic Retail",  revenue:Math.round(184000000*0.52)},
+  {name:"E-Commerce",       revenue:Math.round(184000000*0.28)},
+  {name:"Export / B2B",     revenue:Math.round(184000000*0.12)},
+  {name:"Govt / Tender",    revenue:Math.round(184000000*0.08)},
+];
 
+// P&L summary — Robotek India FY 2025-26 (Mar 2026 MTD, ₹)
 const summaryRows:SummaryRow[]=[
-  {id:"rev",  category:"Revenue",           budget:1500000000,actual:1425000000,variance: -75000000,variancePct:-5.0 },
-  {id:"cogs", category:"Cost of Goods Sold",budget: 680000000,actual: 653000000,variance:  27000000,variancePct: 3.9 },
-  {id:"gross",category:"Gross Profit",      budget: 820000000,actual: 772000000,variance: -48000000,variancePct:-5.8 },
-  {id:"opex", category:"Operating Expenses",budget: 520000000,actual: 548000000,variance: -28000000,variancePct:-5.3 },
-  {id:"ebit", category:"EBIT",              budget: 300000000,actual: 224000000,variance: -76000000,variancePct:-25.3},
-  {id:"tax",  category:"Tax",               budget:  80000000,actual:  67000000,variance:  13000000,variancePct:16.2 },
-  {id:"pat",  category:"Profit After Tax",  budget: 220000000,actual: 157000000,variance: -63000000,variancePct:-28.6},
+  {id:"rev",  category:"Revenue",           budget: 19000000,actual:18400000,variance: -600000,variancePct:-3.2 },
+  {id:"cogs", category:"Cost of Goods Sold",budget: 11600000,actual:11200000,variance:  400000,variancePct: 3.4 },
+  {id:"gross",category:"Gross Profit",      budget:  7400000,actual: 7200000,variance: -200000,variancePct:-2.7 },
+  {id:"opex", category:"Operating Expenses",budget:  3400000,actual: 3420000,variance:  -20000,variancePct:-0.6 },
+  {id:"ebit", category:"EBIT",              budget:  4000000,actual: 3780000,variance: -220000,variancePct:-5.5 },
+  {id:"tax",  category:"Tax",               budget:   700000,actual:  696000,variance:   4000,variancePct:  0.6 },
+  {id:"pat",  category:"Profit After Tax",  budget:  3300000,actual: 3084000,variance: -216000,variancePct:-6.5 },
 ];
 
+// Dept & line-item rows — Robotek India scale (OpEx total ₹34.2L, COGS total ₹112L)
 const deptRows:Record<string,DeptRow[]>={
   opex:[
-    {id:"eng",  department:"Engineering", budget:180000000,actual:212000000,variance:-32000000},
-    {id:"sales",department:"Sales & Mktg",budget:140000000,actual:158000000,variance:-18000000},
-    {id:"gna",  department:"G&A",         budget:120000000,actual:111000000,variance:  9000000},
-    {id:"rd",   department:"R&D",         budget: 80000000,actual: 67000000,variance: 13000000},
+    {id:"eng",  department:"Product Engineering",budget:1400000,actual:1600000,variance:-200000},
+    {id:"sales",department:"Sales & Marketing",  budget:1000000,actual:1050000,variance: -50000},
+    {id:"gna",  department:"G&A",                budget: 600000,actual: 520000,variance:  80000},
+    {id:"tech", department:"Tech / IT",           budget: 400000,actual: 250000,variance: 150000},
   ],
   cogs:[
-    {id:"mfg",department:"Manufacturing",budget:420000000,actual:401000000,variance:19000000},
-    {id:"log",department:"Logistics",    budget:160000000,actual:154000000,variance: 6000000},
-    {id:"qc", department:"Quality",      budget:100000000,actual: 98000000,variance: 2000000},
+    {id:"mfg",department:"Assembly & Mfg", budget:7400000,actual:7000000,variance: 400000},
+    {id:"log",department:"Logistics",      budget:2600000,actual:2800000,variance:-200000},
+    {id:"qc", department:"Quality Control",budget:1600000,actual:1400000,variance: 200000},
   ],
 };
 
 const lineItemRows:Record<string,LineItemRow[]>={
   eng:[
-    {id:"sal", lineItem:"Salaries",         budget:120000000,actual:145000000,variance:-25000000,notes:"2 senior hires above band"},
-    {id:"soft",lineItem:"Software Licenses",budget: 30000000,actual: 38000000,variance: -8000000,notes:"AWS cost spike Q2"},
-    {id:"cont",lineItem:"Contractors",      budget: 30000000,actual: 29000000,variance:  1000000,notes:"On track"},
+    {id:"sal", lineItem:"Salaries",       budget:1000000,actual:1200000,variance:-200000,notes:"Two senior hires above band"},
+    {id:"soft",lineItem:"Software/Tools", budget: 250000,actual: 280000,variance: -30000,notes:"Figma + Jira licences up"},
+    {id:"cont",lineItem:"Contract Labour",budget: 150000,actual: 120000,variance:  30000,notes:"On track"},
   ],
   sales:[
-    {id:"adv",lineItem:"Advertising",budget:60000000,actual:72000000,variance:-12000000,notes:"Campaign extended"},
-    {id:"evt",lineItem:"Events",     budget:40000000,actual:49000000,variance: -9000000,notes:"Expo overrun"},
-    {id:"com",lineItem:"Commissions",budget:40000000,actual:37000000,variance:  3000000,notes:"Deal slippage"},
+    {id:"adv",lineItem:"Advertising",   budget:400000,actual:420000,variance:-20000,notes:"Digital ads extended"},
+    {id:"evt",lineItem:"Trade Events",  budget:300000,actual:350000,variance:-50000,notes:"Expo stall cost overrun"},
+    {id:"com",lineItem:"Commissions",   budget:300000,actual:280000,variance: 20000,notes:"Deal slippage Mar"},
   ],
   mfg:[
-    {id:"rm", lineItem:"Raw Materials",budget:280000000,actual:264000000,variance: 16000000,notes:"Supplier discount"},
-    {id:"lab",lineItem:"Labour",       budget:100000000,actual:102000000,variance: -2000000,notes:"Overtime"},
-    {id:"ovh",lineItem:"Overhead",     budget: 40000000,actual: 35000000,variance:  5000000,notes:"Efficiency gain"},
+    {id:"rm", lineItem:"Raw Materials",   budget:5200000,actual:4800000,variance: 400000,notes:"Supplier volume discount"},
+    {id:"lab",lineItem:"Factory Labour",  budget:1400000,actual:1450000,variance: -50000,notes:"Overtime in peak week"},
+    {id:"ovh",lineItem:"Factory Overhead",budget: 800000,actual: 750000,variance:  50000,notes:"Efficiency improvement"},
   ],
 };
 

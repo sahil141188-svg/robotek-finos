@@ -13,6 +13,23 @@ import type { Database } from "@/types/database";
 
 type CompanyRow = Database["public"]["Tables"]["companies"]["Row"];
 
+/** Verifies the caller is an authenticated CEO. Throws on failure. */
+async function assertCEO(): Promise<void> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: profile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile || (profile as { role: string }).role !== "ceo") {
+    throw new Error("Only the CEO can manage company settings.");
+  }
+}
+
 // ── Read ──────────────────────────────────────────────────────────────────────
 
 /**
@@ -59,6 +76,7 @@ export async function createCompany(formData: FormData): Promise<{
   error?: string;
 }> {
   try {
+    await assertCEO();
     const supabase = await createClient();
 
     // Auto sort_order = max existing + 1
@@ -106,6 +124,7 @@ export async function updateCompany(
   formData: FormData
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    await assertCEO();
     const supabase = await createClient();
 
     const name       = (formData.get("name")       as string).trim();
@@ -145,6 +164,7 @@ export async function deleteCompany(id: string): Promise<{
   error?: string;
 }> {
   try {
+    await assertCEO();
     const supabase = await createClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from("companies") as any).delete().eq("id", id) as { error: { message: string } | null };

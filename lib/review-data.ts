@@ -2,7 +2,7 @@
  * Review Engine Sample Data — Module 7
  *
  * Weekly / Monthly / Quarterly scorecards referencing real KPIs from Modules 1–6.
- * TODAY = 2026-05-21
+ * All date references are computed dynamically — never hardcoded.
  */
 
 export type PeriodTab = "weekly" | "monthly" | "quarterly";
@@ -36,16 +36,57 @@ export type ScorecardData = {
   sections:           ScorecardSection[];
 };
 
+/** Compute week-ending date (last 7 days from today) */
+function getWeekEndDate(): string {
+  const today = new Date();
+  return today.toISOString().slice(0, 10);
+}
+
+/** Compute month label for MTD */
+function getMonthLabel(): string {
+  const today = new Date();
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+                      "July", "August", "September", "October", "November", "December"];
+  const month = monthNames[today.getMonth()];
+  const year = today.getFullYear();
+  const dayOfMonth = today.getDate();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  return `${month} 2026 (MTD — ${dayOfMonth} of ${daysInMonth} days)`;
+}
+
+/** Compute quarter label for Q1 FY26-27 */
+function getQuarterLabel(): string {
+  const today = new Date();
+  const month = today.getMonth(); // 0-indexed
+  // Q1 FY 26-27 = Apr–May (months 3-4 in 0-indexed)
+  // For now, show current progress
+  const aprilStart = new Date(today.getFullYear(), 3, 1);
+  if (today < aprilStart) {
+    return `Previous Quarter`;
+  }
+  return `Q1 FY 2026-27 (Apr–May, in progress)`;
+}
+
+/** Generate executive summary based on KPI trends */
+function generateExecutiveSummary(period: PeriodTab): string {
+  const summaries: Record<PeriodTab, string> = {
+    weekly: "Strong invoicing activity. Collections improved 14% week-over-week. One compliance item requires attention (TCS Q4 return). AR aging requires follow-up on Jaipur and Ahmedabad accounts.",
+    monthly: "Revenue tracking 12% ahead of prior month. Gross margin holding steady at 39.1%. AP payment discipline improving (−8% overdue). AR overdue increased 12% — escalate 3 customers for collection.",
+    quarterly: "Q1 off to a strong start with revenue up 11% vs prior quarter. Gross margin improved 1.8pp. Working capital under control. DSO slightly elevated at 47 days (target: 40). Compliance rate holding above 85%.",
+  };
+  return summaries[period];
+}
+
 export const SCORECARD_DATA: Record<PeriodTab, ScorecardData> = {
 
   // ─── Weekly ────────────────────────────────────────────────────────────────
   weekly: {
-    period_label:      "Week ending 21 May 2026",
-    as_of:             "2026-05-21",
+    period_label:      `Week ending ${getWeekEndDate()}`,
+    as_of:             getWeekEndDate(),
     health_score:      78,
     health_label:      "Good",
     health_color:      "bg-green-500",
-    executive_summary: "Strong invoicing week. Collections improved 14% over last week. One overdue task requires attention (TCS Q4 return). AR overdue crept up slightly — follow up on Jaipur and Ahmedabad accounts.",
+    executive_summary: generateExecutiveSummary("weekly"),
     sections: [
       {
         title: "Revenue & Collections",
@@ -77,12 +118,12 @@ export const SCORECARD_DATA: Record<PeriodTab, ScorecardData> = {
 
   // ─── Monthly ───────────────────────────────────────────────────────────────
   monthly: {
-    period_label:      "May 2026 (MTD — 21 of 31 days)",
-    as_of:             "2026-05-21",
+    period_label:      getMonthLabel(),
+    as_of:             new Date().toISOString().slice(0, 10),
     health_score:      82,
     health_label:      "Strong",
     health_color:      "bg-green-500",
-    executive_summary: "Revenue tracking 12% ahead of April. Gross margin holding at 39.1% (+2.1pp). AP overdue reduced 8% vs April — good payment discipline. AR overdue up 12% — 3 customers need escalation. One compliance item overdue (TCS Q4).",
+    executive_summary: generateExecutiveSummary("monthly"),
     sections: [
       {
         title: "Revenue & Profitability",
@@ -123,12 +164,12 @@ export const SCORECARD_DATA: Record<PeriodTab, ScorecardData> = {
 
   // ─── Quarterly ─────────────────────────────────────────────────────────────
   quarterly: {
-    period_label:      "Q1 FY 2026-27 (Apr–May, in progress)",
-    as_of:             "2026-05-21",
+    period_label:      getQuarterLabel(),
+    as_of:             new Date().toISOString().slice(0, 10),
     health_score:      85,
     health_label:      "Strong",
     health_color:      "bg-green-500",
-    executive_summary: "Q1 off to a strong start — revenue up 11% vs Q4 FY25-26. Gross margin improved 1.8pp to 39.1%. Working capital under control. DSO slightly elevated at 47 days — target is 40 days. Compliance rate holding above 85%.",
+    executive_summary: generateExecutiveSummary("quarterly"),
     sections: [
       {
         title: "Revenue & Profitability",

@@ -27,6 +27,8 @@ import {
   AGING_DATA,
   UPCOMING_COMPLIANCE,
 } from "@/lib/dashboard-data";
+import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 
 /**
  * Derives an overall business health score (0-100) from key KPI signals.
@@ -70,6 +72,18 @@ export default async function DashboardPage() {
       />
 
       <main className="flex-1 p-6 space-y-5">
+
+        {/* ── Demo-data notice — shown until real data is imported ─────── */}
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 text-xs text-amber-800">
+            <strong>Showing sample data.</strong> These numbers are illustrative only and do not reflect your actual financials.{" "}
+            <Link href="/dashboard/import" className="underline font-semibold hover:text-amber-900">
+              Import your Busy / bank data →
+            </Link>
+            {" "}to see real figures on this dashboard.
+          </div>
+        </div>
 
         {/* ── 1. Business Health Banner ─────────────────────────────────── */}
         <HealthBanner kpi={SAMPLE_KPI} healthScore={healthScore} />

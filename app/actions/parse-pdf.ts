@@ -214,6 +214,20 @@ export async function parsePDFBankStatement(formData: FormData): Promise<{
     const file = formData.get("file") as File | null;
     if (!file) return { success: false, error: "No file provided." };
 
+    // Validate file size — max 10 MB
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    if (file.size > MAX_FILE_SIZE) {
+      return {
+        success: false,
+        error: `File size exceeds 10 MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(1)} MB. Please upload a smaller PDF.`,
+      };
+    }
+
+    // Validate MIME type
+    if (!file.type.startsWith("application/pdf")) {
+      return { success: false, error: "Only PDF files are supported. Please upload a .pdf file." };
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const uint8 = new Uint8Array(arrayBuffer);
 
