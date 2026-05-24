@@ -1,22 +1,15 @@
 /**
  * Smart Alerts Engine — Module 8
  *
- * Generates prioritised, real-data alerts from compliance, AP, AR, and tasks.
- * TODAY = 2026-05-22.
- *
- * Priority levels:
- *   critical — overdue items, heavy penalties, 90+ day aging
- *   high     — due in ≤ 3 days, 61-90 day aging, urgent tasks overdue
- *   medium   — due in 4-7 days, 31-60 day aging, high-priority tasks due soon
- *   low      — due in 8-14 days, 0-30 day aging reminders
+ * Compliance alerts come from real statutory deadlines.
+ * AP / AR / Task alerts fire when real imported data has overdue items.
  */
 
 import { COMPLIANCE_ITEMS, daysFromToday } from "./compliance-data";
-import { SAMPLE_VENDORS, SAMPLE_AP_INVOICES, vendorTotal, fmtAmt } from "./payables-data";
-import { SAMPLE_CUSTOMERS, SAMPLE_AR_INVOICES, customerTotal } from "./receivables-data";
-import { SAMPLE_TASKS, effectiveStatus } from "./tasks-data";
+import { SAMPLE_AP_INVOICES, SAMPLE_VENDORS, fmtAmt } from "./payables-data";
+import { SAMPLE_AR_INVOICES, SAMPLE_CUSTOMERS }        from "./receivables-data";
+import { SAMPLE_TASKS, effectiveStatus }                from "./tasks-data";
 
-// Dynamic today — computed at runtime so alerts never become stale
 const TODAY = new Date().toISOString().slice(0, 10);
 
 export type AlertPriority = "critical" | "high" | "medium" | "low";
@@ -28,26 +21,25 @@ export interface Alert {
   category:    AlertCategory;
   title:       string;
   body:        string;
-  drill_href?: string;           // where to navigate on click
-  amount?:     string;           // formatted INR amount if relevant
-  time_label:  string;           // "2 days overdue", "Due in 3 days", etc.
-  days_delta:  number;           // negative = overdue, positive = days remaining
+  drill_href?: string;
+  amount?:     string;
+  time_label:  string;
+  days_delta:  number;
 }
 
-// ─── Priority sort weight ─────────────────────────────────────────────────────
 const PRIORITY_WEIGHT: Record<AlertPriority, number> = {
   critical: 0, high: 1, medium: 2, low: 3,
 };
 
-// ─── Compliance alerts ────────────────────────────────────────────────────────
+// ─── Compliance alerts — always generated from real statutory deadlines ────────
 function buildComplianceAlerts(): Alert[] {
   const alerts: Alert[] = [];
 
   COMPLIANCE_ITEMS.forEach((item) => {
     if (item.status === "filed" || item.status === "paid" || item.status === "not_applicable") return;
 
-    const days = daysFromToday(item.due_date, TODAY);   // negative = overdue
-    if (days > 14) return;   // only alert on items within 14 days
+    const days = daysFromToday(item.due_date, TODAY);
+    if (days > 14) return;
 
     let priority: AlertPriority;
     let time_label: string;
@@ -69,15 +61,13 @@ function buildComplianceAlerts(): Alert[] {
       time_label = `Due in ${days} days`;
     }
 
-    const amtStr = item.amount_due
-      ? ` Tax: ${fmtAmt(item.amount_due)}.`
-      : "";
+    const amtStr = item.amount_due ? ` Tax: ${fmtAmt(item.amount_due)}.` : "";
 
     alerts.push({
       id:         `comp-${item.id}`,
       priority,
       category:   "compliance",
-      title:      `${item.title}`,
+      title:      item.title,
       body:       `${item.description}${amtStr} Period: ${item.period}.`,
       drill_href: `/dashboard/compliance/${item.id}`,
       amount:     item.amount_due ? fmtAmt(item.amount_due) : undefined,
@@ -89,11 +79,11 @@ function buildComplianceAlerts(): Alert[] {
   return alerts;
 }
 
-// ─── AP alerts ────────────────────────────────────────────────────────────────
+// ─── AP alerts — only fire when real imported data exists ─────────────────────
 function buildAPAlerts(): Alert[] {
+  if (SAMPLE_AP_INVOICES.length === 0) return [];   // no data imported yet
   const alerts: Alert[] = [];
 
-  // Group invoices by vendor
   const byVendor: Record<string, typeof SAMPLE_AP_INVOICES> = {};
   SAMPLE_AP_INVOICES.forEach((inv) => {
     if (inv.status !== "overdue") return;
@@ -106,20 +96,13 @@ function buildAPAlerts(): Alert[] {
 
     const totalOverdue = invoices.reduce((s, i) => s + i.amount, 0);
     const maxDays      = Math.max(...invoices.map((i) => i.days_outstanding));
-
-    let priority: AlertPriority;
-    if (maxDays >= 90)      priority = "critical";
-    else if (maxDays >= 61) priority = "high";
-    else if (maxDays >= 31) priority = "medium";
-    else                    priority = "low";
+    const priority: AlertPriority =
+      maxDays >= 90 ? "critical" : maxDays >= 61 ? "high" : maxDays >= 31 ? "medium" : "low";
 
     alerts.push({
-      id:         `ap-${vendorId}`,
-      priority,
-      category:   "ap",
+      id: `ap-${vendorId}`, priority, category: "ap",
       title:      `AP Overdue — ${vendor.name}`,
-      body:       `${invoices.length} invoice${invoices.length > 1 ? "s" : ""} overdue. ` +
-                  `Oldest: ${maxDays} days. Payment terms: ${vendor.payment_terms_days} days.`,
+      body:       `${invoices.length} invoice${invoices.length > 1 ? "s" : ""} overdue. Oldest: ${maxDays} days.`,
       drill_href: `/dashboard/payables/${vendorId}`,
       amount:     fmtAmt(totalOverdue),
       time_label: `${maxDays} days overdue`,
@@ -127,35 +110,12 @@ function buildAPAlerts(): Alert[] {
     });
   });
 
-  // Also alert on invoices due very soon (within 3 days)
-  SAMPLE_AP_INVOICES
-    .filter((inv) => inv.status === "outstanding")
-    .forEach((inv) => {
-      const days = Math.round(
-        (new Date(inv.due_date).getTime() - new Date(TODAY).getTime()) / 86400000
-      );
-      if (days <= 3 && days >= 0) {
-        const vendor = SAMPLE_VENDORS.find((v) => v.id === inv.vendor_id);
-        if (!vendor) return;
-        alerts.push({
-          id:         `ap-due-${inv.id}`,
-          priority:   days === 0 ? "critical" : "high",
-          category:   "ap",
-          title:      `AP Due Soon — ${vendor.name}`,
-          body:       `Invoice ${inv.invoice_no} for ${fmtAmt(inv.amount)} is due ${days === 0 ? "today" : `in ${days} day${days !== 1 ? "s" : ""}`}.`,
-          drill_href: `/dashboard/payables/${vendor.id}`,
-          amount:     fmtAmt(inv.amount),
-          time_label: days === 0 ? "Due TODAY" : `Due in ${days} day${days !== 1 ? "s" : ""}`,
-          days_delta: days,
-        });
-      }
-    });
-
   return alerts;
 }
 
-// ─── AR alerts ────────────────────────────────────────────────────────────────
+// ─── AR alerts — only fire when real imported data exists ─────────────────────
 function buildARAlerts(): Alert[] {
+  if (SAMPLE_AR_INVOICES.length === 0) return [];   // no data imported yet
   const alerts: Alert[] = [];
 
   const byCustomer: Record<string, typeof SAMPLE_AR_INVOICES> = {};
@@ -170,20 +130,13 @@ function buildARAlerts(): Alert[] {
 
     const totalOverdue = invoices.reduce((s, i) => s + i.amount, 0);
     const maxDays      = Math.max(...invoices.map((i) => i.days_outstanding));
-
-    let priority: AlertPriority;
-    if (maxDays >= 90)      priority = "critical";
-    else if (maxDays >= 61) priority = "high";
-    else if (maxDays >= 31) priority = "medium";
-    else                    priority = "low";
+    const priority: AlertPriority =
+      maxDays >= 90 ? "critical" : maxDays >= 61 ? "high" : maxDays >= 31 ? "medium" : "low";
 
     alerts.push({
-      id:         `ar-${customerId}`,
-      priority,
-      category:   "ar",
+      id: `ar-${customerId}`, priority, category: "ar",
       title:      `AR Overdue — ${customer.name}`,
-      body:       `${invoices.length} invoice${invoices.length > 1 ? "s" : ""} uncollected. ` +
-                  `Oldest: ${maxDays} days. Credit limit: ${fmtAmt(customer.credit_limit)}.`,
+      body:       `${invoices.length} invoice${invoices.length > 1 ? "s" : ""} uncollected. Oldest: ${maxDays} days.`,
       drill_href: `/dashboard/receivables/${customerId}`,
       amount:     fmtAmt(totalOverdue),
       time_label: `${maxDays} days overdue`,
@@ -194,21 +147,19 @@ function buildARAlerts(): Alert[] {
   return alerts;
 }
 
-// ─── Task alerts ──────────────────────────────────────────────────────────────
+// ─── Task alerts — only fire when real tasks exist ────────────────────────────
 function buildTaskAlerts(): Alert[] {
+  if (SAMPLE_TASKS.length === 0) return [];   // no tasks yet
   const alerts: Alert[] = [];
 
   SAMPLE_TASKS.forEach((task) => {
     const status = effectiveStatus(task, TODAY);
-    if (status === "completed" || status === "cancelled") return;
-
-    if (!task.due_date) return;
+    if (status === "completed" || status === "cancelled" || !task.due_date) return;
 
     const days = Math.round(
       (new Date(task.due_date).getTime() - new Date(TODAY).getTime()) / 86400000
     );
-
-    if (days > 7) return;   // only alert tasks due within 7 days or overdue
+    if (days > 7) return;
 
     let priority: AlertPriority;
     let time_label: string;
@@ -217,34 +168,28 @@ function buildTaskAlerts(): Alert[] {
       priority   = task.priority === "urgent" ? "critical" : "high";
       time_label = `${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""} OVERDUE`;
     } else if (days === 0) {
-      priority   = "high";
-      time_label = "Due TODAY";
+      priority = "high"; time_label = "Due TODAY";
     } else if (days <= 3) {
       priority   = task.priority === "urgent" || task.priority === "high" ? "high" : "medium";
       time_label = `Due in ${days} day${days !== 1 ? "s" : ""}`;
     } else {
-      priority   = "medium";
-      time_label = `Due in ${days} days`;
+      priority = "medium"; time_label = `Due in ${days} days`;
     }
 
     alerts.push({
-      id:         `task-${task.id}`,
-      priority,
-      category:   "tasks",
+      id: `task-${task.id}`, priority, category: "tasks",
       title:      task.title,
-      body:       `Assigned to: ${task.assigned_to}. Priority: ${task.priority.toUpperCase()}. ${task.description.slice(0, 100)}${task.description.length > 100 ? "…" : ""}`,
+      body:       `Assigned to: ${task.assigned_to}. ${task.description.slice(0, 100)}…`,
       drill_href: `/dashboard/tasks/${task.id}`,
-      time_label,
-      days_delta: days,
+      time_label, days_delta: days,
     });
   });
 
   return alerts;
 }
 
-// ─── Main export ──────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
-/** Returns all active alerts sorted by priority then days_delta */
 export function getAllAlerts(): Alert[] {
   const all = [
     ...buildComplianceAlerts(),
@@ -252,12 +197,9 @@ export function getAllAlerts(): Alert[] {
     ...buildARAlerts(),
     ...buildTaskAlerts(),
   ];
-
-  // Sort: critical first, then by most overdue/most urgent
   return all.sort((a, b) => {
     const pw = PRIORITY_WEIGHT[a.priority] - PRIORITY_WEIGHT[b.priority];
-    if (pw !== 0) return pw;
-    return a.days_delta - b.days_delta;   // most overdue first
+    return pw !== 0 ? pw : a.days_delta - b.days_delta;
   });
 }
 
@@ -269,60 +211,31 @@ export function alertsByCategory(cat: AlertCategory | "all"): Alert[] {
 export function alertCounts() {
   const all = getAllAlerts();
   return {
-    total:    all.length,
-    critical: all.filter((a) => a.priority === "critical").length,
-    high:     all.filter((a) => a.priority === "high").length,
-    medium:   all.filter((a) => a.priority === "medium").length,
-    low:      all.filter((a) => a.priority === "low").length,
+    total:      all.length,
+    critical:   all.filter((a) => a.priority === "critical").length,
+    high:       all.filter((a) => a.priority === "high").length,
+    medium:     all.filter((a) => a.priority === "medium").length,
+    low:        all.filter((a) => a.priority === "low").length,
     compliance: all.filter((a) => a.category === "compliance").length,
-    ap:       all.filter((a) => a.category === "ap").length,
-    ar:       all.filter((a) => a.category === "ar").length,
-    tasks:    all.filter((a) => a.category === "tasks").length,
+    ap:         all.filter((a) => a.category === "ap").length,
+    ar:         all.filter((a) => a.category === "ar").length,
+    tasks:      all.filter((a) => a.category === "tasks").length,
   };
 }
 
-/** Colour/style metadata per priority */
 export const PRIORITY_META: Record<AlertPriority, {
-  label:      string;
-  badgeCls:   string;
-  iconCls:    string;
-  borderCls:  string;
-  dotCls:     string;
+  label: string; badgeCls: string; iconCls: string; borderCls: string; dotCls: string;
 }> = {
-  critical: {
-    label:     "Critical",
-    badgeCls:  "bg-red-100 text-red-800 border-red-200",
-    iconCls:   "bg-red-100 text-red-700",
-    borderCls: "border-l-red-500",
-    dotCls:    "bg-red-500",
-  },
-  high: {
-    label:     "High",
-    badgeCls:  "bg-orange-100 text-orange-800 border-orange-200",
-    iconCls:   "bg-orange-100 text-orange-700",
-    borderCls: "border-l-orange-400",
-    dotCls:    "bg-orange-400",
-  },
-  medium: {
-    label:     "Medium",
-    badgeCls:  "bg-amber-100 text-amber-800 border-amber-200",
-    iconCls:   "bg-amber-100 text-amber-700",
-    borderCls: "border-l-amber-400",
-    dotCls:    "bg-amber-400",
-  },
-  low: {
-    label:     "Low",
-    badgeCls:  "bg-blue-100 text-blue-800 border-blue-200",
-    iconCls:   "bg-blue-100 text-blue-700",
-    borderCls: "border-l-blue-400",
-    dotCls:    "bg-blue-400",
-  },
+  critical: { label: "Critical", badgeCls: "bg-red-100 text-red-800 border-red-200",      iconCls: "bg-red-100 text-red-700",    borderCls: "border-l-red-500",    dotCls: "bg-red-500"    },
+  high:     { label: "High",     badgeCls: "bg-orange-100 text-orange-800 border-orange-200", iconCls: "bg-orange-100 text-orange-700", borderCls: "border-l-orange-400", dotCls: "bg-orange-400" },
+  medium:   { label: "Medium",   badgeCls: "bg-amber-100 text-amber-800 border-amber-200",    iconCls: "bg-amber-100 text-amber-700",  borderCls: "border-l-amber-400",  dotCls: "bg-amber-400"  },
+  low:      { label: "Low",      badgeCls: "bg-blue-100 text-blue-800 border-blue-200",       iconCls: "bg-blue-100 text-blue-700",    borderCls: "border-l-blue-400",   dotCls: "bg-blue-400"   },
 };
 
 export const CATEGORY_META_ALERTS: Record<AlertCategory, { label: string; emoji: string }> = {
-  compliance: { label: "Compliance", emoji: "📋" },
-  ap:         { label: "Payables",   emoji: "📤" },
-  ar:         { label: "Receivables",emoji: "📥" },
-  tasks:      { label: "Tasks",      emoji: "✅" },
-  banking:    { label: "Banking",    emoji: "🏦" },
+  compliance: { label: "Compliance",  emoji: "📋" },
+  ap:         { label: "Payables",    emoji: "📤" },
+  ar:         { label: "Receivables", emoji: "📥" },
+  tasks:      { label: "Tasks",       emoji: "✅" },
+  banking:    { label: "Banking",     emoji: "🏦" },
 };

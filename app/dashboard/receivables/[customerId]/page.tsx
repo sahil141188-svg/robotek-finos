@@ -182,7 +182,7 @@ export default async function CustomerDrillPage({
               <tbody className="divide-y divide-border">
                 {invoices.map((inv) => {
                   const sm    = STATUS_META[inv.status];
-                  const csm   = COLLECTION_STATUS_META[inv.collection_status];
+                  const csm   = COLLECTION_STATUS_META[(inv.collection_status ?? inv.status) as keyof typeof COLLECTION_STATUS_META];
                   const isCrit = inv.days_outstanding >= 90;
                   const isWarn = inv.days_outstanding >= 30;
                   return (

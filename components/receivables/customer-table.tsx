@@ -66,7 +66,7 @@ export function CustomerTable({ customers }: Props) {
       "90+ Days":          c.ag90plus  > 0 ? c.ag90plus  : "",
       "Total (₹)":         customerTotal(c),
       "Overdue (₹)":       customerOverdue(c),
-      "Last Payment Date": fmtD(c.last_payment_date),
+      "Last Payment Date": fmtD(c.last_payment_date ?? null),
     }));
     downloadExcel(rows, "AR_Aging_Report", "AR Aging",
       [{ wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 18 }]
@@ -182,7 +182,7 @@ export function CustomerTable({ customers }: Props) {
                     {total > 0 ? fmtAmt(total) : "—"}
                   </td>
                   <td className="px-3 py-3 text-right text-xs text-brand-gray-mid whitespace-nowrap">
-                    <div>{fmtD(c.last_payment_date)}</div>
+                    <div>{fmtD(c.last_payment_date ?? null)}</div>
                     {c.last_payment_amount && (
                       <div className="text-[10px] text-green-600">{fmtAmt(c.last_payment_amount)}</div>
                     )}
