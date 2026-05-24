@@ -19,6 +19,13 @@ export function CompanySwitcher() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  // After hydration, the selectedCompanyId may differ from the server-rendered
+  // value (server reads cookie; client may reconcile with localStorage).
+  // `hydrated` ensures we only render the final label AFTER mount so the
+  // server-rendered skeleton never mismatches the client tree.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => { setHydrated(true); }, []);
+
   // Close dropdown on outside click
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -48,9 +55,20 @@ export function CompanySwitcher() {
   // Only show active companies in the switcher — dormant / coming-soon slots clutter the list
   const activeCompanies = companies.filter(c => c.status === "active" && !c.name.includes("Coming Soon"));
 
-  const displayLabel = selectedCompanyId === null
-    ? "All Companies"
-    : (selectedCompany?.short_name ?? "Select Company");
+  // Before hydration we always render a neutral "loading" skeleton so the
+  // server HTML and first client render are identical (no hydration mismatch).
+  // After hydration the real selection is shown.
+  const displayLabel = !hydrated
+    ? " "   // non-breaking space as placeholder
+    : selectedCompanyId === null
+      ? "All Companies"
+      : (selectedCompany?.short_name ?? "Select Company");
+
+  const avatarColor = !hydrated
+    ? "bg-brand-red"
+    : selectedCompanyId === null
+      ? "bg-brand-yellow"
+      : (selectedCompany?.color_class ?? "bg-brand-red");
 
   return (
     <div ref={ref} className="relative px-3 pb-2">
@@ -63,14 +81,12 @@ export function CompanySwitcher() {
         <div
           className={cn(
             "w-6 h-6 rounded-md flex items-center justify-center shrink-0",
-            selectedCompanyId === null
-              ? "bg-brand-yellow"
-              : (selectedCompany?.color_class ?? "bg-brand-red")
+            avatarColor,
           )}
         >
-          {selectedCompanyId === null
-            ? <LayoutGrid className="w-3.5 h-3.5 text-brand-black" />
-            : <Building2 className="w-3.5 h-3.5 text-white" />
+          {(!hydrated || selectedCompanyId !== null)
+            ? <Building2 className="w-3.5 h-3.5 text-white" />
+            : <LayoutGrid className="w-3.5 h-3.5 text-brand-black" />
           }
         </div>
         <span className="flex-1 text-xs font-medium text-white truncate">{displayLabel}</span>

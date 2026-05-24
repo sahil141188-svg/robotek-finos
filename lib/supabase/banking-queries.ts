@@ -6,6 +6,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
 
 // Type definitions for bank tables (not yet in auto-generated Database type)
 interface BankAccountRow {
@@ -53,20 +54,43 @@ export interface BankAccount extends BankAccountRow {
 export type BankTransaction = BankStatementRow;
 
 /**
- * Fetch all bank accounts with latest balance
- * Orders by is_primary DESC, then by closing_balance DESC
+ * Fetch bank accounts filtered by the currently selected company.
+ * Orders by is_primary DESC, then by closing_balance DESC.
  */
 export async function fetchBankAccounts(): Promise<BankAccount[]> {
   const supabase = await createClient();
+  const companyId = await getSelectedCompanyId();
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (supabase as any)
     .from("bank_accounts")
     .select("*")
     .order("is_primary", { ascending: false })
-    .order("closing_balance", { ascending: false }) as {
-      data: BankAccountRow[] | null;
-      error: { message: string } | null;
-    };
+    .order("closing_balance", { ascending: false });
+
+  if (companyId) query = query.eq("company_id", companyId);
+
+  let { data, error } = await query as {
+    data: BankAccountRow[] | null;
+    error: { message: string; code?: string } | null;
+  };
+
+  // Pre-migration fallback: if company_id column doesn't exist yet (migration 006
+  // not applied), retry without the filter so banking page still shows all accounts.
+  if (error && (error as { code?: string }).code === "42703" && companyId) {
+    console.warn("[banking-queries] company_id column missing — run migration 006. Showing all accounts.");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fallback = await (supabase as any)
+      .from("bank_accounts")
+      .select("*")
+      .order("is_primary", { ascending: false })
+      .order("closing_balance", { ascending: false }) as {
+        data: BankAccountRow[] | null;
+        error: { message: string } | null;
+      };
+    data  = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     console.error("[banking-queries] Error fetching bank accounts:", error);
@@ -84,25 +108,47 @@ export async function fetchBankAccounts(): Promise<BankAccount[]> {
 }
 
 /**
- * Fetch all bank statements (transactions) across all accounts
- * Orders by transaction_date DESC (newest first)
- * Limit: last 100 transactions for dashboard view
+ * Fetch recent bank statements filtered by the selected company.
+ * Step 1: resolve account IDs for the company.
+ * Step 2: filter statements by those account IDs.
  */
 export async function fetchRecentBankStatements(
   limit: number = 100
 ): Promise<(BankTransaction & { bank_account_id: string; bank_name: string })[]> {
   const supabase = await createClient();
+  const companyId = await getSelectedCompanyId();
 
-  const { data, error } = await supabase
+  // Resolve account IDs for the selected company (skip if "All Companies").
+  // If the company_id column doesn't exist yet (pre-migration), treat as "All Companies".
+  let accountIds: string[] | null = null;
+  if (companyId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: accts, error: acctErr } = await (supabase as any)
+      .from("bank_accounts")
+      .select("id")
+      .eq("company_id", companyId) as {
+        data: Array<{ id: string }> | null;
+        error: { code?: string; message: string } | null;
+      };
+    if (acctErr?.code === "42703") {
+      // Migration 006 not yet applied — fall through with no account filter
+      console.warn("[banking-queries] company_id column missing — run migration 006.");
+    } else {
+      accountIds = accts?.map((a) => a.id) ?? [];
+      if (accountIds.length === 0) return []; // company has no accounts yet
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (supabase as any)
     .from("bank_statements")
-    .select(
-      `
-      *,
-      bank_account:bank_account_id(id, bank_name)
-      `
-    )
+    .select("*, bank_account:bank_account_id(id, bank_name)")
     .order("transaction_date", { ascending: false })
     .limit(limit);
+
+  if (accountIds) query = query.in("bank_account_id", accountIds);
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("[banking-queries] Error fetching bank statements:", error);
@@ -198,16 +244,42 @@ export async function fetchCashflowStats(periodStart: string, periodEnd: string)
   outflow_by_category: OutflowCategory[];
 }> {
   const supabase = await createClient();
+  const companyId = await getSelectedCompanyId();
 
-  // ── Query 1: aggregate totals in DB — no row transfer ────────────────────
-  // Supabase doesn't expose SUM() directly, so we still fetch rows but only
-  // the 3 small numeric columns (no text columns) — much cheaper than before.
-  const { data, error } = await (supabase as any)
+  // If a company is selected, scope to its account IDs.
+  // Falls through with no filter if migration 006 hasn't been applied yet.
+  let accountIds: string[] | null = null;
+  if (companyId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: accts, error: acctErr } = await (supabase as any)
+      .from("bank_accounts")
+      .select("id")
+      .eq("company_id", companyId) as {
+        data: Array<{ id: string }> | null;
+        error: { code?: string; message: string } | null;
+      };
+    if (acctErr?.code === "42703") {
+      console.warn("[banking-queries] company_id column missing — run migration 006.");
+    } else {
+      accountIds = accts?.map((a) => a.id) ?? [];
+      if (accountIds.length === 0) {
+        return { total_inflow: 0, total_outflow: 0, weekly: [], outflow_by_category: [] };
+      }
+    }
+  }
+
+  // ── Query: fetch statement rows for the period ──────────────────────────────
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let stmtQuery = (supabase as any)
     .from("bank_statements")
     .select("transaction_date, debit, credit, category")
     .gte("transaction_date", periodStart)
     .lte("transaction_date", periodEnd)
-    .order("transaction_date", { ascending: true }) as {
+    .order("transaction_date", { ascending: true });
+
+  if (accountIds) stmtQuery = stmtQuery.in("bank_account_id", accountIds);
+
+  const { data, error } = await stmtQuery as {
       data: Array<{ transaction_date: string; debit: number; credit: number; category: string | null }> | null;
       error: { message: string } | null;
     };

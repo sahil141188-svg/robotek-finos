@@ -19,14 +19,17 @@ type UserRow = Database["public"]["Tables"]["users"]["Row"];
 export function DashboardShell({
   profile,
   companies,
+  initialCompanyId,
   children,
 }: {
-  profile:   UserRow;
-  companies: Company[];
-  children:  React.ReactNode;
+  profile:          UserRow;
+  companies:        Company[];
+  /** The company ID read from the server-side cookie — ensures SSR/client agree. */
+  initialCompanyId: string | null;
+  children:         React.ReactNode;
 }) {
   return (
-    <CompanyProvider companies={companies}>
+    <CompanyProvider companies={companies} initialCompanyId={initialCompanyId}>
       <SidebarProvider>
         <ShellInner profile={profile}>{children}</ShellInner>
       </SidebarProvider>

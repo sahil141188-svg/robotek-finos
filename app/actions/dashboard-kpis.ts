@@ -17,6 +17,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
 
 export type DashboardKPI = {
   revenue: { current: number; vs_last_month_pct: number };
@@ -126,14 +127,31 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
 
+    const companyId = await getSelectedCompanyId();
     const currentFY = getCurrentFinancialYear();
     const { current: currentMonth, previous: previousMonth } = getMonthsForComparison();
 
-    // Query all transactions for current FY
-    const { data: currentFYData, error: currentError } = await supabase
+    // Query transactions for current FY, scoped to the selected company when set.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let txnQuery = (supabase as any)
       .from("transactions")
       .select("*")
-      .eq("financial_year", currentFY) as any;
+      .eq("financial_year", currentFY);
+    if (companyId) txnQuery = txnQuery.eq("company_id", companyId);
+
+    let { data: currentFYData, error: currentError } = await txnQuery;
+
+    // Pre-migration fallback: if company_id column doesn't exist, retry without filter
+    if (currentError && (currentError as { code?: string }).code === "42703" && companyId) {
+      console.warn("[dashboard-kpis] company_id column missing — run migration 006. Showing all-company data.");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fallback = await (supabase as any)
+        .from("transactions")
+        .select("*")
+        .eq("financial_year", currentFY);
+      currentFYData  = fallback.data;
+      currentError   = fallback.error;
+    }
 
     if (currentError) throw currentError;
     const transactions = (currentFYData || []) as Array<{

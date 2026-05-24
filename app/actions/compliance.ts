@@ -9,6 +9,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
 import {
   COMPLIANCE_ITEMS,
   type ComplianceItem,
@@ -38,12 +39,30 @@ export async function getComplianceItems(
 ): Promise<ComplianceItem[]> {
   try {
     const supabase = await createClient();
+    const companyId = await getSelectedCompanyId();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = supabase as any;
-    const { data } = await db
+
+    let query = db
       .from("compliance_items")
       .select("*")
-      .order("due_date", { ascending: true }) as { data: ComplianceItem[] | null };
+      .order("due_date", { ascending: true });
+    if (companyId) query = query.eq("company_id", companyId);
+
+    let { data, error: queryErr } = await query as {
+      data: ComplianceItem[] | null;
+      error: { code?: string; message: string } | null;
+    };
+
+    // Pre-migration fallback: if company_id column doesn't exist, retry without filter
+    if (queryErr && queryErr.code === "42703" && companyId) {
+      console.warn("[compliance] company_id column missing — run migration 006.");
+      const fallback = await db
+        .from("compliance_items")
+        .select("*")
+        .order("due_date", { ascending: true }) as { data: ComplianceItem[] | null };
+      data = fallback.data;
+    }
 
     if (data && data.length > 0) {
       // Merge: prefer DB status (user may have updated), rest from sample data

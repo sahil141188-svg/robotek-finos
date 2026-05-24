@@ -19,6 +19,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
 import type { BankAccountMetadata } from "./parsers/types";
 import type { RawRow } from "@/lib/import-utils";
 
@@ -40,6 +41,7 @@ interface BankAccountInsert {
   currency?: string;
   is_primary?: boolean;
   import_id?: string;
+  company_id?: string | null;
 }
 
 interface BankStatementInsert {
@@ -93,6 +95,22 @@ export async function importBankStatement(
     };
   }
 
+  // Read the company the user currently has selected in the switcher.
+  // null = "All Companies" — fall back to the first company in the DB.
+  const selectedCompanyId = await getSelectedCompanyId();
+
+  // If "All Companies" (null), try to resolve the primary company automatically.
+  let companyId: string | null = selectedCompanyId;
+  if (!companyId) {
+    const { data: firstCompany } = await (supabase as any)
+      .from("companies")
+      .select("id")
+      .order("sort_order", { ascending: true })
+      .limit(1)
+      .maybeSingle() as { data: { id: string } | null };
+    companyId = firstCompany?.id ?? null;
+  }
+
   const errors: string[] = [];
 
   // ── Create file_imports audit record ──────────────────────────────────────
@@ -114,6 +132,7 @@ export async function importBankStatement(
       rows_failed: 0,
       financial_year: financialYear,
       can_rollback: true,
+      ...(companyId ? { company_id: companyId } : {}),
     })
     .select("id")
     .single();
@@ -178,6 +197,8 @@ export async function importBankStatement(
           currency: bankMetadata.currency || "INR",
           is_primary: false,
           import_id: importId,
+          // Tag with the currently selected company so data is isolated per subsidiary.
+          ...(companyId ? { company_id: companyId } : {}),
         };
 
         const { data: acctData, error: acctErr } = await db

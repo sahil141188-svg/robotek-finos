@@ -10,6 +10,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
 import type { TaskStatus, TaskPriority, TaskModule } from "@/lib/tasks-data";
 import type { Database } from "@/types/database";
 
@@ -38,7 +39,8 @@ export async function createTask(
   if (!user) return { success: false, message: "Not authenticated" };
 
   // assigned_to: prefer registered user UUID, fall back to manual name string
-  const assignedTo = payload.assigned_to_user_id ?? payload.assigned_to_name ?? null;
+  const assignedTo  = payload.assigned_to_user_id ?? payload.assigned_to_name ?? null;
+  const companyId   = await getSelectedCompanyId();
 
   const insert: TaskInsert = {
     title:               payload.title,
@@ -50,7 +52,9 @@ export async function createTask(
     due_date:            payload.due_date ?? null,
     module:              payload.module ?? "general",
     compliance_item_id:  payload.compliance_item_id ?? null,
-  };
+    // Tag task with the currently selected company for data isolation.
+    ...(companyId ? { company_id: companyId } : {}),
+  } as TaskInsert & { company_id?: string };
 
   const { data, error } = await db
     .from("tasks")

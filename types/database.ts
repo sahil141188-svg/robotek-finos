@@ -128,6 +128,7 @@ export type Database = {
           narration: string | null;
           financial_year: string;
           import_id: string | null;
+          company_id: string;
           created_at: string;
         };
         Insert: {
@@ -141,6 +142,7 @@ export type Database = {
           narration?: string | null;
           financial_year: string;
           import_id?: string | null;
+          company_id?: string;
           created_at?: string;
         };
         Update: {
@@ -153,6 +155,7 @@ export type Database = {
           narration?: string | null;
           financial_year?: string;
           import_id?: string | null;
+          company_id?: string;
         };
       };
       vendors: {
@@ -166,6 +169,7 @@ export type Database = {
           email: string | null;
           payment_terms_days: number;
           is_active: boolean;
+          company_id: string;
           created_at: string;
           updated_at: string;
         };
@@ -179,6 +183,7 @@ export type Database = {
           email?: string | null;
           payment_terms_days?: number;
           is_active?: boolean;
+          company_id?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -191,6 +196,7 @@ export type Database = {
           email?: string | null;
           payment_terms_days?: number;
           is_active?: boolean;
+          company_id?: string;
           updated_at?: string;
         };
       };
@@ -206,6 +212,7 @@ export type Database = {
           credit_limit: number;
           payment_terms_days: number;
           is_active: boolean;
+          company_id: string;
           created_at: string;
           updated_at: string;
         };
@@ -220,6 +227,7 @@ export type Database = {
           credit_limit?: number;
           payment_terms_days?: number;
           is_active?: boolean;
+          company_id?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -233,6 +241,7 @@ export type Database = {
           credit_limit?: number;
           payment_terms_days?: number;
           is_active?: boolean;
+          company_id?: string;
           updated_at?: string;
         };
       };
@@ -252,6 +261,7 @@ export type Database = {
           notes: string | null;
           is_recurring: boolean;
           recurrence_rule: string | null;
+          company_id: string;
           created_at: string;
           updated_at: string;
         };
@@ -270,6 +280,7 @@ export type Database = {
           notes?: string | null;
           is_recurring?: boolean;
           recurrence_rule?: string | null;
+          company_id?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -287,6 +298,7 @@ export type Database = {
           notes?: string | null;
           is_recurring?: boolean;
           recurrence_rule?: string | null;
+          company_id?: string;
           updated_at?: string;
         };
       };
@@ -303,6 +315,7 @@ export type Database = {
           completed_at: string | null;
           compliance_item_id: string | null;
           module: string | null;
+          company_id: string;
           created_at: string;
           updated_at: string;
         };
@@ -318,6 +331,7 @@ export type Database = {
           completed_at?: string | null;
           compliance_item_id?: string | null;
           module?: string | null;
+          company_id?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -332,6 +346,7 @@ export type Database = {
           completed_at?: string | null;
           compliance_item_id?: string | null;
           module?: string | null;
+          company_id?: string;
           updated_at?: string;
         };
       };
@@ -349,6 +364,7 @@ export type Database = {
           financial_year: string;
           can_rollback: boolean;
           rolled_back_at: string | null;
+          company_id: string | null;
           created_at: string;
           completed_at: string | null;
         };
@@ -365,6 +381,7 @@ export type Database = {
           financial_year: string;
           can_rollback?: boolean;
           rolled_back_at?: string | null;
+          company_id?: string | null;
           created_at?: string;
           completed_at?: string | null;
         };
@@ -375,6 +392,7 @@ export type Database = {
           error_log?: string | null;
           can_rollback?: boolean;
           rolled_back_at?: string | null;
+          company_id?: string | null;
           completed_at?: string | null;
         };
       };
