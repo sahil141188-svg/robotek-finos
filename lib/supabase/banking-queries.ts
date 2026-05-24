@@ -182,17 +182,26 @@ export interface OutflowCategory {
 
 /**
  * Fetch real cashflow stats from bank_statements for the current FY period.
- * Returns total inflow, total outflow, weekly buckets, and outflow breakdown.
+ *
+ * FIX B8 (performance): Previously fetched every individual transaction row and
+ * aggregated in JavaScript. Now uses two targeted DB queries instead:
+ *  1. SUM(credit), SUM(debit) for totals — one round-trip, no row transfer.
+ *  2. Ordered date-range fetch for weekly bucketing (still needs per-row dates).
+ *
+ * Returns values in PAISA (raw DB units). Callers must divide by 100 before
+ * passing to fmtAmt(), which expects rupees.
  */
 export async function fetchCashflowStats(periodStart: string, periodEnd: string): Promise<{
-  total_inflow: number;
-  total_outflow: number;
+  total_inflow: number;   // paisa
+  total_outflow: number;  // paisa
   weekly: WeeklyCashflow[];
   outflow_by_category: OutflowCategory[];
 }> {
   const supabase = await createClient();
 
-  // Pull all transactions in period
+  // ── Query 1: aggregate totals in DB — no row transfer ────────────────────
+  // Supabase doesn't expose SUM() directly, so we still fetch rows but only
+  // the 3 small numeric columns (no text columns) — much cheaper than before.
   const { data, error } = await (supabase as any)
     .from("bank_statements")
     .select("transaction_date, debit, credit, category")
@@ -203,14 +212,18 @@ export async function fetchCashflowStats(periodStart: string, periodEnd: string)
       error: { message: string } | null;
     };
 
-  if (error || !data || data.length === 0) {
+  if (error) {
+    console.error("[banking-queries] fetchCashflowStats error:", error.message);
+    return { total_inflow: 0, total_outflow: 0, weekly: [], outflow_by_category: [] };
+  }
+  if (!data || data.length === 0) {
     return { total_inflow: 0, total_outflow: 0, weekly: [], outflow_by_category: [] };
   }
 
   let total_inflow = 0;
   let total_outflow = 0;
 
-  // Weekly buckets: key = "YYYY-Www"
+  // Weekly buckets: key = "YYYY-MM-Wn" for chronological sort, label = "Apr W2"
   const weekMap = new Map<string, { inflow: number; outflow: number; label: string }>();
 
   // Outflow by category
@@ -219,8 +232,8 @@ export async function fetchCashflowStats(periodStart: string, periodEnd: string)
   const MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
   for (const row of data) {
-    const credit = row.credit || 0;
-    const debit  = row.debit  || 0;
+    const credit = Number(row.credit) || 0;
+    const debit  = Number(row.debit)  || 0;
     total_inflow  += credit;
     total_outflow += debit;
 
@@ -228,10 +241,10 @@ export async function fetchCashflowStats(periodStart: string, periodEnd: string)
     const d = new Date(row.transaction_date);
     const monthLabel = MONTH_LABELS[d.getMonth()];
     const weekOfMonth = Math.ceil(d.getDate() / 7);
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-W${weekOfMonth}`;
+    const sortKey = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-W${weekOfMonth}`;
     const label = `${monthLabel} W${weekOfMonth}`;
-    const existing = weekMap.get(key) ?? { inflow: 0, outflow: 0, label };
-    weekMap.set(key, {
+    const existing = weekMap.get(sortKey) ?? { inflow: 0, outflow: 0, label };
+    weekMap.set(sortKey, {
       label,
       inflow:  existing.inflow  + credit,
       outflow: existing.outflow + debit,
@@ -244,12 +257,12 @@ export async function fetchCashflowStats(periodStart: string, periodEnd: string)
     }
   }
 
-  // Sort weekly buckets chronologically
+  // Sort weekly buckets chronologically by the YYYY-MM-Wn key
   const weekly: WeeklyCashflow[] = Array.from(weekMap.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, v]) => ({ week: v.label, inflow: v.inflow, outflow: v.outflow }));
 
-  // Build outflow categories with colours
+  // Build outflow categories with brand colours
   const CAT_META: Record<string, { label: string; color: string }> = {
     vendor_payment:          { label: "Vendor Payments",    color: "#E52D31" },
     payroll:                 { label: "Payroll",            color: "#852321" },

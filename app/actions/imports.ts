@@ -123,7 +123,8 @@ export async function deleteImport(importId: string): Promise<void> {
   }
 
   // 1. Delete linked data depending on module
-  if ((imp as any).module === "bank_statement") {
+  // NOTE: banking imports are stored with module = "banking" (not "bank_statement")
+  if ((imp as any).module === "banking") {
     // bank_statements cascade-deletes when bank_account is deleted
     const { error: baErr } = await admin
       .from("bank_accounts")

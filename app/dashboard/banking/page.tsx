@@ -120,7 +120,7 @@ export default async function BankingPage() {
           <KpiTile
             icon={<TrendingUp className="w-5 h-5 text-green-600" />}
             label={`Total Inflow (${fyStart.slice(0,7).replace("-","/")})`}
-            value={fmtAmt(total_inflow)}
+            value={fmtAmt(total_inflow / 100)}
             sub="customer receipts + interest"
             className="bg-green-50 border-green-200"
             valueClass="text-green-700"
@@ -128,7 +128,7 @@ export default async function BankingPage() {
           <KpiTile
             icon={<Banknote className="w-5 h-5 text-red-600" />}
             label={`Total Outflow (${fyStart.slice(0,7).replace("-","/")})`}
-            value={fmtAmt(total_outflow)}
+            value={fmtAmt(total_outflow / 100)}
             sub="vendors, payroll, taxes"
             className="bg-red-50 border-red-200"
             valueClass="text-red-700"
@@ -219,7 +219,7 @@ export default async function BankingPage() {
                     <div key={cat.category}>
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-brand-gray-mid">{cat.label}</span>
-                        <span className="font-semibold text-brand-black">{fmtAmt(cat.total_out)}</span>
+                        <span className="font-semibold text-brand-black">{fmtAmt(cat.total_out / 100)}</span>
                       </div>
                       <div className="h-2 bg-brand-gray-light rounded-full overflow-hidden">
                         <div

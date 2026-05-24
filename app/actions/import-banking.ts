@@ -9,6 +9,12 @@
  * Imports:
  * 1. Bank account metadata (bank_accounts table)
  * 2. Individual transactions (bank_statements table)
+ *
+ * Unit contract (IMPORTANT — do not change without updating all parsers):
+ *   BankAccountMetadata.openingBalance / closingBalance → already in PAISA
+ *     (parsers call `amount * 100` before setting these fields)
+ *   RawRow.Debit / Credit / Balance → in RUPEES (raw from PDF text)
+ *     (import-banking converts to paisa with * 100 before storing)
  */
 
 import { createClient } from "@/lib/supabase/server";
@@ -101,7 +107,9 @@ export async function importBankStatement(
       status: "processing",
       rows_imported: 0,
       rows_failed: 0,
-      financial_year: new Date().getFullYear() > 3 ? `${new Date().getFullYear() - 1}-${new Date().getFullYear().toString().slice(-2)}` : "2025-26",
+      financial_year: new Date().getFullYear() > 3
+        ? `${new Date().getFullYear() - 1}-${new Date().getFullYear().toString().slice(-2)}`
+        : "2025-26",
       can_rollback: true,
     })
     .select("id")
@@ -130,41 +138,62 @@ export async function importBankStatement(
       const accountNumber = bankMetadata.accountNumber || "UNKNOWN";
       const last4 = accountNumber.slice(-4) || "0000";
 
-      const insertData: BankAccountInsert = {
-        bank_name: bankMetadata.bankName,
-        account_number: accountNumber,
-        account_number_last4: last4,
-        account_type: bankMetadata.accountType || "current",
-        account_holder_name: bankMetadata.accountHolderName,
-        ifsc_code: bankMetadata.ifscCode,
-        micr_code: bankMetadata.micrCode,
-        branch: bankMetadata.branch,
-        opening_balance: Math.round((bankMetadata.openingBalance || 0) * 100), // Convert to paisa
-        closing_balance: Math.round((bankMetadata.closingBalance || 0) * 100),
-        period_start: bankMetadata.periodStart,
-        period_end: bankMetadata.periodEnd,
-        statement_date: bankMetadata.statementDate || bankMetadata.periodEnd,
-        currency: bankMetadata.currency || "INR",
-        is_primary: false,
-        import_id: importId,
-      };
-
-      const { data: acctData, error: acctErr } = await db
+      // FIX B6: Check for an existing account with the same account number before inserting.
+      // The DB unique constraint is (account_number, import_id) — NOT per account_number alone —
+      // so re-uploading the same statement would create a duplicate without this guard.
+      const { data: existingAcct } = await db
         .from("bank_accounts")
-        .insert(insertData)
         .select("id")
-        .single();
+        .eq("account_number", accountNumber)
+        .maybeSingle();
 
-      if (acctErr) {
-        errors.push(`Failed to import bank account: ${acctErr.message}`);
-      } else if (acctData) {
-        bankAccountId = acctData.id;
-        accountsImported = 1;
-        console.log("[import-banking] ✓ Imported bank account:", {
-          id: bankAccountId,
-          bank: bankMetadata.bankName,
-          account: accountNumber.slice(-4),
-        });
+      if (existingAcct) {
+        // Account already imported — reuse it for the new transactions
+        bankAccountId = existingAcct.id;
+        accountsImported = 0; // not a new account
+        console.log("[import-banking] Account already exists, reusing id:", bankAccountId);
+      } else {
+        const insertData: BankAccountInsert = {
+          bank_name: bankMetadata.bankName,
+          account_number: accountNumber,
+          account_number_last4: last4,
+          // FIX B2: Parsers return "CURRENT" / "SAVINGS" (uppercase).
+          // UI lookup table uses lowercase keys ("current", "savings").
+          // Normalise here to prevent "Unknown" showing in account cards.
+          account_type: (bankMetadata.accountType || "current").toLowerCase(),
+          account_holder_name: bankMetadata.accountHolderName,
+          ifsc_code: bankMetadata.ifscCode,
+          micr_code: bankMetadata.micrCode,
+          branch: bankMetadata.branch,
+          // FIX B5: Parsers ALREADY return values in paisa (they do `amount * 100` inside).
+          // Do NOT multiply by 100 again — that inflates balances 100×.
+          opening_balance: Math.round(bankMetadata.openingBalance || 0),
+          closing_balance: Math.round(bankMetadata.closingBalance || 0),
+          period_start: bankMetadata.periodStart,
+          period_end: bankMetadata.periodEnd,
+          statement_date: bankMetadata.statementDate || bankMetadata.periodEnd,
+          currency: bankMetadata.currency || "INR",
+          is_primary: false,
+          import_id: importId,
+        };
+
+        const { data: acctData, error: acctErr } = await db
+          .from("bank_accounts")
+          .insert(insertData)
+          .select("id")
+          .single();
+
+        if (acctErr) {
+          errors.push(`Failed to import bank account: ${acctErr.message}`);
+        } else if (acctData) {
+          bankAccountId = acctData.id;
+          accountsImported = 1;
+          console.log("[import-banking] ✓ Imported bank account:", {
+            id: bankAccountId,
+            bank: bankMetadata.bankName,
+            account: accountNumber.slice(-4),
+          });
+        }
       }
     } catch (err) {
       errors.push(`Error importing bank account: ${err instanceof Error ? err.message : String(err)}`);
@@ -177,15 +206,22 @@ export async function importBankStatement(
     try {
       const statements: BankStatementInsert[] = transactions
         .map((txn) => {
-          const debit = typeof txn.Debit === "number" ? txn.Debit : (txn.Debit ? parseFloat(String(txn.Debit).replace(/[^0-9.]/g, "")) : 0);
-          const credit = typeof txn.Credit === "number" ? txn.Credit : (txn.Credit ? parseFloat(String(txn.Credit).replace(/[^0-9.]/g, "")) : 0);
-          const balance = typeof txn.Balance === "number" ? txn.Balance : (txn.Balance ? parseFloat(String(txn.Balance).replace(/[^0-9.]/g, "")) : 0);
+          // Transactions come in as RUPEES from parse-pdf.ts — convert to paisa here
+          const debit = typeof txn.Debit === "number"
+            ? txn.Debit
+            : (txn.Debit ? parseFloat(String(txn.Debit).replace(/[^0-9.]/g, "")) : 0);
+          const credit = typeof txn.Credit === "number"
+            ? txn.Credit
+            : (txn.Credit ? parseFloat(String(txn.Credit).replace(/[^0-9.]/g, "")) : 0);
+          const balance = typeof txn.Balance === "number"
+            ? txn.Balance
+            : (txn.Balance ? parseFloat(String(txn.Balance).replace(/[^0-9.]/g, "")) : 0);
 
           return {
             bank_account_id: bankAccountId,
             transaction_date: txn.Date || new Date().toISOString().split("T")[0],
             description: String(txn.Description || ""),
-            debit: Math.round(debit * 100), // Convert to paisa
+            debit: Math.round(debit * 100),   // rupees → paisa
             credit: Math.round(credit * 100),
             balance: Math.round(balance * 100),
             import_id: importId,
@@ -214,10 +250,11 @@ export async function importBankStatement(
 
   // ── Update import record ──────────────────────────────────────────────────
 
+  // FIX B3: Both branches previously said "completed" — errors were silently swallowed.
   const { error: updateErr } = await db
     .from("file_imports")
     .update({
-      status: errors.length === 0 ? "completed" : "completed",
+      status: errors.length === 0 ? "completed" : "failed",
       rows_imported: accountsImported + transactionsImported,
       rows_failed: errors.length,
       error_log: errors.length > 0 ? errors.join("\n") : null,
@@ -229,11 +266,12 @@ export async function importBankStatement(
     console.error("[import-banking] Failed to update import record:", updateErr);
   }
 
-  // Revalidate banking dashboard
+  // Revalidate banking dashboard and imports list
   revalidatePath("/dashboard/banking");
+  revalidatePath("/dashboard/imports");
 
   return {
-    success: errors.length === 0 && accountsImported > 0,
+    success: errors.length === 0 && (accountsImported > 0 || transactionsImported > 0),
     importId,
     bankAccountId,
     accountsImported,

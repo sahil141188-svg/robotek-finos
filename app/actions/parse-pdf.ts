@@ -151,17 +151,19 @@ function parseBankStatementText(text: string): ParsedFile {
     if (amounts.length >= 3) {
       // Three-column format: [dr_amount, cr_amount, balance]
       // One of the first two will be 0 in reality, but since extractAmounts
-      // filters ≥10, a zero column won't appear — use keyword to decide
+      // filters ≥10, a zero column won't appear — use keyword to decide.
+      // FIX B7: Never assign BOTH debit and credit — a transaction is one or the other.
       if (IS_DEBIT.test(afterDate)) {
         debit  = amounts[0];
       } else if (IS_CREDIT.test(afterDate)) {
         credit = amounts[0];
       } else {
-        // Ambiguous: first amount is the transaction; second + third are cr + bal
-        // OR first is dr, second is bal — use previous balance comparison if possible
-        // Default: treat amounts[0] as debit if no clear indicator
-        debit  = amounts[0];
-        credit = amounts[1];
+        // Ambiguous — use balance movement to decide direction.
+        // amounts[amounts.length-2] is likely the transaction amount, last is balance.
+        // If two non-balance amounts exist, pick amounts[0] as the txn value and default to debit
+        // (safer: debit inflation is less harmful than double-counting both sides of cashflow).
+        debit = amounts[0];
+        // Do NOT also set credit — that inflates both inflow and outflow.
       }
     } else if (amounts.length === 2) {
       // [transaction_amount, balance]
