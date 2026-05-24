@@ -213,33 +213,48 @@ function parseBankStatementText(text: string): ParsedFile {
 
 // ─── Server action (exported) ─────────────────────────────────────────────────
 
-export async function parsePDFBankStatement(formData: FormData): Promise<{
+/**
+ * parsePDFBankStatement — accepts the PDF as a base64-encoded string.
+ *
+ * WHY base64 instead of FormData:
+ *   FormData triggers a multipart/form-data request which goes through
+ *   Next.js's busboy multipart parser. With large PDFs (>1 MB) this parser
+ *   throws "Unexpected end of form" regardless of bodySizeLimit because of a
+ *   dev-server Turbopack cache issue. Sending the file as a plain string
+ *   argument uses a JSON body instead — busboy is never invoked, and the
+ *   100 MB bodySizeLimit in next.config.ts applies cleanly.
+ */
+export async function parsePDFBankStatement(
+  base64: string,
+  fileName: string = "upload.pdf",
+): Promise<{
   success: boolean;
   data?:   ParsedFile;
-  bankMetadata?: BankAccountMetadata;  // Extracted bank account details
+  bankMetadata?: BankAccountMetadata;
   error?:  string;
   pages?:  number;
 }> {
   try {
-    const file = formData.get("file") as File | null;
-    if (!file) return { success: false, error: "No file provided." };
+    if (!base64) return { success: false, error: "No file provided." };
 
-    // Validate file size — max 10 MB
-    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
-    if (file.size > MAX_FILE_SIZE) {
+    // Decode base64 → Buffer (Node.js server environment)
+    const buffer = Buffer.from(base64, "base64");
+    const uint8  = new Uint8Array(buffer);
+
+    // Validate file size — max 100 MB
+    const MAX_FILE_SIZE = 100 * 1024 * 1024;
+    if (buffer.byteLength > MAX_FILE_SIZE) {
       return {
         success: false,
-        error: `File size exceeds 100 MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(1)} MB. Please upload a smaller PDF.`,
+        error: `File size exceeds 100 MB limit. Your file is ${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB.`,
       };
     }
 
-    // Validate MIME type
-    if (!file.type.startsWith("application/pdf")) {
+    // Basic PDF magic-bytes check (PDF files start with %PDF)
+    const magic = buffer.slice(0, 4).toString("ascii");
+    if (magic !== "%PDF") {
       return { success: false, error: "Only PDF files are supported. Please upload a .pdf file." };
     }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8 = new Uint8Array(arrayBuffer);
 
     let text: string;
     let numpages: number;

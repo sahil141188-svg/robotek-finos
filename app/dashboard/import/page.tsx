@@ -94,10 +94,19 @@ export default function ImportPage() {
     startParsing(async () => {
       try {
         if (fileIsPDF) {
-          // PDF: send to server action — pdf-parse only runs on Node.js
-          const fd = new FormData();
-          fd.set("file", f);
-          const res = await parsePDFBankStatement(fd);
+          // PDF: encode to base64 then call server action.
+          // Using base64 string (not FormData) so the request is sent as JSON,
+          // bypassing Next.js's busboy multipart parser which breaks on large files.
+          const arrayBuffer = await f.arrayBuffer();
+          const uint8 = new Uint8Array(arrayBuffer);
+          // Build base64 in chunks to avoid call-stack overflow on large files
+          let binary = "";
+          const CHUNK = 8192;
+          for (let i = 0; i < uint8.length; i += CHUNK) {
+            binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
+          }
+          const base64 = btoa(binary);
+          const res = await parsePDFBankStatement(base64, f.name);
           if (!res.success || !res.data) {
             throw new Error(res.error ?? "PDF parsing failed.");
           }
