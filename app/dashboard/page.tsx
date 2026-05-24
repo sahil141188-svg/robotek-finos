@@ -105,9 +105,11 @@ function computeHealthScore(kpi: KpiSummary): number {
   return Math.max(0, Math.min(100, score));
 }
 
-/** Format a Lakhs value for display in a KPI tile (kpi values are in Lakhs) */
+/** Format a Lakhs value for display in a KPI tile (kpi values are in Lakhs).
+ *  Guards against: NaN, Infinity, -0, and tiny floating-point noise (< ₹500 → show "—") */
 function fmtL(lakhs: number): string {
-  if (lakhs === 0) return "—";
+  if (!isFinite(lakhs) || Math.abs(lakhs) < 0.005) return "—";
+  if (lakhs < 0) return `−${fmtL(-lakhs)}`;
   if (lakhs >= 100) return `₹${(lakhs / 100).toFixed(2)} Cr`;
   if (lakhs >= 1)   return `₹${lakhs.toFixed(2)}L`;
   return `₹${(lakhs * 100).toFixed(0)}K`;

@@ -13,7 +13,8 @@ import { TrendingUp, AlertTriangle, Clock, Users } from "lucide-react";
 
 export default function ReceivablesPage() {
   const { total, overdue, avg_dso, customers, bucket0to30, bucket31to60, bucket61to90, bucket90plus } = AR_SUMMARY;
-  const overduePercent = Math.round((overdue / total) * 100);
+  // Guard against division by zero when no data imported yet
+  const overduePercent = total > 0 ? Math.round((overdue / total) * 100) : 0;
 
   return (
     <>
@@ -98,7 +99,8 @@ function KpiTile({ icon, label, value, sub, className, valueClass = "text-brand-
 function AgingBar({ label, value, total, color, textClass }: {
   label: string; value: number; total: number; color: string; textClass: string;
 }) {
-  const pct = Math.round((value / total) * 100);
+  // Guard against division by zero when no data imported yet
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
     <div className="flex items-center gap-3">
       <span className="text-xs font-medium text-brand-gray-mid w-24 shrink-0">{label}</span>

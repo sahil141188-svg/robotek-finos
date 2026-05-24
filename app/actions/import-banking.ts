@@ -97,6 +97,11 @@ export async function importBankStatement(
 
   // ── Create file_imports audit record ──────────────────────────────────────
 
+  // FIX N12: Correct FY calculation (Apr-Mar). Old code: getFullYear() > 3 is always true.
+  const _now = new Date();
+  const _fyStart = _now.getMonth() >= 3 ? _now.getFullYear() : _now.getFullYear() - 1;
+  const financialYear = `${_fyStart}-${String(_fyStart + 1).slice(-2)}`;
+
   const { data: importRecord, error: importErr } = await db
     .from("file_imports")
     .insert({
@@ -107,14 +112,7 @@ export async function importBankStatement(
       status: "processing",
       rows_imported: 0,
       rows_failed: 0,
-      // FIX N12: Correct FY calculation. FY runs Apr-Mar.
-      // Apr 2026 → Mar 2027 = "2026-27". Jan 2026 → Mar 2026 = "2025-26".
-      // Old code: getFullYear() > 3 is always true → always used wrong branch.
-      financial_year: (() => {
-        const now = new Date();
-        const fyStart = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-        return `${fyStart}-${String(fyStart + 1).slice(-2)}`;
-      })(),
+      financial_year: financialYear,
       can_rollback: true,
     })
     .select("id")
