@@ -199,7 +199,10 @@ export default async function BankingPage() {
             {fyStart.slice(0,10)} – {fyEnd}
           </p>
           {weekly.length > 0 ? (
-            <CashflowChart data={weekly} />
+            // FIX N14: weekly inflow/outflow come from fetchCashflowStats in paisa.
+            // CashflowChart.formatK expects rupees — divide by 100 here, consistent
+            // with how total_inflow/total_outflow KPI tiles are handled above.
+            <CashflowChart data={weekly.map(w => ({ ...w, inflow: w.inflow / 100, outflow: w.outflow / 100 }))} />
           ) : (
             <div className="h-40 flex items-center justify-center text-xs text-brand-gray-mid">
               No transactions yet — import a bank statement to see cash flow
