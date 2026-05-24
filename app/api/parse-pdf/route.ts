@@ -11,6 +11,9 @@
  *   bypassing that limit. On Vercel production, large PDFs (up to 100 MB)
  *   upload successfully through this endpoint.
  *
+ * Parsing logic lives in lib/parse-bank-statement.ts (shared with the Server
+ * Action at app/actions/parse-pdf.ts) so fixes only need to be applied once.
+ *
  * Client usage:
  *   const res = await fetch('/api/parse-pdf', {
  *     method: 'POST',
@@ -21,132 +24,14 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import type { ParsedFile, RawRow } from "@/lib/import-utils";
 import type { BankAccountMetadata } from "@/app/actions/parsers/types";
 import { extractBankAccountMetadata } from "@/app/actions/parsers";
+import { parseBankStatementText } from "@/lib/parse-bank-statement";
 import { writeFileSync, unlinkSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 
-// Route segment config — disable body parsing so we can read raw binary
 export const dynamic = "force-dynamic";
-
-// ─── Date helpers ──────────────────────────────────────────────────────────────
-
-const MONTH_NUM: Record<string, string> = {
-  jan: "01", feb: "02", mar: "03", apr: "04", may: "05", jun: "06",
-  jul: "07", aug: "08", sep: "09", oct: "10", nov: "11", dec: "12",
-};
-
-function normaliseDate(raw: string): string | null {
-  const m1 = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-  if (m1) {
-    let y = m1[3];
-    if (y.length === 2) y = parseInt(y) > 50 ? `19${y}` : `20${y}`;
-    return `${y}-${m1[2].padStart(2, "0")}-${m1[1].padStart(2, "0")}`;
-  }
-  const m2 = raw.match(/^(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{4})$/i);
-  if (m2) {
-    return `${m2[3]}-${MONTH_NUM[m2[2].toLowerCase()]}-${m2[1].padStart(2, "0")}`;
-  }
-  return null;
-}
-
-function extractAmounts(text: string): number[] {
-  const matches = text.match(/\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?/g) ?? [];
-  return matches
-    .map((s) => parseFloat(s.replace(/,/g, "")))
-    .filter((n) => !isNaN(n) && n >= 10);
-}
-
-const DATE_PATTERNS: RegExp[] = [
-  /^(\d{2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+\d{4})\b/i,
-  /^(\d{2}\/\d{2}\/\d{4})\b/,
-  /^(\d{2}-\d{2}-\d{4})\b/,
-  /^(\d{2}\.\d{2}\.\d{4})\b/,
-  /^(\d{1,2}\/\d{1,2}\/\d{4})\b/,
-  /^(\d{2}\/\d{2}\/\d{2})\s/,
-];
-
-const HEADER_RE = /\b(date|narration|description|withdrawal|deposit|debit|credit|balance|particulars|chq|ref\.?\s*no|value\s+dt|trans\s*type)\b/i;
-const IS_DEBIT  = /\b(dr|debit|withdrawal|payment|paid|neft\s+dr|upi\s+dr|imps\s+dr|rtgs\s+dr|atm|ecs\s+dr|pos\s+)\b/i;
-const IS_CREDIT = /\b(cr|credit|deposit|received|neft\s+cr|upi\s+cr|imps\s+cr|rtgs\s+cr|salary|interest|refund|ecs\s+cr)\b/i;
-
-function parseBankStatementText(text: string): ParsedFile {
-  const lines = text.split("\n").map((l) => l.trim()).filter((l) => l.length > 3);
-  const transactions: RawRow[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    let dateRaw: string | null = null;
-    let dateLen = 0;
-    for (const pat of DATE_PATTERNS) {
-      const m = line.match(pat);
-      if (m) { dateRaw = m[1]; dateLen = m[0].length; break; }
-    }
-    if (!dateRaw) continue;
-
-    const rest = line.slice(dateLen).trim();
-    if (HEADER_RE.test(rest) && rest.split(/\s+/).length < 6) continue;
-
-    const isoDate = normaliseDate(dateRaw);
-    if (!isoDate) continue;
-
-    let fullLine = line;
-    if (i + 1 < lines.length) {
-      const nextLine = lines[i + 1];
-      const nextHasDate = DATE_PATTERNS.some((p) => nextLine.match(p));
-      if (!nextHasDate && /^[A-Za-z]/.test(nextLine) && nextLine.length < 60) {
-        fullLine = line + " " + nextLine;
-        i++;
-      }
-    }
-
-    const afterDate = fullLine.slice(dateLen);
-    const amounts   = extractAmounts(afterDate);
-    if (amounts.length === 0) continue;
-
-    const balance = amounts[amounts.length - 1];
-    let debit = 0, credit = 0;
-
-    if (amounts.length >= 3) {
-      if (IS_DEBIT.test(afterDate))        debit  = amounts[0];
-      else if (IS_CREDIT.test(afterDate))  credit = amounts[0];
-      else                                  debit  = amounts[0];
-    } else if (amounts.length === 2) {
-      const txnAmt = amounts[0];
-      if (IS_CREDIT.test(afterDate))       credit = txnAmt;
-      else if (IS_DEBIT.test(afterDate))   debit  = txnAmt;
-      else                                  credit = txnAmt;
-    } else {
-      continue;
-    }
-
-    const firstNumPos = afterDate.search(/\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?/);
-    const raw_desc = firstNumPos > 2
-      ? afterDate.slice(0, firstNumPos)
-      : afterDate.replace(/\d[\d,\.]+/g, "");
-    const description = raw_desc.replace(/\s+/g, " ").replace(/[|\/\\]+/g, " ").trim();
-    if (description.length < 2) continue;
-
-    transactions.push({
-      Date:        isoDate,
-      Description: description,
-      Debit:       debit  > 0 ? debit  : "",
-      Credit:      credit > 0 ? credit : "",
-      Balance:     balance,
-    });
-  }
-
-  return {
-    headers:   ["Date", "Description", "Debit", "Credit", "Balance"],
-    rows:      transactions,
-    sheetName: "Bank Statement (PDF)",
-    totalRows: transactions.length,
-  };
-}
-
-// ─── Route Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
   try {
@@ -228,6 +113,7 @@ export async function POST(req: NextRequest) {
       }, { status: 422 });
     }
 
+    // Use shared parser — correctly handles NEFT/RTGS reference number fragments
     const parsed = parseBankStatementText(text);
 
     let bankMetadata: BankAccountMetadata | null = null;
