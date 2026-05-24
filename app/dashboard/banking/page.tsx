@@ -144,7 +144,9 @@ export default async function BankingPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {bankAccounts.map((acct) => {
-              const Icon = ACCOUNT_TYPE_ICON[acct.account_type] ?? Landmark;
+              // Normalise account_type to lowercase so legacy "CURRENT"/"SAVINGS" still resolves correctly
+              const accountTypeKey = (acct.account_type || "").toLowerCase() as keyof typeof ACCOUNT_TYPE_LABEL;
+              const Icon = ACCOUNT_TYPE_ICON[accountTypeKey] ?? Landmark;
               const opening = (acct.opening_balance || 0) / 100;
               const closing = (acct.closing_balance || 0) / 100;
               const change = closing - opening;
@@ -163,7 +165,7 @@ export default async function BankingPage() {
                       <div>
                         <p className="text-xs font-semibold text-brand-black leading-tight">{acct.bank_name}</p>
                         <p className="text-[10px] text-brand-gray-mid">
-                          {ACCOUNT_TYPE_LABEL[acct.account_type] || "Unknown"} ···{acct.account_number_last4}
+                          {ACCOUNT_TYPE_LABEL[accountTypeKey] || "Current Account"} ···{acct.account_number_last4}
                         </p>
                       </div>
                     </div>
