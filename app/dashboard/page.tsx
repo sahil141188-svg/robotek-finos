@@ -203,7 +203,7 @@ export default async function DashboardPage() {
             value={fmtL(kpi.cash.balance)}
             trend={kpi.cash.vs_last_month_pct >= 0 ? "up" : "down"}
             trendText={trendText(kpi.cash.vs_last_month_pct)}
-            href="/dashboard/drill/cash"
+            href="/dashboard/banking"
           />
 
           {/* Row 2 */}

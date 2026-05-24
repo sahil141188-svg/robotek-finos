@@ -3,6 +3,9 @@
  *
  * Shows full task details, activity log, and status update actions.
  * Implements RULE 10: audit trail on all actions.
+ *
+ * Fetches the task from Supabase DB first (real tasks with UUIDs).
+ * Falls back to SAMPLE_TASKS for any legacy hard-coded IDs.
  */
 
 import { notFound } from "next/navigation";
@@ -15,14 +18,12 @@ import {
   STATUS_META, MODULE_LABELS, ROLE_LABELS,
   fmtTaskDate, fmtTimestamp, effectiveStatus, relativeDate,
 } from "@/lib/tasks-data";
+import type { SampleTask } from "@/lib/tasks-data";
+import { createClient } from "@/lib/supabase/server";
 import {
   ArrowLeft, Calendar, Tag, User, Clock,
   Link2, AlertTriangle, CheckCircle2,
 } from "lucide-react";
-
-export async function generateStaticParams() {
-  return SAMPLE_TASKS.map((t) => ({ id: t.id }));
-}
 
 // Dynamic today — never hardcode a date string or overdue detection breaks
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -33,7 +34,31 @@ export default async function TaskDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const task = SAMPLE_TASKS.find((t) => t.id === id);
+
+  // 1. Try to load from Supabase DB (real tasks)
+  let task: SampleTask | undefined;
+  try {
+    const supabase = await createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const db = supabase as any;
+    const { data, error } = await db
+      .from("tasks")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!error && data) {
+      task = data as SampleTask;
+    }
+  } catch (err) {
+    console.error("[tasks/[id]] DB fetch failed:", err);
+  }
+
+  // 2. Fall back to SAMPLE_TASKS for legacy hard-coded IDs
+  if (!task) {
+    task = SAMPLE_TASKS.find((t) => t.id === id);
+  }
+
   if (!task) notFound();
 
   const eff       = effectiveStatus(task, TODAY);
@@ -73,7 +98,7 @@ export default async function TaskDetailPage({
             </span>
             {task.module !== "general" && (
               <span className="text-xs px-2 py-0.5 rounded-full border border-border bg-brand-gray-light text-brand-gray-mid font-medium flex items-center gap-1">
-                <Tag className="w-3 h-3" /> {MODULE_LABELS[task.module]}
+                <Tag className="w-3 h-3" /> {MODULE_LABELS[task.module] ?? task.module}
               </span>
             )}
           </div>
@@ -120,7 +145,9 @@ export default async function TaskDetailPage({
               icon={<Clock className="w-3.5 h-3.5 text-brand-red" />}
               label="Created"
             >
-              <p className="text-sm font-semibold text-brand-black">{fmtTaskDate(task.created_at.split("T")[0])}</p>
+              <p className="text-sm font-semibold text-brand-black">
+                {fmtTaskDate((task.created_at ?? "").split("T")[0])}
+              </p>
             </MetaTile>
           </div>
         </div>
@@ -170,9 +197,9 @@ export default async function TaskDetailPage({
         )}
 
         {/* Tags */}
-        {task.tags.length > 0 && (
+        {(task.tags ?? []).length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {task.tags.map((tag) => (
+            {(task.tags ?? []).map((tag) => (
               <span key={tag} className="text-xs px-2.5 py-1 rounded-full border border-border bg-brand-gray-light text-brand-gray-mid font-medium">
                 # {tag}
               </span>

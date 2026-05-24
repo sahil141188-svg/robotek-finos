@@ -43,9 +43,15 @@ export default async function DrillPage({ params }: Props) {
 
   const { title, metric, unit, data, breadcrumb } = config;
 
+  // Guard against empty data — all drill arrays are empty until real data is imported.
+  // data[0] would be undefined on an empty array, crashing bestMonth.month access.
+  if (data.length === 0) {
+    redirect("/dashboard");
+  }
+
   // Summary stats
   const total    = data.reduce((s, d) => s + d.value, 0);
-  const avgValue = total / data.length;
+  const avgValue = data.length > 0 ? total / data.length : 0;
   const bestMonth = data.reduce((b, d) => (d.value > b.value ? d : b), data[0]);
   const ytdLabel = unit === "percent"
     ? `${avgValue.toFixed(1)}% (avg)`
