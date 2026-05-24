@@ -24,7 +24,8 @@ export async function generateStaticParams() {
   return SAMPLE_TASKS.map((t) => ({ id: t.id }));
 }
 
-const TODAY = "2026-05-21";
+// Dynamic today — never hardcode a date string or overdue detection breaks
+const TODAY = new Date().toISOString().slice(0, 10);
 
 export default async function TaskDetailPage({
   params,

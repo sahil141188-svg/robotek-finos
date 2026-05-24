@@ -24,7 +24,8 @@ import {
   CheckCircle2, Clock, Info,
 } from "lucide-react";
 
-const TODAY = "2026-05-21";
+// Dynamic today — never hardcode a date string or overdue detection breaks
+const TODAY = new Date().toISOString().slice(0, 10);
 
 export async function generateStaticParams() {
   return COMPLIANCE_ITEMS.map((item) => ({ id: item.id }));

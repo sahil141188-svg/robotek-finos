@@ -107,9 +107,14 @@ export async function importBankStatement(
       status: "processing",
       rows_imported: 0,
       rows_failed: 0,
-      financial_year: new Date().getFullYear() > 3
-        ? `${new Date().getFullYear() - 1}-${new Date().getFullYear().toString().slice(-2)}`
-        : "2025-26",
+      // FIX N12: Correct FY calculation. FY runs Apr-Mar.
+      // Apr 2026 → Mar 2027 = "2026-27". Jan 2026 → Mar 2026 = "2025-26".
+      // Old code: getFullYear() > 3 is always true → always used wrong branch.
+      financial_year: (() => {
+        const now = new Date();
+        const fyStart = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+        return `${fyStart}-${String(fyStart + 1).slice(-2)}`;
+      })(),
       can_rollback: true,
     })
     .select("id")

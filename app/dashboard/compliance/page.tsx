@@ -13,7 +13,8 @@ import { ComplianceContent } from "@/components/compliance/compliance-content";
 import { COMPLIANCE_ITEMS, computeComplianceScore } from "@/lib/compliance-data";
 import { ShieldCheck } from "lucide-react";
 
-const TODAY = "2026-05-21";
+// Dynamic today — never hardcode a date string or overdue detection breaks
+const TODAY = new Date().toISOString().slice(0, 10);
 
 export default function CompliancePage() {
   const items = COMPLIANCE_ITEMS;

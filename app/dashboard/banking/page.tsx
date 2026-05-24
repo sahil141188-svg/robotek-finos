@@ -106,13 +106,13 @@ export default async function BankingPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <KpiTile
             icon={<Landmark className="w-5 h-5 text-brand-red" />}
-            label="Total Liquidity" value={fmtAmt(total_liquidity * 100)}
+            label="Total Liquidity" value={fmtAmt(total_liquidity)}
             sub={`${total_accounts} account${total_accounts !== 1 ? "s" : ""}`}
             className="bg-white border-border"
           />
           <KpiTile
             icon={<TrendingDown className="w-5 h-5 text-red-600" />}
-            label="Net Change" value={fmtAmt(Math.abs(net_change * 100))}
+            label="Net Change" value={fmtAmt(Math.abs(net_change))}
             sub={net_change >= 0 ? "increase since opening" : "decrease since opening"}
             className={net_change >= 0 ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}
             valueClass={net_change >= 0 ? "text-green-700" : "text-red-700"}
@@ -173,7 +173,7 @@ export default async function BankingPage() {
                   </div>
 
                   <p className="text-xs text-brand-gray-mid mb-0.5">Closing Balance</p>
-                  <p className="text-xl font-bold text-brand-black">{fmtAmt(closing * 100)}</p>
+                  <p className="text-xl font-bold text-brand-black">{fmtAmt(closing)}</p>
 
                   <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
                     <div className={`flex items-center gap-1 text-xs ${change >= 0 ? "text-green-700" : "text-red-700"}`}>

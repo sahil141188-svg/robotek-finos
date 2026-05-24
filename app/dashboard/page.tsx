@@ -87,12 +87,14 @@ function computeHealthScore(kpi: KpiSummary): number {
   if (kpi.revenue.vs_last_month_pct < -10) score -= 5;
 
   // AP overdue: > 20% of total AP is a red flag
-  const apOverduePct = (kpi.ap.overdue / kpi.ap.total) * 100;
+  // Guard against division by zero when no AP data is imported yet
+  const apOverduePct = kpi.ap.total > 0 ? (kpi.ap.overdue / kpi.ap.total) * 100 : 0;
   if (apOverduePct > 30) score -= 15;
   else if (apOverduePct > 15) score -= 8;
 
   // AR overdue: > 25% of total AR is concerning
-  const arOverduePct = (kpi.ar.overdue / kpi.ar.total) * 100;
+  // Guard against division by zero when no AR data is imported yet
+  const arOverduePct = kpi.ar.total > 0 ? (kpi.ar.overdue / kpi.ar.total) * 100 : 0;
   if (arOverduePct > 30) score -= 12;
   else if (arOverduePct > 20) score -= 6;
 
@@ -103,6 +105,25 @@ function computeHealthScore(kpi: KpiSummary): number {
   return Math.max(0, Math.min(100, score));
 }
 
+/** Format a Lakhs value for display in a KPI tile (kpi values are in Lakhs) */
+function fmtL(lakhs: number): string {
+  if (lakhs === 0) return "—";
+  if (lakhs >= 100) return `₹${(lakhs / 100).toFixed(2)} Cr`;
+  if (lakhs >= 1)   return `₹${lakhs.toFixed(2)}L`;
+  return `₹${(lakhs * 100).toFixed(0)}K`;
+}
+
+/** Dynamic period label for current month */
+function currentMonthLabel(): string {
+  return new Date().toLocaleString("en-IN", { month: "short", year: "numeric" });
+}
+
+/** Trend text from a percentage change */
+function trendText(pct: number, label = "vs last month"): string {
+  const sign = pct >= 0 ? "+" : "";
+  return `${sign}${pct.toFixed(1)}% ${label}`;
+}
+
 export default async function DashboardPage() {
   const { profile } = await requireAuth();
 
@@ -111,8 +132,12 @@ export default async function DashboardPage() {
 
   // Use live data if available, fallback to sample data
   const kpi: KpiSummary = liveKPI ? transformDashboardKPI(liveKPI) : SAMPLE_KPI;
-  const isShowingSampleData = !liveKPI;
+  // FIX N6: isShowingSampleData was previously used to show a banner but the
+  // KPI tile VALUES were hardcoded strings — they never reflected live data.
+  // Now tiles always show kpi values (live when imported, zeros when not).
+  const isShowingSampleData = !liveKPI || (kpi.revenue.mtd === 0 && kpi.cogs.mtd === 0);
   const healthScore = computeHealthScore(kpi);
+  const period = currentMonthLabel();
 
   return (
     <>
@@ -145,68 +170,68 @@ export default async function DashboardPage() {
         {/* ── 2. KPI Tiles ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
 
-          {/* Row 1 */}
+          {/* Row 1 — FIX N6: values now driven by live kpi variable, not hardcoded strings */}
           <KpiCard
             title="Revenue MTD"
-            period="Mar 2026"
-            value="₹1.84 Cr"
-            trend="up"
-            trendText="+7% vs Feb"
+            period={period}
+            value={fmtL(kpi.revenue.mtd)}
+            trend={kpi.revenue.vs_last_month_pct >= 0 ? "up" : "down"}
+            trendText={trendText(kpi.revenue.vs_last_month_pct)}
             href="/dashboard/drill/revenue"
           />
           <KpiCard
             title="COGS MTD"
-            period="Mar 2026"
-            value="₹1.12 Cr"
-            trend="up"
-            trendText="+5% vs Feb"
+            period={period}
+            value={fmtL(kpi.cogs.mtd)}
+            trend={kpi.cogs.vs_last_month_pct <= 0 ? "up" : "down"}
+            trendText={trendText(kpi.cogs.vs_last_month_pct)}
             href="/dashboard/drill/cogs"
           />
           <KpiCard
             title="Gross Margin"
-            period="Mar 2026"
-            value="39.1%"
-            trend="up"
-            trendText="+1.2pp vs Feb"
+            period={period}
+            value={kpi.gross_margin.pct > 0 ? `${kpi.gross_margin.pct.toFixed(1)}%` : "—"}
+            trend={kpi.gross_margin.vs_last_month_pp >= 0 ? "up" : "down"}
+            trendText={`${kpi.gross_margin.vs_last_month_pp >= 0 ? "+" : ""}${kpi.gross_margin.vs_last_month_pp.toFixed(1)}pp vs last month`}
             href="/dashboard/drill/gross-margin"
           />
           <KpiCard
             title="Cash Balance"
             period="As of today"
-            value="₹28.4 L"
-            trend="down"
-            trendText="−3.2% vs Feb"
+            value={fmtL(kpi.cash.balance)}
+            trend={kpi.cash.vs_last_month_pct >= 0 ? "up" : "down"}
+            trendText={trendText(kpi.cash.vs_last_month_pct)}
             href="/dashboard/drill/cash"
           />
 
           {/* Row 2 */}
           <KpiCard
             title="AP Outstanding"
-            value="₹46.5 L"
+            value={fmtL(kpi.ap.total)}
             subtext="Accounts Payable"
-            alertText="₹16.95L overdue"
+            alertText={kpi.ap.overdue > 0 ? `${fmtL(kpi.ap.overdue)} overdue` : undefined}
             href="/dashboard/payables"
           />
           <KpiCard
             title="AR Outstanding"
-            value="₹68.35 L"
+            value={fmtL(kpi.ar.total)}
             subtext="Accounts Receivable"
-            alertText="₹22.5L overdue"
+            alertText={kpi.ar.overdue > 0 ? `${fmtL(kpi.ar.overdue)} overdue` : undefined}
             href="/dashboard/receivables"
           />
           <KpiCard
             title="Tax Liability"
-            value="₹6.96 L"
+            value={fmtL(kpi.tax.total)}
             trend="neutral"
             trendText="GST + TDS pending"
             href="/dashboard/drill/tax"
           />
           <KpiCard
             title="OpEx MTD"
-            period="Mar 2026"
-            value="₹34.2 L"
-            trend="up"
-            trendText="+2.1% vs Feb"
+            period={period}
+            value={fmtL(kpi.opex.mtd)}
+            trend={kpi.opex.vs_last_month_pct <= 0 ? "up" : "down"}
+            trendText={trendText(kpi.opex.vs_last_month_pct)}
             href="/dashboard/drill/opex"
           />
         </div>

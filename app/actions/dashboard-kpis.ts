@@ -66,14 +66,15 @@ function getMonthsForComparison(): { current: string; previous: string } {
 }
 
 /**
- * Heuristic: detect if a ledger name is revenue-related
+ * Heuristic: detect if a ledger name is revenue-related.
+ * FIX N9: Removed the "classify everything else as revenue" OR clause.
+ * That fallback inflated revenue by including payroll, freight, and other
+ * non-revenue ledgers that just didn't match the expense keyword list.
+ * Now requires a positive match against known revenue keywords only.
  */
 function isRevenueLedger(ledgerName: string): boolean {
   const name = ledgerName.toLowerCase();
-  return (
-    /\b(sales|service|revenue|income|trade receivable)\b/.test(name) ||
-    !/\b(payable|expense|cost|tax|bank|cash|advance|deposit)\b/.test(name)
-  );
+  return /\b(sales|service|revenue|income|trade receivable)\b/.test(name);
 }
 
 /**
