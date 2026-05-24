@@ -19,6 +19,13 @@ const nextConfig: NextConfig = {
   // Turbopack is the default in Next.js 16; PWA plugin injects a webpack config
   // so we must declare an explicit (empty) turbopack section to silence the error.
   turbopack: {},
+  // Raise server action body size limit so large PDFs (up to 100 MB) can be
+  // uploaded without Next.js rejecting the multipart request at the framework level.
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "100mb",
+    },
+  },
 };
 
 export default withPWA(nextConfig);

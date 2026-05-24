@@ -225,11 +225,11 @@ export async function parsePDFBankStatement(formData: FormData): Promise<{
     if (!file) return { success: false, error: "No file provided." };
 
     // Validate file size — max 10 MB
-    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
     if (file.size > MAX_FILE_SIZE) {
       return {
         success: false,
-        error: `File size exceeds 10 MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(1)} MB. Please upload a smaller PDF.`,
+        error: `File size exceeds 100 MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(1)} MB. Please upload a smaller PDF.`,
       };
     }
 

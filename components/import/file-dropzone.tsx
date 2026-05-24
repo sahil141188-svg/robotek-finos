@@ -16,7 +16,7 @@ const ACCEPTED_TYPES = [
   "application/pdf",             // .pdf
 ];
 const ACCEPTED_EXTS = [".xlsx", ".xls", ".csv", ".pdf"];
-const MAX_MB = 20;
+const MAX_MB = 100;
 
 interface FileDropzoneProps {
   onFile: (file: File) => void;
