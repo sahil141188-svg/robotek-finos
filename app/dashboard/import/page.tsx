@@ -38,7 +38,6 @@ import { importTransactions } from "@/app/actions/import";
 import type { ImportResult } from "@/app/actions/import";
 import { importBankStatement } from "@/app/actions/import-banking";
 import type { BankImportResult } from "@/app/actions/import-banking";
-import { parsePDFBankStatement } from "@/app/actions/parse-pdf";
 import type { BankAccountMetadata } from "@/app/actions/parsers/types";
 import type { RawRow } from "@/lib/import-utils";
 import {
@@ -94,19 +93,21 @@ export default function ImportPage() {
     startParsing(async () => {
       try {
         if (fileIsPDF) {
-          // PDF: encode to base64 then call server action.
-          // Using base64 string (not FormData) so the request is sent as JSON,
-          // bypassing Next.js's busboy multipart parser which breaks on large files.
-          const arrayBuffer = await f.arrayBuffer();
-          const uint8 = new Uint8Array(arrayBuffer);
-          // Build base64 in chunks to avoid call-stack overflow on large files
-          let binary = "";
-          const CHUNK = 8192;
-          for (let i = 0; i < uint8.length; i += CHUNK) {
-            binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
-          }
-          const base64 = btoa(binary);
-          const res = await parsePDFBankStatement(base64, f.name);
+          // PDF: POST the raw binary to /api/parse-pdf (Route Handler).
+          // Route Handlers receive req.arrayBuffer() directly — no JSON encoding,
+          // no busboy multipart parser — so large PDFs (up to 100 MB) work on Vercel.
+          const httpRes = await fetch("/api/parse-pdf", {
+            method:  "POST",
+            body:    f,
+            headers: { "x-file-name": f.name },
+          });
+          const res = await httpRes.json() as {
+            success: boolean;
+            data?: ParsedFile;
+            bankMetadata?: BankAccountMetadata;
+            pages?: number;
+            error?: string;
+          };
           if (!res.success || !res.data) {
             throw new Error(res.error ?? "PDF parsing failed.");
           }
