@@ -455,10 +455,10 @@ function generateItems(): ComplianceItem[] {
     id: "roc-aoc4-fy2526",
     category: "ROC", title: "ROC Financial Statements (AOC-4)", period: "FY 2025-26",
     description: "File audited financial statements with ROC within 30 days of AGM",
-    due_date: "2026-08-29", status: "pending",
+    due_date: "2026-09-30", status: "pending",
     financial_year: "2025-26", assigned_to: null,
     filed_date: null, acknowledgement_number: null,
-    notes: "File P&L, Balance Sheet, and Auditor Report. AGM usually July 30.",
+    notes: "File P&L, Balance Sheet, and Auditor Report. AGM must be held by Sep 30; AOC-4 due Sep 30 (internal deadline).",
     is_recurring: true,
     forms: ["AOC-4"],
     late_fee: "₹100/day additional fee; prosecution under Sec 137(3)",
@@ -516,6 +516,176 @@ function generateItems(): ComplianceItem[] {
     forms: ["PT Challan (Haryana)"],
     late_fee: "Interest @18% p.a. + penalty under Haryana PT Act",
     amount_due: 1040000,
+  });
+
+  // ── DPT-3 (Return of Deposits) ────────────────────────────────────────────
+  // Every company that has received loans/deposits (other than exempted) must
+  // file DPT-3 by June 30 each year for the FY ending March 31.
+  items.push({
+    id: "dpt3-fy2526",
+    category: "ROC", title: "DPT-3 (Return of Deposits)", period: "FY 2025-26",
+    description: "Annual return of deposits/loans received — file with MCA by June 30",
+    due_date: "2026-06-30", status: autoStatus("2026-06-30"),
+    financial_year: "2025-26", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "Covers all deposits/loans from members and public as of March 31, 2026. Exempted: loans from directors (with declaration), bank loans.",
+    is_recurring: true,
+    forms: ["DPT-3"],
+    late_fee: "₹5,000 + ₹500/day after first 30 days delay",
+    amount_due: null,
+  });
+
+  // ── MSME Form-1 (Half-Yearly) ──────────────────────────────────────────────
+  // Companies with MSME vendors having outstanding > 45 days must file half-yearly.
+  // Period Apr–Sep: due October 31 | Period Oct–Mar: due April 30
+  items.push({
+    id: "msme-form1-h2-fy2526",
+    category: "ROC", title: "MSME Form-1 — H2 (Oct–Mar 2025-26)", period: "Oct 2025–Mar 2026",
+    description: "Half-yearly return of outstanding dues to MSME suppliers (Oct 2025–Mar 2026)",
+    due_date: "2026-04-30", status: autoStatus("2026-04-30"),
+    financial_year: "2025-26", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "⚠️ Due April 30, 2026 — check if filed. Lists all MSME vendor invoices > 45 days outstanding.",
+    is_recurring: true,
+    forms: ["MSME Form-1"],
+    late_fee: "₹25,000–₹3,00,000 (company) + ₹25,000–₹1,00,000 (officer) under MSMED Act",
+    amount_due: null,
+  });
+
+  items.push({
+    id: "msme-form1-h1-fy2627",
+    category: "ROC", title: "MSME Form-1 — H1 (Apr–Sep 2026-27)", period: "Apr 2026–Sep 2026",
+    description: "Half-yearly return of outstanding dues to MSME suppliers (Apr–Sep 2026)",
+    due_date: "2026-10-31", status: autoStatus("2026-10-31"),
+    financial_year: "2026-27", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "Lists all MSME vendor invoices outstanding > 45 days as of September 30, 2026.",
+    is_recurring: true,
+    forms: ["MSME Form-1"],
+    late_fee: "₹25,000–₹3,00,000 (company) + ₹25,000–₹1,00,000 (officer) under MSMED Act",
+    amount_due: null,
+  });
+
+  items.push({
+    id: "msme-form1-h2-fy2627",
+    category: "ROC", title: "MSME Form-1 — H2 (Oct 2026–Mar 2027)", period: "Oct 2026–Mar 2027",
+    description: "Half-yearly return of outstanding dues to MSME suppliers (Oct 2026–Mar 2027)",
+    due_date: "2027-04-30", status: autoStatus("2027-04-30"),
+    financial_year: "2026-27", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "Lists all MSME vendor invoices outstanding > 45 days as of March 31, 2027.",
+    is_recurring: true,
+    forms: ["MSME Form-1"],
+    late_fee: "₹25,000–₹3,00,000 (company) + ₹25,000–₹1,00,000 (officer) under MSMED Act",
+    amount_due: null,
+  });
+
+  // ── LLP Form-11 (Annual Return) ────────────────────────────────────────────
+  // Due within 60 days of close of FY (March 31) = May 30 each year.
+  // ⚠️ URGENT: FY 2025-26 Form-11 is due May 30, 2026 — only 5 days away!
+  items.push({
+    id: "llp-form11-fy2526",
+    category: "ROC", title: "LLP Form-11 (Annual Return)", period: "FY 2025-26",
+    description: "LLP Annual Return — details of partners, contributions, and LLP agreement changes",
+    due_date: "2026-05-30", status: autoStatus("2026-05-30"),
+    financial_year: "2025-26", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "⚠️ URGENT — due May 30, 2026 (within 60 days of March 31). File immediately.",
+    is_recurring: true,
+    forms: ["LLP Form-11"],
+    late_fee: "₹100/day per day of delay — no cap. Accumulates rapidly.",
+    amount_due: null,
+  });
+
+  items.push({
+    id: "llp-form11-fy2627",
+    category: "ROC", title: "LLP Form-11 (Annual Return)", period: "FY 2026-27",
+    description: "LLP Annual Return — details of partners, contributions, and LLP agreement changes",
+    due_date: "2027-05-30", status: autoStatus("2027-05-30"),
+    financial_year: "2026-27", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "Due within 60 days of March 31, 2027 = May 30, 2027.",
+    is_recurring: true,
+    forms: ["LLP Form-11"],
+    late_fee: "₹100/day per day of delay — no cap.",
+    amount_due: null,
+  });
+
+  // ── LLP Form-8 (Statement of Account & Solvency) ──────────────────────────
+  // Due within 30 days from end of first 6 months of FY (Sep 30) = Oct 30 each year.
+  items.push({
+    id: "llp-form8-fy2526",
+    category: "ROC", title: "LLP Form-8 (Statement of Solvency)", period: "FY 2025-26 H1",
+    description: "LLP Statement of Account & Solvency — certify financial position signed by designated partners + CA",
+    due_date: "2025-10-30", status: autoStatus("2025-10-30"),
+    financial_year: "2025-26", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "Due within 30 days from September 30 (end of first 6 months of FY). Check if filed for FY 2025-26.",
+    is_recurring: true,
+    forms: ["LLP Form-8"],
+    late_fee: "₹100/day per day of delay.",
+    amount_due: null,
+  });
+
+  items.push({
+    id: "llp-form8-fy2627",
+    category: "ROC", title: "LLP Form-8 (Statement of Solvency)", period: "FY 2026-27 H1",
+    description: "LLP Statement of Account & Solvency — certify financial position for first half of FY 2026-27",
+    due_date: "2026-10-30", status: autoStatus("2026-10-30"),
+    financial_year: "2026-27", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "Due October 30, 2026 (30 days after September 30 end of first 6 months). CA certification required.",
+    is_recurring: true,
+    forms: ["LLP Form-8"],
+    late_fee: "₹100/day per day of delay.",
+    amount_due: null,
+  });
+
+  // ── DIN KYC (DIR-3 KYC) ───────────────────────────────────────────────────
+  // Every director who has been allotted a DIN must file KYC by September 30 each year.
+  items.push({
+    id: "din-kyc-fy2627",
+    category: "ROC", title: "DIN KYC — All Directors (DIR-3 KYC)", period: "FY 2026-27",
+    description: "Annual KYC of Directors — every DIN holder must file DIR-3 KYC by September 30",
+    due_date: "2026-09-30", status: autoStatus("2026-09-30"),
+    financial_year: "2026-27", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "All directors of Robotek India must file separately. Requires OTP on registered mobile + email. DIN is deactivated if KYC is missed.",
+    is_recurring: true,
+    forms: ["DIR-3 KYC (Web)"],
+    late_fee: "₹5,000 reactivation fee per DIN if filed after September 30",
+    amount_due: null,
+  });
+
+  // ── GSTR-9 & 9C — Entity-Specific ────────────────────────────────────────
+  // FY 2025-26 annual returns for LLP and other group entities.
+  // Update existing gstr9-fy2526 note to clarify it's for Robotek India Pvt Ltd.
+  items.push({
+    id: "gstr9-robotek-llp-fy2526",
+    category: "GST", title: "GSTR-9 & 9C — Robotek LLP", period: "FY 2025-26",
+    description: "Annual GST return (GSTR-9) + Reconciliation Statement (GSTR-9C) for Robotek LLP for FY 2025-26",
+    due_date: "2026-12-31", status: autoStatus("2026-12-31"),
+    financial_year: "2025-26", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "Entity: Robotek LLP. Turnover determines applicability of 9C. CA to certify GSTR-9C if turnover > ₹5 Cr.",
+    is_recurring: true,
+    forms: ["GSTR-9", "GSTR-9C"],
+    late_fee: "₹200/day (max 0.25% of turnover) — per entity separately",
+    amount_due: null,
+  });
+
+  items.push({
+    id: "gstr9-muskan-towers-fy2526",
+    category: "GST", title: "GSTR-9 — Muskan Towers Pvt Ltd", period: "FY 2025-26",
+    description: "Annual GST return (GSTR-9) for Muskan Towers Pvt Ltd for FY 2025-26",
+    due_date: "2026-12-31", status: autoStatus("2026-12-31"),
+    financial_year: "2025-26", assigned_to: null,
+    filed_date: null, acknowledgement_number: null,
+    notes: "Entity: Muskan Towers Pvt Ltd. Reconcile all monthly GSTR-1 and GSTR-3B filings for FY 2025-26.",
+    is_recurring: true,
+    forms: ["GSTR-9"],
+    late_fee: "₹200/day (max 0.25% of turnover)",
+    amount_due: null,
   });
 
   return items;
