@@ -19,6 +19,7 @@ export type TxRow = {
   id:               string;
   transaction_date: string;   // YYYY-MM-DD
   voucher_type:     string;
+  voucher_number:   string | null;
   ledger_name:      string;
   amount:           number;   // always positive (use dr_cr for direction)
   dr_cr:            "DR" | "CR";
@@ -303,52 +304,79 @@ export function detectFraudSignals(txns: TxRow[]): FraudSignal[] {
 }
 
 // ── 4. GST Mismatch Detection ─────────────────────────────────────────────────
+//
+// Strategy: group every transaction by voucher_number (the unique invoice
+// identifier from Busy). For each voucher, sum the CGST + SGST + IGST
+// entries and divide by the Purchase / Sale taxable-amount entry to get
+// the effective rate. Compare to standard rates (5/12/18/28%). Each
+// voucher yields AT MOST ONE issue — eliminates the multi-row duplicate
+// alerts that appeared when a voucher had separate CGST and SGST entries
+// (the old code matched each tax line against the vendor's gross row).
 
 export function detectGSTMismatches(txns: TxRow[]): GSTIssue[] {
-  const issues: GSTIssue[] = [];
   const GST_RATES = [0.05, 0.12, 0.18, 0.28];
+  const isTaxLine     = (n: string) => /\b(cgst|sgst|igst|gst)\b/i.test(n);
+  const isPurchaseLine = (n: string) => /^purchase$|\b(purchase|sale|sale gst|sale local|sale interstate|sales)\b/i.test(n) && !/payable|receivable|return/i.test(n);
 
-  // Find pairs: Sales/Purchase + corresponding GST ledger on same date
-  const gstLedgers = txns.filter((t) =>
-    /gst|igst|cgst|sgst|tax/i.test(t.ledger_name)
-  );
-
-  for (const gstTxn of gstLedgers) {
-    // Find the corresponding base transaction (same date ±1 day, same direction)
-    const baseTxn = txns.find((t) =>
-      t.id !== gstTxn.id &&
-      !(/gst|igst|cgst|sgst|tax/i.test(t.ledger_name)) &&
-      Math.abs(new Date(t.transaction_date).getTime() - new Date(gstTxn.transaction_date).getTime()) <= 86_400_000 &&
-      t.voucher_type === gstTxn.voucher_type
-    );
-
-    if (!baseTxn) continue;
-
-    const taxAmount  = gstTxn.amount;
-    const baseAmount = baseTxn.amount;
-    const effectiveRate = taxAmount / baseAmount;
-
-    // Check if rate matches any standard GST rate (within 0.5%)
-    const isValidRate = GST_RATES.some((r) => Math.abs(effectiveRate - r) < 0.005);
-
-    if (!isValidRate && effectiveRate > 0) {
-      const closestRate = GST_RATES.reduce((prev, curr) =>
-        Math.abs(curr - effectiveRate) < Math.abs(prev - effectiveRate) ? curr : prev
-      );
-
-      issues.push({
-        date:        gstTxn.transaction_date,
-        ledger:      baseTxn.ledger_name,
-        baseAmount,
-        taxAmount,
-        expectedTax: parseFloat((baseAmount * closestRate).toFixed(2)),
-        rateApplied: parseFloat((effectiveRate * 100).toFixed(1)),
-        issue:       `Tax rate ${(effectiveRate * 100).toFixed(1)}% applied — expected ${(closestRate * 100).toFixed(0)}% (${closestRate === 0.18 ? "standard" : closestRate === 0.28 ? "luxury" : closestRate === 0.12 ? "reduced" : "zero"} rate). Difference: ${formatINR(Math.abs(taxAmount - baseAmount * closestRate))}`,
-      });
-    }
+  // 1) Group transactions by voucher_number (skip rows without one)
+  const byVoucher = new Map<string, TxRow[]>();
+  for (const t of txns) {
+    if (!t.voucher_number) continue;
+    const key = `${t.voucher_number}|${t.transaction_date}|${t.voucher_type}`;
+    if (!byVoucher.has(key)) byVoucher.set(key, []);
+    byVoucher.get(key)!.push(t);
   }
 
-  return issues.slice(0, 10);
+  const issues: GSTIssue[] = [];
+  // Track unique vendor+rate signatures so we don't show ALPINE TECH × 17
+  // separate alerts when every one of its purchases has the same wrong rate.
+  const seenSignatures = new Set<string>();
+
+  for (const [, voucherLines] of byVoucher) {
+    // Sum tax entries (DR for purchases, CR for sales — direction agnostic)
+    const taxLines      = voucherLines.filter((l) => isTaxLine(l.ledger_name));
+    const purchaseLines = voucherLines.filter((l) => !isTaxLine(l.ledger_name) && isPurchaseLine(l.ledger_name));
+
+    if (taxLines.length === 0 || purchaseLines.length === 0) continue;
+
+    const taxAmount  = taxLines.reduce((s, l) => s + l.amount, 0);
+    const baseAmount = purchaseLines.reduce((s, l) => s + l.amount, 0);
+    if (baseAmount <= 0 || taxAmount <= 0) continue;
+
+    const effectiveRate = taxAmount / baseAmount;
+    const isValidRate = GST_RATES.some((r) => Math.abs(effectiveRate - r) < 0.005);
+    if (isValidRate) continue;
+
+    const closestRate = GST_RATES.reduce((prev, curr) =>
+      Math.abs(curr - effectiveRate) < Math.abs(prev - effectiveRate) ? curr : prev,
+    );
+
+    // Counterparty = the non-tax, non-purchase row in the voucher (vendor / customer)
+    const partyLine = voucherLines.find((l) => !isTaxLine(l.ledger_name) && !isPurchaseLine(l.ledger_name));
+    const counterparty = partyLine?.ledger_name ?? voucherLines[0].ledger_name;
+
+    // Dedup signature: same counterparty + same wrong rate (rounded) + same base
+    // prevents listing 17 identical ALPINE TECH purchases on the same day.
+    const signature = `${counterparty}|${Math.round(effectiveRate * 1000)}|${Math.round(baseAmount)}`;
+    if (seenSignatures.has(signature)) continue;
+    seenSignatures.add(signature);
+
+    issues.push({
+      date:        voucherLines[0].transaction_date,
+      ledger:      counterparty,
+      baseAmount,
+      taxAmount,
+      expectedTax: parseFloat((baseAmount * closestRate).toFixed(2)),
+      rateApplied: parseFloat((effectiveRate * 100).toFixed(1)),
+      issue:       `Tax rate ${(effectiveRate * 100).toFixed(1)}% applied — expected ${(closestRate * 100).toFixed(0)}% (${closestRate === 0.18 ? "standard" : closestRate === 0.28 ? "luxury" : closestRate === 0.12 ? "reduced" : "zero"} rate). Difference: ${formatINR(Math.abs(taxAmount - baseAmount * closestRate))}`,
+    });
+  }
+
+  // Sort by magnitude of mismatch (biggest first) and cap at 25
+  issues.sort((a, b) =>
+    Math.abs(b.taxAmount - b.expectedTax) - Math.abs(a.taxAmount - a.expectedTax),
+  );
+  return issues.slice(0, 25);
 }
 
 // ── 5. Cashflow Prediction ────────────────────────────────────────────────────

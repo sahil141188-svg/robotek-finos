@@ -61,7 +61,7 @@ export async function getIntelligenceReport(): Promise<IntelligenceReport> {
   // ── Fetch transactions ────────────────────────────────────────────────────
   let txnQuery = db
     .from("transactions")
-    .select("id, transaction_date, voucher_type, ledger_name, amount, dr_cr, narration")
+    .select("id, transaction_date, voucher_type, voucher_number, ledger_name, amount, dr_cr, narration")
     .order("transaction_date", { ascending: true });
 
   if (companyId) txnQuery = txnQuery.eq("company_id", companyId);
