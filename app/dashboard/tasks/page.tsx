@@ -47,29 +47,30 @@ export default async function TasksPage() {
         showImport={false}
       />
 
-      <main className="flex-1 p-6 space-y-6 max-w-5xl">
+      <main className="flex-1 p-4 sm:p-6 pb-24 sm:pb-6 space-y-4 sm:space-y-6 max-w-5xl">
 
         {/* Top action bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+        <div className="flex items-center gap-3 justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center">
-              <ListChecks className="w-5 h-5 text-brand-red" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-red/10 flex items-center justify-center shrink-0">
+              <ListChecks className="w-4 h-4 sm:w-5 sm:h-5 text-brand-red" />
             </div>
             <div>
               <p className="text-sm font-bold text-brand-black">
-                {tasks.length} tasks this sprint
+                {tasks.length} tasks
                 {overdue > 0 && (
                   <span className="ml-2 text-xs font-medium text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full">
                     {overdue} overdue
                   </span>
                 )}
               </p>
-              <p className="text-xs text-brand-gray-mid mt-0.5">
-                FY 2026-27 · Assign, track, escalate · Full audit trail
+              <p className="text-xs text-brand-gray-mid mt-0.5 hidden sm:block">
+                FY 2026-27 · Assign, track, escalate
               </p>
             </div>
           </div>
-          <Link href="/dashboard/tasks/new">
+          {/* Desktop: inline button */}
+          <Link href="/dashboard/tasks/new" className="hidden sm:block">
             <button className="flex items-center gap-2 bg-brand-red hover:bg-brand-maroon text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors shadow-sm">
               <Plus className="w-4 h-4" /> New Task
             </button>
@@ -78,6 +79,15 @@ export default async function TasksPage() {
 
         <TaskContent tasks={tasks} />
       </main>
+
+      {/* Mobile: sticky "New Task" button pinned to bottom */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border z-20">
+        <Link href="/dashboard/tasks/new" className="block">
+          <button className="w-full flex items-center justify-center gap-2 bg-brand-red hover:bg-brand-maroon text-white text-sm font-semibold px-4 py-3 rounded-xl transition-colors shadow-md">
+            <Plus className="w-4 h-4" /> New Task
+          </button>
+        </Link>
+      </div>
     </>
   );
 }

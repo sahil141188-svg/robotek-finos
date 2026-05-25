@@ -26,14 +26,15 @@ export function AddUserSheet() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <button
-          className="inline-flex items-center gap-2 h-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium bg-brand-red hover:bg-brand-maroon text-white transition-colors"
-        >
-          <UserPlus className="w-3.5 h-3.5" />
-          Add User
-        </button>
-      </SheetTrigger>
+      {/* Base UI Dialog.Trigger uses render prop (not asChild) for slot composition */}
+      <SheetTrigger
+        render={
+          <button className="inline-flex items-center gap-2 h-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium bg-brand-red hover:bg-brand-maroon text-white transition-colors">
+            <UserPlus className="w-3.5 h-3.5" />
+            Add User
+          </button>
+        }
+      />
       <SheetContent className="w-[500px] sm:max-w-[500px] overflow-y-auto">
         <SheetHeader className="mb-6">
           <SheetTitle>Add New User</SheetTitle>
