@@ -124,6 +124,36 @@ export function autoDetectColumns(headers: string[], module?: string): ColumnMap
     }
   }
 
+  // ── Universal fallback: if still no amount column detected for ANY module ───
+  // Busy exports sometimes use "Amount", "Net Amount", "Bill Amount", or "Closing Balance"
+  // as a single combined amount column instead of separate Debit/Credit.
+  // Without this fallback every row fails with "Both debit and credit are zero".
+  if (!mapping.dr_amount && !mapping.cr_amount) {
+    const universalFallbacks = [
+      "amount", "net amount", "bill amount", "invoice amount",
+      "txn amount", "transaction amount", "net", "total",
+      "closing balance", "closing bal",
+    ];
+    for (const h of headers) {
+      const hn = normalise(h);
+      if (universalFallbacks.some((v) => hn === v || hn === `${v} (₹)` || hn === `${v}(₹)`)) {
+        // Default to cr_amount (most single-column Busy exports are receipt/receivable amounts)
+        mapping.cr_amount = h;
+        break;
+      }
+    }
+    // Broader scan: any header whose normalised form CONTAINS "amount" or "total"
+    if (!mapping.cr_amount) {
+      for (const h of headers) {
+        const hn = normalise(h);
+        if ((hn.includes("amount") || hn.includes("total")) && !hn.includes("date")) {
+          mapping.cr_amount = h;
+          break;
+        }
+      }
+    }
+  }
+
   return mapping;
 }
 

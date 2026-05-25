@@ -6,7 +6,7 @@
  * Also shows the first 5 raw rows as a preview beneath the mapping.
  */
 
-import { CheckCircle, AlertCircle, HelpCircle } from "lucide-react";
+import { CheckCircle, AlertCircle, HelpCircle, AlertTriangle } from "lucide-react";
 import type { ColumnMapping, RawRow } from "@/lib/import-utils";
 
 const BASE_SCHEMA_FIELDS: { key: keyof ColumnMapping; label: string; required: boolean; hint: string; skipModules?: string[] }[] = [
@@ -93,6 +93,22 @@ export function ColumnMapper({
           Auto-detected from Busy format
         </div>
       </div>
+
+      {/* ⚠️ Critical warning: both amount columns unmapped → all rows will fail */}
+      {!mapping.dr_amount && !mapping.cr_amount && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-xs text-red-800">
+            <strong>No amount column mapped — all rows will fail validation.</strong>
+            {" "}Map your file&apos;s amount column to <strong>Debit Amount</strong> or{" "}
+            <strong>Credit Amount</strong> in the table below. Common Busy column names:{" "}
+            <span className="font-mono bg-red-100 px-1 rounded">Amount</span>,{" "}
+            <span className="font-mono bg-red-100 px-1 rounded">Debit</span>,{" "}
+            <span className="font-mono bg-red-100 px-1 rounded">Credit</span>,{" "}
+            <span className="font-mono bg-red-100 px-1 rounded">Net Amount</span>.
+          </div>
+        </div>
+      )}
 
       {/* Mapping table */}
       <div className="rounded-xl border border-border overflow-hidden">

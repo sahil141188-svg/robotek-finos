@@ -27,10 +27,13 @@ interface ValidationSummaryProps {
 }
 
 export function ValidationSummary({ result, totalRows, fileName }: ValidationSummaryProps) {
-  const [showErrors, setShowErrors] = useState(false);
-  const [showPreview, setShowPreview] = useState(true);
-
   const { valid, errors, warnings, duplicates } = result;
+
+  // Auto-expand error list when there are 0 valid rows so the user immediately
+  // sees WHY everything failed (e.g. "Both debit and credit are zero") instead
+  // of having to manually click the collapsed error panel.
+  const [showErrors, setShowErrors] = useState(valid.length === 0 && errors.length > 0);
+  const [showPreview, setShowPreview] = useState(valid.length > 0);
   const willImport  = valid.length;
   const willSkip    = errors.length;
   const withWarning = warnings.length;
@@ -77,6 +80,44 @@ export function ValidationSummary({ result, totalRows, fileName }: ValidationSum
           {totalRows} rows parsed · {willImport} will be written to the database
         </p>
       </div>
+
+      {/* Diagnostic banner when ALL rows fail — show the specific reason */}
+      {valid.length === 0 && errors.length > 0 && (() => {
+        const firstError = errors[0];
+        const isAmountError = errors.every((e) => e.field === "amount");
+        const isLedgerError = errors.every((e) => e.field === "ledger_name");
+        const isDateError   = errors.every((e) => e.field === "transaction_date");
+        return (
+          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <XCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-red-800 space-y-1">
+              <p className="font-semibold">Why all {errors.length} rows failed:</p>
+              {isAmountError && (
+                <p>
+                  <strong>No amount column is mapped.</strong> Go back to Step 2 and map your
+                  file&apos;s amount column (e.g. &quot;Amount&quot;, &quot;Debit&quot;, &quot;Credit&quot;, &quot;Net Amount&quot;) to{" "}
+                  <strong>Debit Amount</strong> or <strong>Credit Amount</strong>.
+                </p>
+              )}
+              {isLedgerError && (
+                <p>
+                  <strong>Ledger / Party column is missing.</strong> Map the party or ledger
+                  name column in Step 2.
+                </p>
+              )}
+              {isDateError && (
+                <p>
+                  <strong>Date column could not be parsed.</strong> Go back to Step 2 and check
+                  the Date Format setting matches your file (try &quot;DD-MM-YYYY&quot; for Busy exports).
+                </p>
+              )}
+              {!isAmountError && !isLedgerError && !isDateError && (
+                <p>First error: Row {firstError.row} — {firstError.message}</p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Errors collapsible */}
       {(errors.length > 0 || warnings.length > 0) && (
