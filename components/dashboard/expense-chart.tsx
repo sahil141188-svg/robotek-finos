@@ -6,6 +6,7 @@
  * Uses Recharts BarChart with per-bar colour via Cell.
  */
 
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -40,6 +41,9 @@ interface ExpenseChartProps {
 }
 
 export function ExpenseChart({ data }: ExpenseChartProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const total = data.reduce((s, d) => s + d.amount, 0);
 
   return (
@@ -53,6 +57,7 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
       </div>
 
       {/* Chart */}
+      {mounted ? (
       <div className="flex-1" style={{ minHeight: 220 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -94,6 +99,9 @@ export function ExpenseChart({ data }: ExpenseChartProps) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      ) : (
+        <div className="flex-1 bg-brand-gray-light/30 rounded-lg animate-pulse" style={{ minHeight: 220 }} />
+      )}
     </div>
   );
 }

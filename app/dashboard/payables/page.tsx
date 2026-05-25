@@ -9,7 +9,7 @@
 import { Header } from "@/components/layout/header";
 import { VendorTable } from "@/components/payables/vendor-table";
 import { SAMPLE_VENDORS, AP_SUMMARY, fmtAmt } from "@/lib/payables-data";
-import { TrendingDown, AlertTriangle, Clock, Building2 } from "lucide-react";
+import { TrendingDown, AlertTriangle, Clock, Building2, Upload } from "lucide-react";
 
 export default function PayablesPage() {
   const { total, overdue, avg_dpo, vendors, bucket0to30, bucket31to60, bucket61to90, bucket90plus } = AP_SUMMARY;
@@ -69,6 +69,28 @@ export default function PayablesPage() {
             <AgingBar label="90+ Days"    value={bucket90plus} total={total} color="bg-red-600"    textClass="text-red-700" />
           </div>
         </div>
+
+        {/* ── Empty state CTA — shown when no AP data imported yet ──── */}
+        {total === 0 && vendors === 0 && (
+          <div className="bg-white rounded-xl border border-dashed border-brand-red/30 p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-brand-red/10 flex items-center justify-center mx-auto">
+              <Upload className="w-6 h-6 text-brand-red" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-brand-black">No vendor data imported yet</p>
+              <p className="text-xs text-brand-gray-mid mt-1">
+                Export your vendor outstanding / aging report from Busy:<br />
+                Busy → Reports → Payables → Vendor Outstanding → Export Excel
+              </p>
+            </div>
+            <a
+              href="/dashboard/import?module=payables"
+              className="inline-flex items-center gap-1.5 h-8 rounded-lg px-4 text-xs font-semibold bg-brand-red hover:bg-brand-maroon text-white transition-colors"
+            >
+              <Upload className="w-3.5 h-3.5" /> Import AP Data
+            </a>
+          </div>
+        )}
 
         {/* ── Vendor table ─────────────────────────────────────────────── */}
         <VendorTable vendors={SAMPLE_VENDORS} />

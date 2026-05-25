@@ -17,6 +17,8 @@ import type { DashboardKPI } from "@/app/actions/dashboard-kpis";
 import type { KpiSummary } from "@/lib/dashboard-data";
 import { requireAuth } from "@/lib/auth";
 import { fetchDashboardKPIs } from "@/app/actions/dashboard-kpis";
+import { fetchBankAccounts } from "@/lib/supabase/banking-queries";
+import { COMPLIANCE_ITEMS } from "@/lib/compliance-data";
 import { Header } from "@/components/layout/header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { HealthBanner } from "@/components/dashboard/health-banner";
@@ -128,18 +130,35 @@ function trendText(pct: number, label = "vs last month"): string {
   return `${sign}${pct.toFixed(1)}% ${label}`;
 }
 
+// Fetch fresh data on every navigation — prevents stale RSC cache causing 503 blank pages
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const { profile } = await requireAuth();
 
   // Fetch live KPI data from transactions table
   const liveKPI = await fetchDashboardKPIs();
+  // Fetch bank accounts to detect whether bank data has been imported
+  const bankAccounts = await fetchBankAccounts();
 
   // Use live data if available, fallback to sample data
   const kpi: KpiSummary = liveKPI ? transformDashboardKPI(liveKPI) : SAMPLE_KPI;
-  // FIX N6: isShowingSampleData was previously used to show a banner but the
-  // KPI tile VALUES were hardcoded strings — they never reflected live data.
-  // Now tiles always show kpi values (live when imported, zeros when not).
-  const isShowingSampleData = !liveKPI || (kpi.revenue.mtd === 0 && kpi.cogs.mtd === 0);
+
+  // Determine data state for banners
+  const hasBankData  = bankAccounts.length > 0;
+  const hasBusyData  = liveKPI != null && (kpi.revenue.mtd > 0 || kpi.cogs.mtd > 0 || kpi.opex.mtd > 0);
+  const isShowingSampleData = !hasBusyData && !hasBankData;
+  const needsBusyImport     = hasBankData && !hasBusyData;
+
+  // Compute real compliance stats from the static compliance data
+  const overdueCount   = COMPLIANCE_ITEMS.filter(i => i.status === "overdue").length;
+  const filedCount     = COMPLIANCE_ITEMS.filter(i => i.status === "filed" || i.status === "paid").length;
+  const totalCount     = COMPLIANCE_ITEMS.length;
+  const complianceChip      = overdueCount > 0
+    ? `${overdueCount} OVERDUE`
+    : `${filedCount}/${totalCount} filed`;
+  const complianceChipClass = overdueCount > 0 ? "text-red-600 font-bold" : "text-brand-black";
+
   const healthScore = computeHealthScore(kpi);
   const period = currentMonthLabel();
 
@@ -154,22 +173,53 @@ export default async function DashboardPage() {
 
       <main className="flex-1 p-6 space-y-5">
 
-        {/* ── Demo-data notice — shown only when no real data is imported ─────── */}
+        {/* ── Demo-data notice — shown only when truly no data is imported ─────── */}
         {isShowingSampleData && (
           <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="flex-1 text-xs text-amber-800">
-              <strong>Showing sample data.</strong> These numbers are illustrative only and do not reflect your actual financials.{" "}
+              <strong>Showing sample data.</strong> These numbers are illustrative only.{" "}
               <Link href="/dashboard/import" className="underline font-semibold hover:text-amber-900">
                 Import your Busy / bank data →
               </Link>
-              {" "}to see real figures on this dashboard.
+            </div>
+          </div>
+        )}
+
+        {/* ── Bank imported but no Busy accounting data yet ─────────────────── */}
+        {needsBusyImport && (
+          <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+            <div className="flex-1 text-xs text-blue-800">
+              <strong>Bank data imported ✓</strong> — To see Revenue, COGS, and Gross Margin, import your{" "}
+              <strong>Busy accounting export</strong> (Day Book or Sales/Purchase Register).{" "}
+              <Link href="/dashboard/import?module=transactions" className="underline font-semibold hover:text-blue-900">
+                Import Busy data →
+              </Link>
             </div>
           </div>
         )}
 
         {/* ── 1. Business Health Banner ─────────────────────────────────── */}
-        <HealthBanner kpi={kpi} healthScore={healthScore} />
+        <HealthBanner
+          kpi={kpi}
+          healthScore={healthScore}
+          complianceChip={complianceChip}
+          complianceChipClass={complianceChipClass}
+        />
+
+        {/* ── Compliance overdue alert — shown below health banner ──────── */}
+        {overdueCount > 0 && (
+          <div className="flex items-start gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1 text-xs text-red-800">
+              <strong>{overdueCount} compliance item{overdueCount > 1 ? "s" : ""} OVERDUE</strong> — including LLP Form-8 (207 days), MSME Form-1 (25 days). File immediately to avoid escalating penalties.{" "}
+              <Link href="/dashboard/compliance" className="underline font-semibold hover:text-red-900">
+                View Compliance Calendar →
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* ── 2. KPI Tiles ─────────────────────────────────────────────── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

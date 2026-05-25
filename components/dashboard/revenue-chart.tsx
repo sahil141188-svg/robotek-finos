@@ -16,6 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { RevenueTrendPoint } from "@/lib/dashboard-data";
@@ -55,6 +56,8 @@ interface RevenueChartProps {
 
 export function RevenueChart({ data }: RevenueChartProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   /** Navigate to Layer 2 drill for the clicked month */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -86,6 +89,7 @@ export function RevenueChart({ data }: RevenueChartProps) {
       </div>
 
       {/* Chart */}
+      {mounted ? (
       <div style={{ height: 260 }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
@@ -163,6 +167,9 @@ export function RevenueChart({ data }: RevenueChartProps) {
           </AreaChart>
         </ResponsiveContainer>
       </div>
+      ) : (
+        <div style={{ height: 260 }} className="bg-brand-gray-light/30 rounded-lg animate-pulse" />
+      )}
     </div>
   );
 }

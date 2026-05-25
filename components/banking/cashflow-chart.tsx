@@ -5,6 +5,7 @@
  * Uses Recharts BarChart. Every bar is clickable (RULE 1).
  */
 
+import { useState, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
@@ -47,6 +48,11 @@ function CustomTooltip({ active, payload, label }: {
 }
 
 export function CashflowChart({ data }: Props) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  if (!mounted) return <div style={{ height: 260 }} />;
+
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data} barGap={2} barCategoryGap="28%">

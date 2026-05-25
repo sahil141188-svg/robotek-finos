@@ -40,20 +40,38 @@ const ACCOUNT_TYPE_LABEL: Record<string, string> = {
   cc:      "Credit Card",
 };
 
-export default async function BankingPage() {
-  // Fetch real data from database
-  const bankAccounts = await fetchBankAccounts();
-  const recentStatements = await fetchRecentBankStatements(15);
-  const { total_liquidity, total_accounts, net_change } = await calculateBankingSummary(bankAccounts);
+// Always fetch fresh — never serve stale banking data from Next.js cache
+export const dynamic = "force-dynamic";
 
-  // Current FY period: Apr 1 to today
+export default async function BankingPage() {
+  // Current FY period: Apr 1 to today (computed before parallel fetches)
   const today = new Date();
   const fyStart = today.getMonth() >= 3
     ? `${today.getFullYear()}-04-01`
     : `${today.getFullYear() - 1}-04-01`;
   const fyEnd = today.toISOString().split("T")[0];
+
+  // Fetch all data in parallel — use allSettled so a single 503/timeout
+  // on one query doesn't blank the entire page (503 resilience fix).
+  const [accountsResult, statementsResult, cashflowResult] = await Promise.allSettled([
+    fetchBankAccounts(),
+    fetchRecentBankStatements(15),
+    fetchCashflowStats(fyStart, fyEnd),
+  ]);
+
+  const bankAccounts     = accountsResult.status   === "fulfilled" ? accountsResult.value   : [];
+  const recentStatements = statementsResult.status === "fulfilled" ? statementsResult.value : [];
   const { total_inflow, total_outflow, weekly, outflow_by_category } =
-    await fetchCashflowStats(fyStart, fyEnd);
+    cashflowResult.status === "fulfilled"
+      ? cashflowResult.value
+      : { total_inflow: 0, total_outflow: 0, weekly: [], outflow_by_category: [] };
+
+  const { total_liquidity, total_accounts, net_change } = await calculateBankingSummary(bankAccounts);
+
+  // Human-readable period label e.g. "Apr 2026 – May 2026"
+  const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const fyStartDate = new Date(fyStart);
+  const periodLabel = `${MONTHS[fyStartDate.getMonth()]} ${fyStartDate.getFullYear()} – ${MONTHS[today.getMonth()]} ${today.getFullYear()}`;
 
   // Convert database statements to transaction format for display
   const recentTxns = recentStatements.map((stmt) => {
@@ -119,7 +137,7 @@ export default async function BankingPage() {
           />
           <KpiTile
             icon={<TrendingUp className="w-5 h-5 text-green-600" />}
-            label={`Total Inflow (${fyStart.slice(0,7).replace("-","/")})`}
+            label={`FY Inflow (${periodLabel})`}
             value={fmtAmt(total_inflow / 100)}
             sub="customer receipts + interest"
             className="bg-green-50 border-green-200"
@@ -127,7 +145,7 @@ export default async function BankingPage() {
           />
           <KpiTile
             icon={<Banknote className="w-5 h-5 text-red-600" />}
-            label={`Total Outflow (${fyStart.slice(0,7).replace("-","/")})`}
+            label={`FY Outflow (${periodLabel})`}
             value={fmtAmt(total_outflow / 100)}
             sub="vendors, payroll, taxes"
             className="bg-red-50 border-red-200"
@@ -196,7 +214,7 @@ export default async function BankingPage() {
         <div className="bg-white rounded-xl border border-border p-5">
           <h3 className="text-sm font-semibold text-brand-black mb-1">Weekly Cash Flow — All Accounts</h3>
           <p className="text-xs text-brand-gray-mid mb-4">
-            {fyStart.slice(0,10)} – {fyEnd}
+            {periodLabel}
           </p>
           {weekly.length > 0 ? (
             // FIX N14: weekly inflow/outflow come from fetchCashflowStats in paisa.

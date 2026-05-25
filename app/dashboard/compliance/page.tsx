@@ -15,6 +15,8 @@ import { ShieldCheck } from "lucide-react";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
+export const dynamic = "force-dynamic";
+
 export default async function CompliancePage() {
   // Bug #6 fix: fetch live items (DB merged with seed data)
   const items = await getComplianceItems();

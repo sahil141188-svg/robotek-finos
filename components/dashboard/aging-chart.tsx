@@ -16,6 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AgingBucket } from "@/lib/dashboard-data";
@@ -51,6 +52,8 @@ interface AgingChartProps {
 
 export function AgingChart({ data }: AgingChartProps) {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   return (
     <div className="rounded-xl border border-border bg-white p-5">
@@ -79,6 +82,7 @@ export function AgingChart({ data }: AgingChartProps) {
       </div>
 
       {/* Chart */}
+      {mounted ? (
       <div style={{ height: 210 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -127,6 +131,9 @@ export function AgingChart({ data }: AgingChartProps) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      ) : (
+        <div style={{ height: 210 }} className="bg-brand-gray-light/30 rounded-lg animate-pulse" />
+      )}
     </div>
   );
 }

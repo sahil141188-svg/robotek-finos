@@ -13,6 +13,8 @@ import { ImportsTable } from "@/components/imports/imports-table";
 import { Upload } from "lucide-react";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default async function ImportsPage() {
   const imports = await getAllImports();
 

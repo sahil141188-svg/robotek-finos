@@ -37,14 +37,9 @@ export function Header({ title, breadcrumbs, showImport = true, importModule }: 
           {breadcrumbs && breadcrumbs.length > 0 && (
             <Breadcrumb className="hidden sm:block">
               <BreadcrumbList className="text-xs">
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/dashboard" className="text-brand-gray-mid hover:text-brand-red">
-                    Home
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
                 {breadcrumbs.map((crumb, idx) => (
                   <span key={idx} className="flex items-center gap-1.5">
-                    <BreadcrumbSeparator />
+                    {idx > 0 && <BreadcrumbSeparator />}
                     <BreadcrumbItem>
                       {crumb.href ? (
                         <BreadcrumbLink href={crumb.href} className="text-brand-gray-mid hover:text-brand-red">

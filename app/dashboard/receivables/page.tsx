@@ -9,7 +9,7 @@
 import { Header } from "@/components/layout/header";
 import { CustomerTable } from "@/components/receivables/customer-table";
 import { SAMPLE_CUSTOMERS, AR_SUMMARY, fmtAmt } from "@/lib/receivables-data";
-import { TrendingUp, AlertTriangle, Clock, Users } from "lucide-react";
+import { TrendingUp, AlertTriangle, Clock, Users, Upload } from "lucide-react";
 
 export default function ReceivablesPage() {
   const { total, overdue, avg_dso, customers, bucket0to30, bucket31to60, bucket61to90, bucket90plus } = AR_SUMMARY;
@@ -69,6 +69,28 @@ export default function ReceivablesPage() {
             <AgingBar label="90+ Days"    value={bucket90plus} total={total} color="bg-red-600"    textClass="text-red-700" />
           </div>
         </div>
+
+        {/* ── Empty state CTA — shown when no AR data imported yet ──── */}
+        {total === 0 && customers === 0 && (
+          <div className="bg-white rounded-xl border border-dashed border-brand-red/30 p-8 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-brand-red/10 flex items-center justify-center mx-auto">
+              <Upload className="w-6 h-6 text-brand-red" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-brand-black">No customer data imported yet</p>
+              <p className="text-xs text-brand-gray-mid mt-1">
+                Export your customer outstanding / aging report from Busy:<br />
+                Busy → Reports → Receivables → Customer Outstanding → Export Excel
+              </p>
+            </div>
+            <a
+              href="/dashboard/import?module=receivables"
+              className="inline-flex items-center gap-1.5 h-8 rounded-lg px-4 text-xs font-semibold bg-brand-red hover:bg-brand-maroon text-white transition-colors"
+            >
+              <Upload className="w-3.5 h-3.5" /> Import AR Data
+            </a>
+          </div>
+        )}
 
         {/* ── Customer table ─────────────────────────────────────────────── */}
         <CustomerTable customers={SAMPLE_CUSTOMERS} />

@@ -25,9 +25,11 @@ function fmtLakhs(lakhs: number): string {
 interface HealthBannerProps {
   kpi: KpiSummary;
   healthScore: number; // 0–100
+  complianceChip: string;
+  complianceChipClass: string;
 }
 
-export function HealthBanner({ kpi, healthScore }: HealthBannerProps) {
+export function HealthBanner({ kpi, healthScore, complianceChip, complianceChipClass }: HealthBannerProps) {
   const isHealthy  = healthScore >= 80;
   const isModerate = healthScore >= 60 && healthScore < 80;
 
@@ -87,8 +89,8 @@ export function HealthBanner({ kpi, healthScore }: HealthBannerProps) {
         <Chip
           icon={<Calendar className="w-3.5 h-3.5 text-brand-gray-mid" />}
           label="Compliance"
-          value="8/10 · 2 pending"
-          valueClass="text-brand-black"
+          value={complianceChip}
+          valueClass={complianceChipClass}
         />
       </div>
 
