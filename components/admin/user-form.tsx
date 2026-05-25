@@ -24,7 +24,8 @@ import { cn } from "@/lib/utils";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
-const ROLES: UserRole[] = ["ceo", "cfo", "accounts", "ca"];
+// Bug #6 fix: COO role added to the role selector
+const ROLES: UserRole[] = ["ceo", "cfo", "coo", "accounts", "ca"];
 
 interface UserFormProps {
   /** Pass an existing user to edit; omit to create a new one */

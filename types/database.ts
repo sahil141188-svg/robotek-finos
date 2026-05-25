@@ -1,5 +1,5 @@
-/** Roles available in the UI. COO exists in DB enum but is not used. */
-export type UserRole = "ceo" | "cfo" | "accounts" | "ca";
+/** Roles available in the UI. Bug #6 fix: added "coo" which exists in DB enum. */
+export type UserRole = "ceo" | "cfo" | "coo" | "accounts" | "ca";
 
 /** All granular module permissions — stored as JSONB on each user row */
 export type UserPermissions = {

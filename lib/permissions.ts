@@ -122,6 +122,19 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
     view_alerts:      true,
     admin_users:      false,
   },
+  // Bug #6 fix: COO role added — operational focus (AP, expenses, banking)
+  coo: {
+    view_dashboard:   true,
+    import_data:      false,
+    view_compliance:  true,
+    manage_tasks:     true,
+    view_payables:    true,
+    view_receivables: true,
+    view_banking:     true,
+    view_review:      false,
+    view_alerts:      true,
+    admin_users:      false,
+  },
   ca: {
     view_dashboard:   true,
     import_data:      false,

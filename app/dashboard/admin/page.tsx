@@ -3,19 +3,11 @@ import { getAllUsers } from "@/app/actions/users";
 import { getCompanies } from "@/app/actions/companies";
 import { Header } from "@/components/layout/header";
 import { UserTable } from "@/components/admin/user-table";
-import { UserForm } from "@/components/admin/user-form";
+import { AddUserSheet } from "@/components/admin/add-user-sheet";
 import { CompaniesSection } from "@/components/admin/companies-section";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { UserPlus, Users, Settings } from "lucide-react";
+import { Users, Settings } from "lucide-react";
 
 /**
  * Admin Panel — CEO only.
@@ -69,27 +61,8 @@ export default async function AdminPage() {
               </span>
             </div>
 
-            {/* Add user — opens a sheet */}
-            <Sheet>
-              <SheetTrigger
-                render={
-                  <button className="inline-flex items-center gap-2 h-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium bg-brand-red hover:bg-brand-maroon text-white transition-colors">
-                    <UserPlus className="w-3.5 h-3.5" />
-                    Add User
-                  </button>
-                }
-              />
-              <SheetContent className="w-[500px] sm:max-w-[500px] overflow-y-auto">
-                <SheetHeader className="mb-6">
-                  <SheetTitle>Add New User</SheetTitle>
-                  <SheetDescription>
-                    Set the user&apos;s email, password, role, company access, and module permissions.
-                    No invitation email — the user logs in directly with these credentials.
-                  </SheetDescription>
-                </SheetHeader>
-                <UserForm />
-              </SheetContent>
-            </Sheet>
+            {/* Bug #7 fix: AddUserSheet is a client component that closes itself on success */}
+            <AddUserSheet />
           </div>
 
           <UserTable users={users} />
