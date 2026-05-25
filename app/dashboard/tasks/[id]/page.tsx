@@ -28,6 +28,11 @@ import {
 // Dynamic today — never hardcode a date string or overdue detection breaks
 const TODAY = new Date().toISOString().slice(0, 10);
 
+/** Detect whether a string looks like a Supabase UUID */
+function isUUID(s: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+}
+
 export default async function TaskDetailPage({
   params,
 }: {
@@ -60,6 +65,37 @@ export default async function TaskDetailPage({
   }
 
   if (!task) notFound();
+
+  // Bug #11 fix: resolve assigned_to / assigned_by UUIDs to display names.
+  // When tasks come from the DB, these fields hold user UUIDs.
+  // Run a single batched users query to get full_name for both.
+  let assignedToName  = task.assigned_to;
+  let assignedByName  = task.assigned_by;
+
+  const uuidsToResolve = [task.assigned_to, task.assigned_by].filter(
+    (v) => v && isUUID(v)
+  );
+
+  if (uuidsToResolve.length > 0) {
+    try {
+      const supabase = await createClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db = supabase as any;
+      const { data: userRows } = await db
+        .from("users")
+        .select("id, full_name")
+        .in("id", uuidsToResolve) as { data: { id: string; full_name: string }[] | null };
+
+      if (userRows) {
+        const nameMap = new Map(userRows.map((u) => [u.id, u.full_name]));
+        if (isUUID(task.assigned_to))  assignedToName = nameMap.get(task.assigned_to)  ?? task.assigned_to;
+        if (isUUID(task.assigned_by))  assignedByName = nameMap.get(task.assigned_by)  ?? task.assigned_by;
+      }
+    } catch (err) {
+      console.error("[tasks/[id]] user name resolution failed:", err);
+      // Non-fatal — fall back to raw UUIDs
+    }
+  }
 
   const eff       = effectiveStatus(task, TODAY);
   const rel       = relativeDate(task.due_date, TODAY);
@@ -118,7 +154,7 @@ export default async function TaskDetailPage({
                 <span className={`w-6 h-6 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${roleInfo.color}`}>
                   {roleInfo.initials}
                 </span>
-                <span className="text-sm font-medium text-brand-black truncate">{task.assigned_to}</span>
+                <span className="text-sm font-medium text-brand-black truncate">{assignedToName}</span>
               </div>
             </MetaTile>
 
@@ -138,7 +174,7 @@ export default async function TaskDetailPage({
               icon={<User className="w-3.5 h-3.5 text-brand-red" />}
               label="Assigned By"
             >
-              <p className="text-sm font-semibold text-brand-black">{task.assigned_by}</p>
+              <p className="text-sm font-semibold text-brand-black">{assignedByName}</p>
             </MetaTile>
 
             <MetaTile
