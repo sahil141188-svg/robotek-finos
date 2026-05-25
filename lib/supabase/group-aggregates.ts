@@ -20,6 +20,7 @@ export type GroupRow = {
   short_name: string;
   type: string;
   city: string;
+  gstin: string;
   color_class: string;
   status: "active" | "dormant";
   monthly_revenue: number;
@@ -146,6 +147,7 @@ export async function fetchGroupAggregates(
       short_name: c.short_name,
       type: c.type ?? "",
       city: c.city ?? "",
+      gstin: c.gstin ?? "",
       color_class: c.color_class ?? "bg-brand-red",
       status: c.status,
       monthly_revenue: revenue,
