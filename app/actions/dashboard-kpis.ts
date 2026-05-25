@@ -172,6 +172,18 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
     const currentFY = getCurrentFinancialYear();
     const { current: currentMonth, previous: previousMonth } = getMonthsForComparison();
 
+    // Pre-load party names so we can exclude their DR sides from OpEx
+    // (a Jrnl DR to a vendor/customer is an AP/AR settlement, not an expense).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let vendorQ = (supabase as any).from("vendors").select("name");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let custQ   = (supabase as any).from("customers").select("name");
+    if (companyId) { vendorQ = vendorQ.eq("company_id", companyId); custQ = custQ.eq("company_id", companyId); }
+    const [{ data: _vendors }, { data: _customers }] = await Promise.all([vendorQ, custQ]);
+    const partyNames = new Set<string>();
+    for (const v of (_vendors   ?? []) as Array<{ name: string }>) partyNames.add(v.name.toLowerCase().trim());
+    for (const c of (_customers ?? []) as Array<{ name: string }>) partyNames.add(c.name.toLowerCase().trim());
+
     // Query transactions for current FY, scoped to the selected company when set.
     // Supabase enforces a 1000-row default limit; paginate via .range() so we
     // capture every row in a full Day Book (4k-10k entries is normal).
@@ -257,10 +269,13 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
         else if (isTaxLedger(t.ledger_name)) {
           taxLiab += t.dr_cr === "CR" ? amt : -amt;
         }
-        // Opex: DR to "Journal" expense accounts (not vendor/customer ledgers)
+        // Opex: DR to a TRUE expense ledger via Jrnl/Journal voucher
+        // (excludes vendor/customer names by checking partyNames). Pymt
+        // vouchers are intentionally excluded — they're AP settlements.
         else if (
           t.dr_cr === "DR" &&
           (t.voucher_type.toLowerCase() === "jrnl" || t.voucher_type.toLowerCase() === "journal") &&
+          !partyNames.has(t.ledger_name.toLowerCase().trim()) &&
           !isCOGSLedger(t.ledger_name) && !isRevenueLedger(t.ledger_name) &&
           !isAPLedger(t.ledger_name) && !isARLedger(t.ledger_name)
         ) {
@@ -347,6 +362,7 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
       const vt = t.voucher_type.toLowerCase();
       if (t.dr_cr !== "DR") continue;
       if (vt !== "jrnl" && vt !== "journal") continue;
+      if (partyNames.has(t.ledger_name.toLowerCase().trim())) continue;
       if (isCOGSLedger(t.ledger_name) || isRevenueLedger(t.ledger_name) ||
           isAPLedger(t.ledger_name)   || isARLedger(t.ledger_name) ||
           isCashLedger(t.ledger_name) || isTaxLedger(t.ledger_name)) continue;

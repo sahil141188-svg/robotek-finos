@@ -52,14 +52,18 @@ function categorise(ledgerName: string, narration: string | null): string {
   return "Other";
 }
 
-/** Skip ledgers that aren't operating expenses (sales, purchases, parties, banks, taxes already netted) */
+/** Skip ledgers that aren't operating expenses by their name pattern.
+ *  Party-name exclusion (matching vendors / customers in the DB) is done
+ *  separately in fetchExpenseSummary because it needs a DB lookup. */
 function isOpExLedger(name: string): boolean {
-  const lower = name.toLowerCase();
+  const lower = name.toLowerCase().trim();
   if (/\b(sales?|service rendered|revenue|income)\b/.test(lower)) return false;
-  if (/\b(purchase|raw material|material consumed|trading)\b/.test(lower)) return false;
-  if (/\b(cgst|sgst|igst|gst payable|gst receivable|tcs payable|round)\b/.test(lower)) return false;
-  if (/\b(bank|cash|hdfc|idbi|kotak|sib|au small|on hand)\b/.test(lower)) return false;
-  if (/\b(opening balance|stock|inventory|capital)\b/.test(lower)) return false;
+  if (/^purchase$|\b(purchase|raw material|material consumed|trading)\b/.test(lower)) return false;
+  // Statutory pass-through ledgers (tax payable, custom duty, wages payable
+  // — these get DR'd during Pymt entries and net to zero on the P&L)
+  if (/\b(cgst|sgst|igst|gst payable|gst receivable|tcs payable|tds payable|round|custom duty|duty payable|wages.*payable|salary.*payable|tds\b)\b/.test(lower)) return false;
+  if (/\b(bank|cash|hdfc|idbi|kotak|sib|au small|on hand|axis|icici|sbi)\b/.test(lower)) return false;
+  if (/\b(opening balance|stock|inventory|capital|reserve|drawings)\b/.test(lower)) return false;
   return true;
 }
 
@@ -73,6 +77,22 @@ export async function fetchExpenseSummary(
   const curM   = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   const prevD  = new Date(today.getFullYear(), today.getMonth() - 1, 1);
   const prevM  = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, "0")}`;
+
+  // Pre-load every vendor + customer name for the scope. Any ledger_name
+  // matching one of these is a balance-sheet party movement (Pymt /
+  // settlement) — not an operating expense — and is excluded below.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let vendorQ   = (supabase as any).from("vendors").select("name");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let customerQ = (supabase as any).from("customers").select("name");
+  if (companyId) {
+    vendorQ   = vendorQ.eq("company_id", companyId);
+    customerQ = customerQ.eq("company_id", companyId);
+  }
+  const [{ data: vendors }, { data: customers }] = await Promise.all([vendorQ, customerQ]);
+  const partyNames = new Set<string>();
+  for (const v of (vendors ?? []) as Array<{ name: string }>)   partyNames.add(v.name.toLowerCase().trim());
+  for (const c of (customers ?? []) as Array<{ name: string }>) partyNames.add(c.name.toLowerCase().trim());
 
   // Pull all transactions for the scope (paginated). For the consolidated
   // view we accept all companies — the aggregator slices on company_id below.
@@ -96,12 +116,17 @@ export async function fetchExpenseSummary(
     from += PAGE;
   }
 
-  // Filter to expense entries: DR side of Jrnl/Journal/Pymt to expense-like ledgers
+  // Filter to TRUE expense entries: DR side of Jrnl / Journal vouchers
+  // to expense-like ledgers (NOT to a vendor/customer ledger).
+  // Pymt vouchers are excluded entirely — they are AP settlements
+  // (DR vendor / CR bank), already captured as expense when the
+  // original Jrnl created the AP.
   const expRows: ExpenseRow[] = [];
   for (const t of txns) {
     if (t.dr_cr !== "DR") continue;
     const vt = t.voucher_type.toLowerCase();
-    if (vt !== "jrnl" && vt !== "journal" && vt !== "pymt" && vt !== "payment") continue;
+    if (vt !== "jrnl" && vt !== "journal") continue;
+    if (partyNames.has(t.ledger_name.toLowerCase().trim())) continue;
     if (!isOpExLedger(t.ledger_name)) continue;
     expRows.push({
       date: t.transaction_date,

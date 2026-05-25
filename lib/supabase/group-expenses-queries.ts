@@ -29,12 +29,12 @@ function categorise(name: string): string {
 }
 
 function isOpExLedger(name: string): boolean {
-  const lower = name.toLowerCase();
+  const lower = name.toLowerCase().trim();
   if (/\b(sales?|service rendered|revenue|income)\b/.test(lower)) return false;
-  if (/\b(purchase|raw material|material consumed|trading)\b/.test(lower)) return false;
-  if (/\b(cgst|sgst|igst|gst payable|gst receivable|tcs payable|round)\b/.test(lower)) return false;
-  if (/\b(bank|cash|hdfc|idbi|kotak|sib|au small|on hand)\b/.test(lower)) return false;
-  if (/\b(opening balance|stock|inventory|capital)\b/.test(lower)) return false;
+  if (/^purchase$|\b(purchase|raw material|material consumed|trading)\b/.test(lower)) return false;
+  if (/\b(cgst|sgst|igst|gst payable|gst receivable|tcs payable|tds payable|round|custom duty|duty payable|wages.*payable|salary.*payable|tds\b)\b/.test(lower)) return false;
+  if (/\b(bank|cash|hdfc|idbi|kotak|sib|au small|on hand|axis|icici|sbi)\b/.test(lower)) return false;
+  if (/\b(opening balance|stock|inventory|capital|reserve|drawings)\b/.test(lower)) return false;
   return true;
 }
 
@@ -81,6 +81,22 @@ export async function fetchGroupExpenseReport(
     };
   }
 
+  // Pre-load every vendor + customer name across all group companies so we
+  // can exclude their Pymt/Jrnl movements (settlements, not expenses).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [{ data: allVendors }, { data: allCustomers }] = await Promise.all([
+    (supabase as any).from("vendors").select("name, company_id"),
+    (supabase as any).from("customers").select("name, company_id"),
+  ]);
+  const partyByCompany = new Map<string, Set<string>>();
+  for (const co of cos) partyByCompany.set(co.id, new Set());
+  for (const p of (allVendors ?? []) as Array<{ name: string; company_id: string }>) {
+    partyByCompany.get(p.company_id)?.add(p.name.toLowerCase().trim());
+  }
+  for (const p of (allCustomers ?? []) as Array<{ name: string; company_id: string }>) {
+    partyByCompany.get(p.company_id)?.add(p.name.toLowerCase().trim());
+  }
+
   const today = new Date();
   const curM   = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
   const prevD  = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -115,7 +131,10 @@ export async function fetchGroupExpenseReport(
   for (const t of txns) {
     const vt = t.voucher_type.toLowerCase();
     if (t.dr_cr !== "DR") continue;
-    if (vt !== "jrnl" && vt !== "journal" && vt !== "pymt" && vt !== "payment") continue;
+    // Only Jrnl/Journal — Pymt vouchers are AP settlements, not expenses.
+    if (vt !== "jrnl" && vt !== "journal") continue;
+    // Exclude party-name ledgers (vendor/customer DRs)
+    if (partyByCompany.get(t.company_id)?.has(t.ledger_name.toLowerCase().trim())) continue;
     if (!isOpExLedger(t.ledger_name)) continue;
     const amt = Number(t.amount);
 

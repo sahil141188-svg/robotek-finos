@@ -97,6 +97,17 @@ export async function fetchGroupAggregates(
         from += PAGE;
       }
 
+      // Party names for THIS company (used to exclude vendor/customer DRs
+      // from OpEx — they're settlements, not new expenses).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const [{ data: vens }, { data: custs }] = await Promise.all([
+        (supabase as any).from("vendors").select("name").eq("company_id", c.id),
+        (supabase as any).from("customers").select("name").eq("company_id", c.id),
+      ]);
+      const partyNames = new Set<string>();
+      for (const v of (vens  ?? []) as Array<{ name: string }>) partyNames.add(v.name.toLowerCase().trim());
+      for (const v of (custs ?? []) as Array<{ name: string }>) partyNames.add(v.name.toLowerCase().trim());
+
       // ── Revenue / COGS / OpEx / Tax for current month ───────────────────
       let revA = 0, revB = 0, cogsA = 0, cogsB = 0;
       for (const t of txns) {
@@ -114,6 +125,7 @@ export async function fetchGroupAggregates(
         else if (
           t.dr_cr === "DR" &&
           (t.voucher_type.toLowerCase() === "jrnl" || t.voucher_type.toLowerCase() === "journal") &&
+          !partyNames.has(t.ledger_name.toLowerCase().trim()) &&
           !isCOGSLedger(t.ledger_name) && !isRevenueLedger(t.ledger_name)
         ) opex += amt;
       }

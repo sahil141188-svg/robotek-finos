@@ -67,8 +67,12 @@ function isTaxLedger(name: string): boolean {
   return /\b(cgst|sgst|igst|gst payable|tds|tcs|advance tax|cbdt|income tax)\b/i.test(name);
 }
 function isExclusionLedger(name: string): boolean {
-  const lower = name.toLowerCase();
-  return /\b(bank|cash|opening balance|round)\b/.test(lower);
+  const lower = name.toLowerCase().trim();
+  if (/\b(bank|cash|hdfc|idbi|kotak|sib|au small|axis|icici|sbi|on hand)\b/.test(lower)) return true;
+  if (/\b(opening balance|stock|inventory|capital|reserve|drawings|round)\b/.test(lower)) return true;
+  // Statutory pass-through ledgers — netted out in the Tax line
+  if (/\b(custom duty|duty payable|wages.*payable|salary.*payable|tds\b)\b/.test(lower)) return true;
+  return false;
 }
 
 const CATEGORIES: Array<{ name: string; pattern: RegExp }> = [
@@ -113,6 +117,17 @@ export async function fetchPnL(
   // FY runs Apr-Mar
   const fyStartYear = today.getMonth() + 1 >= 4 ? today.getFullYear() : today.getFullYear() - 1;
   const fy = `${fyStartYear}-${String(fyStartYear + 1).slice(2)}`;
+
+  // Pre-load party names so we can exclude their Pymt/Jrnl movements from OpEx
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let vQ = (supabase as any).from("vendors").select("name");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let cQ = (supabase as any).from("customers").select("name");
+  if (companyId) { vQ = vQ.eq("company_id", companyId); cQ = cQ.eq("company_id", companyId); }
+  const [{ data: vendors }, { data: customers }] = await Promise.all([vQ, cQ]);
+  const partyNames = new Set<string>();
+  for (const v of (vendors ?? []) as Array<{ name: string }>)   partyNames.add(v.name.toLowerCase().trim());
+  for (const c of (customers ?? []) as Array<{ name: string }>) partyNames.add(c.name.toLowerCase().trim());
 
   // Pull all transactions in current FY
   type Txn = {
@@ -165,11 +180,15 @@ export async function fetchPnL(
       // Tax net (output GST - input GST)
       if (isTaxLedger(t.ledger_name)) s.tax += t.dr_cr === "CR" ? amt : -amt;
 
-      // OpEx: DR side of Jrnl/Pymt to expense ledgers (excluding taxes, depreciation, interest, COGS, revenue)
+      // OpEx: DR side of Jrnl / Journal vouchers to TRUE expense ledgers
+      // (not a vendor/customer name, not COGS/Revenue/Interest/Depreciation/
+      // Tax/Bank/Cash/Capital). Pymt vouchers are deliberately excluded —
+      // they're AP settlements, not new expenses (DR vendor / CR bank).
       const vt = t.voucher_type.toLowerCase();
       if (
         t.dr_cr === "DR" &&
-        (vt === "jrnl" || vt === "journal" || vt === "pymt" || vt === "payment") &&
+        (vt === "jrnl" || vt === "journal") &&
+        !partyNames.has(t.ledger_name.toLowerCase().trim()) &&
         !isCOGSLedger(t.ledger_name)  && !isRevenueLedger(t.ledger_name) &&
         !isInterestLedger(t.ledger_name) && !isDepreciationLedger(t.ledger_name) &&
         !isTaxLedger(t.ledger_name)   && !isExclusionLedger(t.ledger_name)
