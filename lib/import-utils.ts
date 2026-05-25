@@ -69,15 +69,52 @@ export type ColumnMapping = {
 /**
  * Known Busy column name variants for each schema field.
  * Matching is case-insensitive and trims whitespace.
+ *
+ * IMPORTANT: list more-specific variants BEFORE shorter ones to avoid false
+ * matches (e.g. "invoice date" before "date" so a column called "Invoice Date"
+ * doesn't get double-counted as a generic "date" hit).
  */
 const BUSY_COLUMN_VARIANTS: Record<keyof ColumnMapping, string[]> = {
-  transaction_date: ["date", "tran date", "txn date", "trans date", "transaction date", "vch date", "voucher date", "entry date", "value dt", "value date"],
-  voucher_number:   ["voucher no", "voucher number", "vch no", "vch number", "vchno", "invoice no", "bill no", "ref no", "ref. no", "chq./ref.no.", "chq no", "cheque no", "reference"],
+  transaction_date: [
+    // Busy day book
+    "tran date", "txn date", "trans date", "transaction date",
+    "vch date", "voucher date", "entry date",
+    // Bank statement
+    "value dt", "value date",
+    // AP / AR aging exports — MUST come before plain "date" so "Invoice Date" is not
+    // matched as "date" by the shorter fallback and then skipped for the longer one.
+    "invoice date", "bill date", "invoice dt", "bill dt",
+    // Compliance
+    "due date", "payment date", "filing date", "deposit date",
+    // Generic (last resort — also matches substrings like "Invoice Date")
+    "date",
+  ],
+  voucher_number: [
+    "voucher no", "voucher number", "vch no", "vch number", "vchno",
+    "invoice no", "invoice number", "bill no", "bill number",
+    "ref no", "ref. no", "chq./ref.no.", "chq no", "cheque no", "reference",
+    // Compliance
+    "challan no", "challan number", "ack no", "acknowledgment no",
+  ],
   voucher_type:     ["voucher type", "vch type", "type", "transaction type", "vch. type"],
-  ledger_name:      ["ledger name", "party name", "account name", "ledger", "account", "party", "name", "description", "particulars", "narration"],
-  dr_amount:        ["debit", "dr", "dr amount", "debit amount", "dr.", "debit (₹)", "dr (₹)", "amount (dr)", "withdrawal", "withdrawal amt.", "withdrawal amt"],
-  cr_amount:        ["credit", "cr", "cr amount", "credit amount", "cr.", "credit (₹)", "cr (₹)", "amount (cr)", "deposit", "deposit amt.", "deposit amt"],
-  narration:        ["narration", "remarks", "description", "particulars", "note", "notes", "comment"],
+  ledger_name: [
+    "ledger name", "party name", "account name",
+    // AP / AR party names
+    "vendor name", "customer name", "supplier name", "buyer name",
+    "creditor name", "debtor name",
+    // Shorter / generic (order matters — more specific above)
+    "ledger", "account", "party", "vendor", "customer", "supplier",
+    "name", "description", "particulars", "narration",
+  ],
+  dr_amount: [
+    "debit", "dr", "dr amount", "debit amount", "dr.", "debit (₹)", "dr (₹)",
+    "amount (dr)", "withdrawal", "withdrawal amt.", "withdrawal amt",
+  ],
+  cr_amount: [
+    "credit", "cr", "cr amount", "credit amount", "cr.", "credit (₹)", "cr (₹)",
+    "amount (cr)", "deposit", "deposit amt.", "deposit amt",
+  ],
+  narration: ["narration", "remarks", "description", "particulars", "note", "notes", "comment"],
 };
 
 /**
@@ -100,6 +137,8 @@ export function autoDetectColumns(headers: string[], module?: string): ColumnMap
 
   for (const [field, variants] of Object.entries(BUSY_COLUMN_VARIANTS)) {
     for (const variant of variants) {
+      // Prefer exact match over substring match to avoid "invoice date" being
+      // caught by the short "date" variant when both appear in the list.
       const idx = normalisedHeaders.findIndex((h) => h === variant || h.includes(variant));
       if (idx !== -1) {
         (mapping as Record<string, string | null>)[field] = headers[idx];
@@ -108,18 +147,33 @@ export function autoDetectColumns(headers: string[], module?: string): ColumnMap
     }
   }
 
-  // Bug #1 & #2 fix: module-specific amount column mapping.
-  // AP payables files typically have a single "Amount / Outstanding" column → dr_amount.
-  // AR receivables files typically have a single "Amount / Receivable" column → cr_amount.
+  // ── Module-specific amount overrides ─────────────────────────────────────
+  // AP payables: single "Amount / Outstanding / Balance" column → dr_amount.
+  // AR receivables: same but → cr_amount.
   if (module === "payables" || module === "receivables") {
     if (!mapping.dr_amount && !mapping.cr_amount) {
-      const amtVariants = ["amount", "outstanding", "outstanding amount", "pending", "balance", "payable", "receivable"];
+      // Explicit AP/AR amount synonyms (ordered most-specific → least)
+      const amtVariants = [
+        "outstanding amount", "outstanding", "payable amount", "receivable amount",
+        "receivable", "payable", "pending amount", "pending",
+        "balance", "amount",
+      ];
       for (const h of headers) {
-        if (amtVariants.some((v) => h.toLowerCase().trim().includes(v))) {
+        const hn = normalise(h);
+        if (amtVariants.some((v) => hn === v || hn.includes(v))) {
           if (module === "payables") mapping.dr_amount = h;
           else mapping.cr_amount = h;
           break;
         }
+      }
+    }
+    // If only cr_amount was auto-mapped (e.g. "Balance" caught by a generic rule)
+    // and this is payables, move it to dr_amount (payable entries are debits).
+    if (module === "payables" && !mapping.dr_amount && mapping.cr_amount) {
+      const crNorm = normalise(mapping.cr_amount);
+      if (["balance", "outstanding", "payable", "pending", "overdue"].some((v) => crNorm.includes(v))) {
+        mapping.dr_amount = mapping.cr_amount;
+        mapping.cr_amount = null;
       }
     }
   }
@@ -207,29 +261,36 @@ export function autoDetectModule(headers: string[]): ModuleDetectionResult {
     };
   }
 
-  // Accounts Payable — vendor + due date + outstanding
+  // Accounts Payable — vendor/party + outstanding/payable amount (due date optional)
   if (
-    (has("vendor", "supplier") || has("party name")) &&
-    has("due date") &&
-    has("outstanding", "pending", "payable")
+    (has("vendor", "supplier") || has("party name", "creditor")) &&
+    (has("outstanding", "payable", "overdue") || has("due date"))
   ) {
     return {
       moduleId:   "payables",
       confidence: "high",
-      reason:     "Vendor + Due Date + Outstanding detected — looks like AP aging",
+      reason:     "Vendor/Party + Outstanding detected — looks like AP aging",
     };
   }
 
-  // Accounts Receivable — customer + due date + receivable
+  // Accounts Receivable — customer/party + receivable/outstanding amount (due date optional)
   if (
-    (has("customer", "buyer") || has("party name")) &&
-    has("due date") &&
-    has("receivable", "outstanding", "pending")
+    (has("customer", "buyer", "debtor") || (has("party name") && has("receivable", "receipt"))) &&
+    (has("receivable", "outstanding", "overdue") || has("due date"))
   ) {
     return {
       moduleId:   "receivables",
       confidence: "high",
-      reason:     "Customer + Due Date + Receivable detected — looks like AR aging",
+      reason:     "Customer + Receivable detected — looks like AR aging",
+    };
+  }
+
+  // Broader AP/AR: party name + single amount + invoice date (no explicit payable/receivable keyword)
+  if (has("party name") && (has("invoice date", "bill date", "due date")) && has("amount")) {
+    return {
+      moduleId:   "payables",
+      confidence: "medium",
+      reason:     "Party + Invoice Date + Amount — likely AP or AR aging report",
     };
   }
 

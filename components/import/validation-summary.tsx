@@ -24,9 +24,11 @@ interface ValidationSummaryProps {
   result: ValidationResult;
   totalRows: number;
   fileName: string;
+  /** Rows that had no parseable date and were silently dropped before validation. */
+  unmappableRows?: number;
 }
 
-export function ValidationSummary({ result, totalRows, fileName }: ValidationSummaryProps) {
+export function ValidationSummary({ result, totalRows, fileName, unmappableRows = 0 }: ValidationSummaryProps) {
   const { valid, errors, warnings, duplicates } = result;
 
   // Auto-expand error list when there are 0 valid rows so the user immediately
@@ -41,7 +43,7 @@ export function ValidationSummary({ result, totalRows, fileName }: ValidationSum
   return (
     <div className="space-y-4">
       {/* Summary cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className={`grid gap-3 ${unmappableRows > 0 ? "grid-cols-2 sm:grid-cols-5" : "grid-cols-2 sm:grid-cols-4"}`}>
         <SummaryCard
           icon={<CheckCircle className="w-5 h-5 text-green-600" />}
           bg="bg-green-50 border-green-200"
@@ -70,6 +72,15 @@ export function ValidationSummary({ result, totalRows, fileName }: ValidationSum
           value={duplicates.length}
           sub="voucher numbers"
         />
+        {unmappableRows > 0 && (
+          <SummaryCard
+            icon={<XCircle className="w-5 h-5 text-orange-600" />}
+            bg="bg-orange-50 border-orange-200"
+            label="No Date"
+            value={unmappableRows}
+            sub="date unreadable"
+          />
+        )}
       </div>
 
       {/* Source file info */}
@@ -77,7 +88,13 @@ export function ValidationSummary({ result, totalRows, fileName }: ValidationSum
         <AlertCircle className="w-4 h-4 text-brand-gray-mid shrink-0" />
         <p className="text-xs text-brand-gray-mid">
           <span className="font-medium text-brand-black">{fileName}</span> ·{" "}
-          {totalRows} rows parsed · {willImport} will be written to the database
+          {totalRows} rows parsed
+          {unmappableRows > 0 && (
+            <span className="text-orange-700 font-medium">
+              {" "}· {unmappableRows} skipped (no date)
+            </span>
+          )}
+          {" "}· {willImport} will be written to the database
         </p>
       </div>
 
@@ -118,6 +135,24 @@ export function ValidationSummary({ result, totalRows, fileName }: ValidationSum
           </div>
         );
       })()}
+
+      {/* Unmappable rows diagnostic — shown when rows had no parseable date */}
+      {unmappableRows > 0 && (
+        <div className="flex items-start gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+          <XCircle className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
+          <div className="text-xs text-orange-900 space-y-1">
+            <p className="font-semibold">
+              {unmappableRows} row{unmappableRows !== 1 ? "s" : ""} skipped — date column not mapped or unreadable
+            </p>
+            <p>
+              These rows were dropped <em>before</em> validation because no transaction date could be parsed.
+              Go back to Step 2 and make sure the <strong>Transaction Date</strong> field is mapped to the
+              correct column (e.g. &quot;Invoice Date&quot;, &quot;Bill Date&quot;, &quot;Due Date&quot;, or &quot;Date&quot;).
+              Also check the <strong>Date Format</strong> setting — Busy exports use <strong>DD-MM-YYYY</strong>.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Errors collapsible */}
       {(errors.length > 0 || warnings.length > 0) && (

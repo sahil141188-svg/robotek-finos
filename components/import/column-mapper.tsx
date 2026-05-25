@@ -10,7 +10,7 @@ import { CheckCircle, AlertCircle, HelpCircle, AlertTriangle } from "lucide-reac
 import type { ColumnMapping, RawRow } from "@/lib/import-utils";
 
 const BASE_SCHEMA_FIELDS: { key: keyof ColumnMapping; label: string; required: boolean; hint: string; skipModules?: string[] }[] = [
-  { key: "transaction_date", label: "Transaction Date",  required: true,  hint: "Date of the voucher / transaction"                          },
+  { key: "transaction_date", label: "Transaction Date",  required: true,  hint: "Date of the voucher / transaction (Invoice Date, Bill Date, Due Date…)" },
   { key: "voucher_number",   label: "Voucher Number",    required: false, hint: "Voucher / Invoice / Bill number"                             },
   { key: "voucher_type",     label: "Voucher Type",      required: false, hint: "Sales, Purchase, Receipt, Payment…"                         },
   { key: "ledger_name",      label: "Ledger / Party",    required: true,  hint: "Name of the account or party", skipModules: ["compliance"]  },

@@ -74,6 +74,7 @@ export default function ImportPage() {
   const [pdfPages, setPdfPages]     = useState<number | null>(null);
   const [bankMetadata, setBankMetadata] = useState<BankAccountMetadata | null>(null);
   const [autoDetected, setAutoDetected] = useState<ModuleDetectionResult | null>(null);
+  const [unmappableCount, setUnmappableCount] = useState(0);
   const [isParsing, startParsing]   = useTransition();
   const [isImporting, startImport]  = useTransition();
   // Bug #9 fix: track whether user explicitly clicked a module card so
@@ -168,7 +169,8 @@ export default function ImportPage() {
     if (!parsed) return;
     // Bug #4 fix: pass selected date format; Bug #3 fix: pass module to skip
     // ledger_name requirement for compliance imports.
-    const { mapped } = applyMapping(parsed.rows, mapping, dateFormat);
+    const { mapped, unmappable } = applyMapping(parsed.rows, mapping, dateFormat);
+    setUnmappableCount(unmappable);
     const result = validateRows(mapped, selectedModule);
     setValidation(result);
     setStep("validate");
@@ -236,6 +238,7 @@ export default function ImportPage() {
     setParseError(null);
     setIsPDF(false);
     setPdfPages(null);
+    setUnmappableCount(0);
     moduleManuallySelectedRef.current = false; // Bug #9 fix: allow auto-detect on next upload
     setDateFormat("DD-MM-YYYY"); // Reset date format to Indian default
   };
@@ -403,7 +406,8 @@ export default function ImportPage() {
                 <Button
                   onClick={() => {
                     if (!parsed) return;
-                    const { mapped } = applyMapping(parsed.rows, mapping, dateFormat);
+                    const { mapped, unmappable } = applyMapping(parsed.rows, mapping, dateFormat);
+                    setUnmappableCount(unmappable);
                     const result = validateRows(mapped, selectedModule);
                     setValidation(result);
                     setStep("validate");
@@ -472,7 +476,12 @@ export default function ImportPage() {
                   Rows with errors will be skipped. Review before confirming the import.
                 </p>
               </div>
-              <ValidationSummary result={validation} totalRows={parsed.totalRows} fileName={file.name} />
+              <ValidationSummary
+                result={validation}
+                totalRows={parsed.totalRows}
+                fileName={file.name}
+                unmappableRows={unmappableCount}
+              />
             </div>
 
             {validation.valid.length === 0 && (
@@ -503,7 +512,7 @@ export default function ImportPage() {
             )}
 
             <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep("map")}>
+              <Button variant="outline" onClick={() => setStep(isPDF ? "select" : "map")}>
                 <ArrowLeft className="w-4 h-4 mr-2" /> Back
               </Button>
               <Button
