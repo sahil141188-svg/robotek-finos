@@ -7,27 +7,35 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, PlayCircle, ArrowUpCircle, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, PlayCircle, ArrowUpCircle, XCircle, Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { updateTaskStatus } from "@/app/actions/tasks";
 import { type SampleTask, effectiveStatus } from "@/lib/tasks-data";
 
-const TODAY = "2026-05-21";
+// Bug #12 fix: use dynamic today rather than hardcoded date
+const TODAY = new Date().toISOString().slice(0, 10);
 
 export function TaskDetailActions({ task }: { task: SampleTask }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [done, setDone]              = useState(false);
   const [note, setNote]              = useState("");
+  // Bug #10 fix: track errors so a failure shows a message instead of a white screen
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   const eff = effectiveStatus(task, TODAY);
 
   const handle = (status: "in_progress" | "completed" | "cancelled") => {
+    setUpdateError(null);
     startTransition(async () => {
-      // For demo: updateTaskStatus writes to Supabase if available, otherwise is a no-op
-      await updateTaskStatus(task.id, status, note || undefined);
-      setDone(true);
-      setTimeout(() => router.push("/dashboard/tasks"), 1200);
+      try {
+        await updateTaskStatus(task.id, status, note || undefined);
+        setDone(true);
+        setTimeout(() => router.push("/dashboard/tasks"), 1200);
+      } catch (err) {
+        // Bug #10 fix: surface the error instead of crashing to a white screen
+        setUpdateError(err instanceof Error ? err.message : "Failed to update task. Please try again.");
+      }
     });
   };
 
@@ -41,6 +49,13 @@ export function TaskDetailActions({ task }: { task: SampleTask }) {
 
   return (
     <div className="space-y-3">
+      {/* Bug #10 fix: error message instead of white screen */}
+      {updateError && (
+        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700">{updateError}</p>
+        </div>
+      )}
       {/* Note */}
       <div>
         <label className="block text-xs font-medium text-brand-black mb-1">

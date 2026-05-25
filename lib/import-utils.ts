@@ -80,8 +80,11 @@ const BUSY_COLUMN_VARIANTS: Record<keyof ColumnMapping, string[]> = {
   narration:        ["narration", "remarks", "description", "particulars", "note", "notes", "comment"],
 };
 
-/** Auto-detect column mapping from headers using fuzzy matching */
-export function autoDetectColumns(headers: string[]): ColumnMapping {
+/**
+ * Auto-detect column mapping from headers using fuzzy matching.
+ * Pass `module` to enable module-specific overrides (e.g. AP/AR single-amount column).
+ */
+export function autoDetectColumns(headers: string[], module?: string): ColumnMapping {
   const normalise = (s: string) => s.toLowerCase().trim().replace(/\s+/g, " ");
   const normalisedHeaders = headers.map(normalise);
 
@@ -101,6 +104,22 @@ export function autoDetectColumns(headers: string[]): ColumnMapping {
       if (idx !== -1) {
         (mapping as Record<string, string | null>)[field] = headers[idx];
         break;
+      }
+    }
+  }
+
+  // Bug #1 & #2 fix: module-specific amount column mapping.
+  // AP payables files typically have a single "Amount / Outstanding" column → dr_amount.
+  // AR receivables files typically have a single "Amount / Receivable" column → cr_amount.
+  if (module === "payables" || module === "receivables") {
+    if (!mapping.dr_amount && !mapping.cr_amount) {
+      const amtVariants = ["amount", "outstanding", "outstanding amount", "pending", "balance", "payable", "receivable"];
+      for (const h of headers) {
+        if (amtVariants.some((v) => h.toLowerCase().trim().includes(v))) {
+          if (module === "payables") mapping.dr_amount = h;
+          else mapping.cr_amount = h;
+          break;
+        }
       }
     }
   }
@@ -212,17 +231,56 @@ export function autoDetectModule(headers: string[]): ModuleDetectionResult {
 // ─── File parsing ─────────────────────────────────────────────────────────────
 
 /**
+ * Pre-process CSV text to collapse Indian comma-notation numbers into plain
+ * integers before the CSV parser splits on them.
+ *
+ * Indian format: up to 2 leading digits, then one-or-more pairs of 2 digits,
+ * ending with a 3-digit group (and optional decimal).
+ *   4,50,000     → 450000
+ *   1,00,00,000  → 10000000
+ *   1,23,456.00  → 123456.00
+ *
+ * The pattern requires ≥ 2 comma groups (≥ 1 lakh) so ordinary CSV commas
+ * (which are never flanked by exactly 2-digit groups) are left intact.
+ */
+function preprocessCSVIndianNumbers(csvText: string): string {
+  return csvText.replace(
+    /(\d{1,2})((?:,\d{2})+,\d{3}(?:\.\d+)?)/g,
+    (match) => match.replace(/,/g, ""),
+  );
+}
+
+/**
  * Parse an Excel (.xlsx / .xls) or CSV file using the xlsx library.
  * Returns headers and all data rows as raw key→value maps.
  * Runs entirely in the browser — no upload needed.
+ *
+ * For CSV files, Indian comma-notation numbers (e.g. "4,50,000") are
+ * collapsed to plain numbers BEFORE the CSV parser runs so they are not
+ * split across multiple columns.
  */
 export async function parseExcelFile(file: File): Promise<ParsedFile> {
-  const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, {
-    type: "array",
-    cellDates: true,
-    dateNF: "dd/mm/yyyy",
-  });
+  const isCSV =
+    file.name.toLowerCase().endsWith(".csv") || file.type === "text/csv";
+
+  let workbook: XLSX.WorkBook;
+  if (isCSV) {
+    // Bug #5 fix: preprocess CSV text to collapse Indian number commas first
+    const text = await file.text();
+    const preprocessed = preprocessCSVIndianNumbers(text);
+    workbook = XLSX.read(preprocessed, {
+      type: "string",
+      cellDates: true,
+      dateNF: "dd/mm/yyyy",
+    });
+  } else {
+    const buffer = await file.arrayBuffer();
+    workbook = XLSX.read(buffer, {
+      type: "array",
+      cellDates: true,
+      dateNF: "dd/mm/yyyy",
+    });
+  }
 
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
@@ -326,6 +384,33 @@ export function parseDate(raw: string | number | null): string | null {
   return null;
 }
 
+/**
+ * Parse a date with an explicit format hint (Bug #4 fix).
+ * Accepts "DD-MM-YYYY" (Indian default), "MM-DD-YYYY" (US), or "auto" (existing behaviour).
+ */
+export function parseDateWithFormat(
+  raw: string | number | null,
+  format: "DD-MM-YYYY" | "MM-DD-YYYY" | "auto" = "auto",
+): string | null {
+  if (raw === null || raw === "") return null;
+
+  // Excel serial numbers and ISO strings are unambiguous — delegate as-is
+  if (typeof raw === "number") return parseDate(raw);
+  const s = raw.toString().trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // already ISO
+
+  if (format !== "auto") {
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (m) {
+      const [, first, second, yyyy] = m;
+      const [dd, mm] = format === "DD-MM-YYYY" ? [first, second] : [second, first];
+      return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+    }
+  }
+
+  return parseDate(raw);
+}
+
 /** Infer financial year from an ISO date string (April = start of new FY) */
 export function inferFinancialYear(isoDate: string): string {
   const date = new Date(isoDate);
@@ -370,17 +455,19 @@ export function parseAmount(raw: string | number | null): number {
 /**
  * Apply a column mapping to raw rows, producing MappedRows for the DB.
  * Returns the full list — validation is done separately.
+ * Pass `dateFormat` ("DD-MM-YYYY" | "MM-DD-YYYY" | "auto") to control date parsing (Bug #4).
  */
 export function applyMapping(
   rows: RawRow[],
   mapping: ColumnMapping,
+  dateFormat: "DD-MM-YYYY" | "MM-DD-YYYY" | "auto" = "auto",
 ): { mapped: MappedRow[]; unmappable: number } {
   let unmappable = 0;
   const mapped: MappedRow[] = [];
 
   rows.forEach((row, idx) => {
     const rawDate = mapping.transaction_date ? row[mapping.transaction_date] : null;
-    const isoDate = parseDate(rawDate as string | number | null);
+    const isoDate = parseDateWithFormat(rawDate as string | number | null, dateFormat);
 
     if (!isoDate) {
       unmappable++;
@@ -411,8 +498,9 @@ export function applyMapping(
 /**
  * Validate mapped rows before import.
  * Returns lists of valid rows, errors, warnings, and in-file duplicates.
+ * Pass `module` to skip fields that are not required for that module (Bug #3).
  */
-export function validateRows(rows: MappedRow[]): ValidationResult {
+export function validateRows(rows: MappedRow[], module = "transactions"): ValidationResult {
   const errors: RowError[] = [];
   const warnings: RowError[] = [];
   const valid: MappedRow[] = [];
@@ -433,8 +521,8 @@ export function validateRows(rows: MappedRow[]): ValidationResult {
   rows.forEach((row) => {
     let rowHasError = false;
 
-    // Required: ledger name
-    if (!row.ledger_name || row.ledger_name === "Unknown") {
+    // Required: ledger name — NOT required for compliance (Bug #3 fix)
+    if (module !== "compliance" && (!row.ledger_name || row.ledger_name === "Unknown")) {
       errors.push({
         row: row._raw_index,
         field: "ledger_name",

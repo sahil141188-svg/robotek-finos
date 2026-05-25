@@ -9,14 +9,14 @@
 import { CheckCircle, AlertCircle, HelpCircle } from "lucide-react";
 import type { ColumnMapping, RawRow } from "@/lib/import-utils";
 
-const SCHEMA_FIELDS: { key: keyof ColumnMapping; label: string; required: boolean; hint: string }[] = [
-  { key: "transaction_date", label: "Transaction Date",  required: true,  hint: "Date of the voucher / transaction"   },
-  { key: "voucher_number",   label: "Voucher Number",    required: false, hint: "Voucher / Invoice / Bill number"      },
-  { key: "voucher_type",     label: "Voucher Type",      required: false, hint: "Sales, Purchase, Receipt, Payment…"  },
-  { key: "ledger_name",      label: "Ledger / Party",    required: true,  hint: "Name of the account or party"        },
-  { key: "dr_amount",        label: "Debit Amount",      required: false, hint: "Debit column (leave blank if merged)" },
-  { key: "cr_amount",        label: "Credit Amount",     required: false, hint: "Credit column (leave blank if merged)"},
-  { key: "narration",        label: "Narration",         required: false, hint: "Description / remarks"               },
+const BASE_SCHEMA_FIELDS: { key: keyof ColumnMapping; label: string; required: boolean; hint: string; skipModules?: string[] }[] = [
+  { key: "transaction_date", label: "Transaction Date",  required: true,  hint: "Date of the voucher / transaction"                          },
+  { key: "voucher_number",   label: "Voucher Number",    required: false, hint: "Voucher / Invoice / Bill number"                             },
+  { key: "voucher_type",     label: "Voucher Type",      required: false, hint: "Sales, Purchase, Receipt, Payment…"                         },
+  { key: "ledger_name",      label: "Ledger / Party",    required: true,  hint: "Name of the account or party", skipModules: ["compliance"]  },
+  { key: "dr_amount",        label: "Debit Amount",      required: false, hint: "Debit column (leave blank if merged)"                        },
+  { key: "cr_amount",        label: "Credit Amount",     required: false, hint: "Credit column (leave blank if merged)"                       },
+  { key: "narration",        label: "Narration",         required: false, hint: "Description / remarks"                                       },
 ];
 
 interface ColumnMapperProps {
@@ -24,20 +24,54 @@ interface ColumnMapperProps {
   mapping: ColumnMapping;
   previewRows: RawRow[];
   onChange: (mapping: ColumnMapping) => void;
+  /** Current import module — affects which fields are required (Bug #3). */
+  module?: string;
+  /** Explicit date format to use when parsing ambiguous date strings (Bug #4). */
+  dateFormat?: string;
+  /** Callback when user changes the date format selector. */
+  onDateFormatChange?: (format: string) => void;
 }
 
-export function ColumnMapper({ headers, mapping, previewRows, onChange }: ColumnMapperProps) {
+export function ColumnMapper({
+  headers,
+  mapping,
+  previewRows,
+  onChange,
+  module = "transactions",
+  dateFormat = "DD-MM-YYYY",
+  onDateFormatChange,
+}: ColumnMapperProps) {
   const NONE = "__none__";
 
   const handleChange = (field: keyof ColumnMapping, value: string) => {
     onChange({ ...mapping, [field]: value === NONE ? null : value });
   };
 
+  // Bug #3 fix: compute required flag per-row taking module into account
+  const SCHEMA_FIELDS = BASE_SCHEMA_FIELDS.map((f) => ({
+    ...f,
+    required: f.required && !(f.skipModules?.includes(module)),
+  }));
+
   const mapped = Object.values(mapping).filter(Boolean).length;
   const total  = SCHEMA_FIELDS.length;
 
   return (
     <div className="space-y-5">
+      {/* Bug #4 fix: Date format selector */}
+      <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
+        <span className="text-xs font-medium text-blue-900 shrink-0">Date format in your file:</span>
+        <select
+          value={dateFormat}
+          onChange={(e) => onDateFormatChange?.(e.target.value)}
+          className="text-xs border border-blue-300 rounded-lg px-2.5 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-brand-red focus:border-brand-red text-brand-black"
+        >
+          <option value="DD-MM-YYYY">DD-MM-YYYY — Indian / Busy (01-04-2025)</option>
+          <option value="MM-DD-YYYY">MM-DD-YYYY — US format (04-01-2025)</option>
+          <option value="auto">Auto-detect</option>
+        </select>
+        <span className="text-[10px] text-blue-700 ml-auto shrink-0">Busy exports use DD-MM-YYYY</span>
+      </div>
       {/* Status bar */}
       <div className="flex items-center gap-3 bg-brand-gray-light rounded-xl px-4 py-3">
         <div className="flex-1">

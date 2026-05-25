@@ -13,7 +13,7 @@
  * RULE 10: Every import logged in file_imports with 24-hour rollback.
  */
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useTransition, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { StepIndicator, type WizardStep } from "@/components/import/step-indicator";
@@ -76,6 +76,11 @@ export default function ImportPage() {
   const [autoDetected, setAutoDetected] = useState<ModuleDetectionResult | null>(null);
   const [isParsing, startParsing]   = useTransition();
   const [isImporting, startImport]  = useTransition();
+  // Bug #9 fix: track whether user explicitly clicked a module card so
+  // auto-detection in handleFile does not silently override their choice.
+  const moduleManuallySelectedRef = useRef(!!searchParams.get("module"));
+  // Bug #4 fix: date format selector — default to Indian DD-MM-YYYY (Busy standard).
+  const [dateFormat, setDateFormat] = useState<"DD-MM-YYYY" | "MM-DD-YYYY" | "auto">("DD-MM-YYYY");
 
   // ── Step 1: File selected → parse (client-side for Excel, server-side for PDF)
   const handleFile = useCallback((f: File) => {
@@ -125,14 +130,20 @@ export default function ImportPage() {
           setBankMetadata(res.bankMetadata ?? null);
           setMapping(BANK_STATEMENT_MAPPING);
         } else {
-          // Excel / CSV: parse client-side then run module + column detection
-          const result   = await parseExcelFile(f);
-          const detected = autoDetectColumns(result.headers);
+          // Excel / CSV: parse client-side then run module + column detection.
+          // Bug #5 fix: parseExcelFile now preprocesses CSV Indian commas.
+          const result = await parseExcelFile(f);
+          // Bug #1 & #2 fix: pass current module so AP/AR amount column is detected.
+          // Bug #9 fix: only auto-override module selection if user hasn't manually picked one.
+          const currentModule = moduleManuallySelectedRef.current ? selectedModule : undefined;
+          const detected = autoDetectColumns(result.headers, currentModule);
           const mod      = autoDetectModule(result.headers);
           setParsed(result);
           setMapping(detected);
           setAutoDetected(mod);
-          setModule(mod.moduleId);
+          if (!moduleManuallySelectedRef.current) {
+            setModule(mod.moduleId);
+          }
         }
       } catch (err) {
         // Next.js wraps unhandled server-action errors in a generic "Server Components
@@ -150,13 +161,15 @@ export default function ImportPage() {
         );
       }
     });
-  }, []);
+  }, [selectedModule]); // selectedModule needed for module-aware column detection
 
   // ── Step 2 → 3: Apply mapping and validate ────────────────────────────────
   const handleToValidate = () => {
     if (!parsed) return;
-    const { mapped } = applyMapping(parsed.rows, mapping);
-    const result = validateRows(mapped);
+    // Bug #4 fix: pass selected date format; Bug #3 fix: pass module to skip
+    // ledger_name requirement for compliance imports.
+    const { mapped } = applyMapping(parsed.rows, mapping, dateFormat);
+    const result = validateRows(mapped, selectedModule);
     setValidation(result);
     setStep("validate");
   };
@@ -194,6 +207,8 @@ export default function ImportPage() {
     setParseError(null);
     setIsPDF(false);
     setPdfPages(null);
+    moduleManuallySelectedRef.current = false; // Bug #9 fix: allow auto-detect on next upload
+    setDateFormat("DD-MM-YYYY"); // Reset date format to Indian default
   };
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -230,7 +245,7 @@ export default function ImportPage() {
                 {IMPORT_MODULES.map((mod) => (
                   <button
                     key={mod.id}
-                    onClick={() => setModule(mod.id)}
+                    onClick={() => { setModule(mod.id); moduleManuallySelectedRef.current = true; }}
                     className={`rounded-xl border-2 p-4 text-left transition-all ${
                       selectedModule === mod.id
                         ? "border-brand-red bg-brand-red/5"
@@ -359,8 +374,8 @@ export default function ImportPage() {
                 <Button
                   onClick={() => {
                     if (!parsed) return;
-                    const { mapped } = applyMapping(parsed.rows, mapping);
-                    const result = validateRows(mapped);
+                    const { mapped } = applyMapping(parsed.rows, mapping, dateFormat);
+                    const result = validateRows(mapped, selectedModule);
                     setValidation(result);
                     setStep("validate");
                   }}
@@ -397,6 +412,9 @@ export default function ImportPage() {
                 mapping={mapping}
                 previewRows={parsed.rows.slice(0, 5)}
                 onChange={setMapping}
+                module={selectedModule}
+                dateFormat={dateFormat}
+                onDateFormatChange={(f) => setDateFormat(f as "DD-MM-YYYY" | "MM-DD-YYYY" | "auto")}
               />
             </div>
             <div className="flex justify-between">
@@ -405,7 +423,8 @@ export default function ImportPage() {
               </Button>
               <Button
                 onClick={handleToValidate}
-                disabled={!mapping.transaction_date || !mapping.ledger_name}
+                // Bug #3 fix: compliance module doesn't require ledger_name
+                disabled={!mapping.transaction_date || (selectedModule !== "compliance" && !mapping.ledger_name)}
                 className="bg-brand-red hover:bg-brand-maroon text-white"
               >
                 Validate Data <ArrowRight className="w-4 h-4 ml-2" />
