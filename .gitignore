@@ -47,3 +47,8 @@ analyze_pdfs.mjs
 BANKING_MODULE_IMPLEMENTATION.md
 BANKING_QUICK_START.md
 supabase/APPLY_MIGRATION_005.md
+
+
+# Tesseract OCR language data — auto-downloaded at runtime
+eng.traineddata
+*.traineddata

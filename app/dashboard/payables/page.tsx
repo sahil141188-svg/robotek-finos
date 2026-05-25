@@ -1,22 +1,50 @@
 /**
  * Accounts Payable Health — Module 5
  *
- * Server component: loads vendor aging data, renders interactive VendorTable.
+ * Server component: queries vendor aging from `transactions` table, renders
+ * interactive VendorTable.
  * RULE 1: Every vendor name links to /dashboard/payables/[vendorId]
  * RULE 5: Indian number format (Lakhs / Crores)
  */
 
 import { Header } from "@/components/layout/header";
 import { VendorTable } from "@/components/payables/vendor-table";
-import { SAMPLE_VENDORS, AP_SUMMARY, fmtAmt } from "@/lib/payables-data";
+import { fmtAmt, type SampleVendor } from "@/lib/payables-data";
+import { createClient } from "@/lib/supabase/server";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
+import { buildPartyAging } from "@/lib/supabase/party-aging";
 import { TrendingDown, AlertTriangle, Clock, Building2, Upload } from "lucide-react";
 
 
 export const dynamic = "force-dynamic";
 
-export default function PayablesPage() {
-  const { total, overdue, avg_dpo, vendors, bucket0to30, bucket31to60, bucket61to90, bucket90plus } = AP_SUMMARY;
-  // Guard against division by zero when no data imported yet
+export default async function PayablesPage() {
+  const supabase = await createClient();
+  const companyId = await getSelectedCompanyId();
+  const { parties, summary } = await buildPartyAging(supabase, "vendor", companyId);
+
+  // Map PartyAging → SampleVendor shape that the client table expects
+  const vendors: SampleVendor[] = parties
+    .filter((p) => p.total > 0)
+    .map((p) => ({
+      id: p.party_id,
+      name: p.party_name,
+      category: "Vendor",
+      gstin: p.gstin,
+      contact_person: p.contact_person,
+      phone: p.phone,
+      email: p.email,
+      payment_terms_days: p.payment_terms_days,
+      ag0to30: p.ag0to30,
+      ag31to60: p.ag31to60,
+      ag61to90: p.ag61to90,
+      ag90plus: p.ag90plus,
+      last_payment_date: p.last_payment_date,
+      last_payment_amount: p.last_payment_amount,
+    }));
+
+  const { total, overdue, avg_dpo, parties: vendorCount,
+          bucket0to30, bucket31to60, bucket61to90, bucket90plus } = summary;
   const overduePercent = total > 0 ? Math.round((overdue / total) * 100) : 0;
 
   return (
@@ -38,7 +66,7 @@ export default function PayablesPage() {
           <KpiTile
             icon={<TrendingDown className="w-5 h-5 text-brand-red" />}
             label="Total Outstanding" value={fmtAmt(total)}
-            sub={`${vendors} vendors`}
+            sub={`${vendorCount} vendors`}
             className="bg-white border-border"
           />
           <KpiTile
@@ -56,7 +84,7 @@ export default function PayablesPage() {
           />
           <KpiTile
             icon={<Building2 className="w-5 h-5 text-blue-600" />}
-            label="Vendors" value={`${vendors}`}
+            label="Vendors" value={`${vendorCount}`}
             sub="Active vendor accounts"
             className="bg-blue-50 border-blue-200"
           />
@@ -74,7 +102,7 @@ export default function PayablesPage() {
         </div>
 
         {/* ── Empty state CTA — shown when no AP data imported yet ──── */}
-        {total === 0 && vendors === 0 && (
+        {total === 0 && vendorCount === 0 && (
           <div className="bg-white rounded-xl border border-dashed border-brand-red/30 p-8 text-center space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-brand-red/10 flex items-center justify-center mx-auto">
               <Upload className="w-6 h-6 text-brand-red" />
@@ -96,7 +124,7 @@ export default function PayablesPage() {
         )}
 
         {/* ── Vendor table ─────────────────────────────────────────────── */}
-        <VendorTable vendors={SAMPLE_VENDORS} />
+        <VendorTable vendors={vendors} />
 
       </main>
     </>

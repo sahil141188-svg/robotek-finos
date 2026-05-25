@@ -1,22 +1,55 @@
 /**
  * Accounts Receivable Health — Module 6
  *
- * Server component: loads customer aging data, renders interactive CustomerTable.
+ * Server component: queries customer aging from `transactions` table, renders
+ * interactive CustomerTable.
  * RULE 1: Every customer name links to /dashboard/receivables/[customerId]
  * RULE 5: Indian number format (Lakhs / Crores)
  */
 
 import { Header } from "@/components/layout/header";
 import { CustomerTable } from "@/components/receivables/customer-table";
-import { SAMPLE_CUSTOMERS, AR_SUMMARY, fmtAmt } from "@/lib/receivables-data";
+import { fmtAmt, type SampleCustomer } from "@/lib/receivables-data";
+import { createClient } from "@/lib/supabase/server";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
+import { buildPartyAging } from "@/lib/supabase/party-aging";
 import { TrendingUp, AlertTriangle, Clock, Users, Upload } from "lucide-react";
 
 
 export const dynamic = "force-dynamic";
 
-export default function ReceivablesPage() {
-  const { total, overdue, avg_dso, customers, bucket0to30, bucket31to60, bucket61to90, bucket90plus } = AR_SUMMARY;
-  // Guard against division by zero when no data imported yet
+export default async function ReceivablesPage() {
+  const supabase = await createClient();
+  const companyId = await getSelectedCompanyId();
+  const { parties, summary } = await buildPartyAging(supabase, "customer", companyId);
+
+  const customers: SampleCustomer[] = parties
+    .filter((p) => p.total > 0)
+    .map((p) => ({
+      id: p.party_id,
+      name: p.party_name,
+      category: "Customer",
+      segment: null,
+      gstin: p.gstin,
+      contact_person: p.contact_person,
+      phone: p.phone,
+      email: p.email,
+      credit_limit: 0,
+      credit_days: p.payment_terms_days,
+      payment_terms_days: p.payment_terms_days,
+      ag0to30: p.ag0to30,
+      ag31to60: p.ag31to60,
+      ag61to90: p.ag61to90,
+      ag90plus: p.ag90plus,
+      last_receipt_date: p.last_payment_date,
+      last_receipt_amount: p.last_payment_amount,
+      last_payment_date: p.last_payment_date,
+      last_payment_amount: p.last_payment_amount,
+      collection_notes: null,
+    }));
+
+  const { total, overdue, avg_dpo: avg_dso, parties: customerCount,
+          bucket0to30, bucket31to60, bucket61to90, bucket90plus } = summary;
   const overduePercent = total > 0 ? Math.round((overdue / total) * 100) : 0;
 
   return (
@@ -38,7 +71,7 @@ export default function ReceivablesPage() {
           <KpiTile
             icon={<TrendingUp className="w-5 h-5 text-brand-red" />}
             label="Total Receivable" value={fmtAmt(total)}
-            sub={`${customers} customers`}
+            sub={`${customerCount} customers`}
             className="bg-white border-border"
           />
           <KpiTile
@@ -56,7 +89,7 @@ export default function ReceivablesPage() {
           />
           <KpiTile
             icon={<Users className="w-5 h-5 text-blue-600" />}
-            label="Customers" value={`${customers}`}
+            label="Customers" value={`${customerCount}`}
             sub="Active accounts"
             className="bg-blue-50 border-blue-200"
           />
@@ -74,7 +107,7 @@ export default function ReceivablesPage() {
         </div>
 
         {/* ── Empty state CTA — shown when no AR data imported yet ──── */}
-        {total === 0 && customers === 0 && (
+        {total === 0 && customerCount === 0 && (
           <div className="bg-white rounded-xl border border-dashed border-brand-red/30 p-8 text-center space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-brand-red/10 flex items-center justify-center mx-auto">
               <Upload className="w-6 h-6 text-brand-red" />
@@ -96,7 +129,7 @@ export default function ReceivablesPage() {
         )}
 
         {/* ── Customer table ─────────────────────────────────────────────── */}
-        <CustomerTable customers={SAMPLE_CUSTOMERS} />
+        <CustomerTable customers={customers} />
 
       </main>
     </>

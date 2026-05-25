@@ -8,18 +8,17 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
-import {
-  SAMPLE_CUSTOMERS, getCustomerInvoices, customerTotal, customerOverdue,
-  COLLECTION_STATUS_META, fmtAmt, fmtD,
-} from "@/lib/receivables-data";
+import { COLLECTION_STATUS_META, fmtAmt, fmtD } from "@/lib/receivables-data";
+import { createClient } from "@/lib/supabase/server";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
+import { buildPartyAging } from "@/lib/supabase/party-aging";
 import {
   ArrowLeft, Phone, Mail, AlertTriangle, CheckCircle2, Users,
-  CreditCard, MessageSquare,
 } from "lucide-react";
 
-export async function generateStaticParams() {
-  return SAMPLE_CUSTOMERS.map((c) => ({ customerId: c.id }));
-}
+// Customer IDs come from the DB at request time. Skip prerendering — fully
+// dynamic at request time.
+export const dynamic = "force-dynamic";
 
 export default async function CustomerDrillPage({
   params,
@@ -27,12 +26,16 @@ export default async function CustomerDrillPage({
   params: Promise<{ customerId: string }>;
 }) {
   const { customerId } = await params;
-  const customer = SAMPLE_CUSTOMERS.find((c) => c.id === customerId);
+
+  const supabase  = await createClient();
+  const companyId = await getSelectedCompanyId();
+  const { parties } = await buildPartyAging(supabase, "customer", companyId);
+  const customer = parties.find((p) => p.party_id === customerId);
   if (!customer) notFound();
 
-  const invoices   = getCustomerInvoices(customer.id);
-  const total      = customerTotal(customer);
-  const overdue    = customerOverdue(customer);
+  const invoices   = customer.open_invoices;
+  const total      = customer.total;
+  const overdue    = customer.ag31to60 + customer.ag61to90 + customer.ag90plus;
   const isCritical = customer.ag90plus > 0;
 
   const STATUS_META: Record<string, { label: string; className: string }> = {
@@ -42,20 +45,14 @@ export default async function CustomerDrillPage({
     paid:           { label: "Paid",        className: "bg-green-100 text-green-700 border-green-200" },
   };
 
-  // Credit utilisation
-  const utilPct = customer.credit_limit > 0
-    ? Math.min(100, Math.round((total / customer.credit_limit) * 100))
-    : 0;
-  const utilColor = utilPct >= 90 ? "bg-red-500" : utilPct >= 70 ? "bg-amber-500" : "bg-green-500";
-
   return (
     <>
       <Header
-        title={customer.name}
+        title={customer.party_name}
         breadcrumbs={[
           { label: "Dashboard",            href: "/dashboard" },
           { label: "Accounts Receivable",  href: "/dashboard/receivables" },
-          { label: customer.name.substring(0, 30) },
+          { label: customer.party_name.substring(0, 30) },
         ]}
         showImport={false}
       />
@@ -76,8 +73,8 @@ export default async function CustomerDrillPage({
                 <Users className="w-6 h-6 text-brand-gray-mid" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-brand-black">{customer.name}</h1>
-                <p className="text-sm text-brand-gray-mid">{customer.segment}</p>
+                <h1 className="text-lg font-bold text-brand-black">{customer.party_name}</h1>
+                <p className="text-sm text-brand-gray-mid">Customer</p>
               </div>
             </div>
             {isCritical && (
@@ -95,29 +92,12 @@ export default async function CustomerDrillPage({
             {customer.gstin && <span>GSTIN: <code className="font-mono">{customer.gstin}</code></span>}
             <span>Payment Terms: {customer.payment_terms_days} days</span>
           </div>
-
-          {/* Credit limit utilisation */}
-          {customer.credit_limit > 0 && (
-            <div className="pt-1 border-t border-border space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1 text-brand-gray-mid">
-                  <CreditCard className="w-3 h-3" /> Credit limit: <span className="font-medium text-brand-black">{fmtAmt(customer.credit_limit)}</span>
-                </span>
-                <span className={`font-semibold ${utilPct >= 90 ? "text-red-700" : utilPct >= 70 ? "text-amber-700" : "text-green-700"}`}>
-                  {utilPct}% utilised
-                </span>
-              </div>
-              <div className="h-2 bg-brand-gray-light rounded-full overflow-hidden">
-                <div className={`h-full rounded-full ${utilColor} transition-all`} style={{ width: `${utilPct}%` }} />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Aging summary tiles */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "0–30 Days",  value: customer.ag0to30,  className: "bg-green-50 border-green-200 text-green-800",   badge: "Current" },
+            { label: "0–30 Days",  value: customer.ag0to30,  className: "bg-green-50 border-green-200 text-green-800" },
             { label: "31–60 Days", value: customer.ag31to60, className: customer.ag31to60 > 0 ? "bg-amber-50 border-amber-200 text-amber-800"  : "bg-white border-border text-brand-gray-mid" },
             { label: "61–90 Days", value: customer.ag61to90, className: customer.ag61to90 > 0 ? "bg-orange-50 border-orange-200 text-orange-800" : "bg-white border-border text-brand-gray-mid" },
             { label: "90+ Days",   value: customer.ag90plus, className: customer.ag90plus > 0 ? "bg-red-50 border-red-200 text-red-800"         : "bg-white border-border text-brand-gray-mid" },
@@ -139,37 +119,17 @@ export default async function CustomerDrillPage({
           </div>
         )}
 
-        {/* Collection notes */}
-        {customer.collection_notes && (
-          <div className={`rounded-xl border p-4 flex items-start gap-3 ${
-            isCritical
-              ? "bg-red-50 border-red-200"
-              : overdue > 0
-              ? "bg-amber-50 border-amber-200"
-              : "bg-blue-50 border-blue-200"
-          }`}>
-            <MessageSquare className={`w-4 h-4 shrink-0 mt-0.5 ${
-              isCritical ? "text-red-600" : overdue > 0 ? "text-amber-600" : "text-blue-600"
-            }`} />
-            <p className={`text-sm ${
-              isCritical ? "text-red-800" : overdue > 0 ? "text-amber-800" : "text-blue-800"
-            }`}>
-              <strong>Collection note:</strong> {customer.collection_notes}
-            </p>
-          </div>
-        )}
-
         {/* Invoice list */}
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border bg-brand-gray-light flex items-center justify-between">
             <h3 className="text-sm font-semibold text-brand-black">Outstanding Invoices</h3>
-            <span className="text-xs text-brand-gray-mid">{invoices.length} invoices · {fmtAmt(total)} total</span>
+            <span className="text-xs text-brand-gray-mid">{invoices.length} invoices · {fmtAmt(total)} total · {fmtAmt(overdue)} overdue</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-brand-gray-light/50">
-                  {["Invoice No", "Invoice Date", "Due Date", "Days Out", "Amount", "Status", "Collection"].map((h) => (
+                  {["Voucher", "Invoice Date", "Due Date", "Days Out", "Amount", "Status", "Collection"].map((h) => (
                     <th
                       key={h}
                       className={`px-4 py-2.5 text-xs font-medium text-brand-gray-mid ${h === "Amount" ? "text-right" : "text-left"}`}
@@ -182,7 +142,7 @@ export default async function CustomerDrillPage({
               <tbody className="divide-y divide-border">
                 {invoices.map((inv) => {
                   const sm    = STATUS_META[inv.status];
-                  const csm   = COLLECTION_STATUS_META[(inv.collection_status ?? inv.status) as keyof typeof COLLECTION_STATUS_META];
+                  const csm   = COLLECTION_STATUS_META[inv.status as keyof typeof COLLECTION_STATUS_META];
                   const isCrit = inv.days_outstanding >= 90;
                   const isWarn = inv.days_outstanding >= 30;
                   return (

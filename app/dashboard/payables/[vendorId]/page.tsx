@@ -8,14 +8,15 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
-import {
-  SAMPLE_VENDORS, getVendorInvoices, vendorTotal, vendorOverdue, fmtAmt, fmtD,
-} from "@/lib/payables-data";
+import { fmtAmt, fmtD } from "@/lib/payables-data";
+import { createClient } from "@/lib/supabase/server";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
+import { buildPartyAging } from "@/lib/supabase/party-aging";
 import { ArrowLeft, Phone, Mail, AlertTriangle, CheckCircle2, Building2 } from "lucide-react";
 
-export async function generateStaticParams() {
-  return SAMPLE_VENDORS.map((v) => ({ vendorId: v.id }));
-}
+// Vendor IDs come from the DB at request time. Skip prerendering — this page
+// is fully dynamic.
+export const dynamic = "force-dynamic";
 
 export default async function VendorDrillPage({
   params,
@@ -23,13 +24,16 @@ export default async function VendorDrillPage({
   params: Promise<{ vendorId: string }>;
 }) {
   const { vendorId } = await params;
-  const vendor = SAMPLE_VENDORS.find((v) => v.id === vendorId);
+
+  const supabase  = await createClient();
+  const companyId = await getSelectedCompanyId();
+  const { parties } = await buildPartyAging(supabase, "vendor", companyId);
+  const vendor = parties.find((p) => p.party_id === vendorId);
   if (!vendor) notFound();
 
-  const invoices  = getVendorInvoices(vendor.id);
-  const total     = vendorTotal(vendor);
-  const overdue   = vendorOverdue(vendor);
-  const isOverdue = overdue > 0;
+  const invoices = vendor.open_invoices;
+  const total = vendor.total;
+  const overdue = vendor.ag31to60 + vendor.ag61to90 + vendor.ag90plus;
   const isCritical = vendor.ag90plus > 0;
 
   const STATUS_META: Record<string, { label: string; className: string }> = {
@@ -42,11 +46,11 @@ export default async function VendorDrillPage({
   return (
     <>
       <Header
-        title={vendor.name}
+        title={vendor.party_name}
         breadcrumbs={[
           { label: "Dashboard",         href: "/dashboard" },
           { label: "Accounts Payable",  href: "/dashboard/payables" },
-          { label: vendor.name.substring(0, 30) },
+          { label: vendor.party_name.substring(0, 30) },
         ]}
         showImport={false}
       />
@@ -64,8 +68,8 @@ export default async function VendorDrillPage({
                 <Building2 className="w-6 h-6 text-brand-gray-mid" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-brand-black">{vendor.name}</h1>
-                <p className="text-sm text-brand-gray-mid">{vendor.category}</p>
+                <h1 className="text-lg font-bold text-brand-black">{vendor.party_name}</h1>
+                <p className="text-sm text-brand-gray-mid">Vendor</p>
               </div>
             </div>
             {isCritical && (
@@ -88,7 +92,7 @@ export default async function VendorDrillPage({
         {/* Aging summary tiles */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: "0–30 Days",   value: vendor.ag0to30,  className: "bg-green-50 border-green-200 text-green-800", badge: "Current" },
+            { label: "0–30 Days",   value: vendor.ag0to30,  className: "bg-green-50 border-green-200 text-green-800" },
             { label: "31–60 Days",  value: vendor.ag31to60, className: vendor.ag31to60 > 0 ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-white border-border text-brand-gray-mid" },
             { label: "61–90 Days",  value: vendor.ag61to90, className: vendor.ag61to90 > 0 ? "bg-orange-50 border-orange-200 text-orange-800" : "bg-white border-border text-brand-gray-mid" },
             { label: "90+ Days",    value: vendor.ag90plus, className: vendor.ag90plus > 0 ? "bg-red-50 border-red-200 text-red-800" : "bg-white border-border text-brand-gray-mid" },
@@ -114,13 +118,13 @@ export default async function VendorDrillPage({
         <div className="bg-white rounded-xl border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border bg-brand-gray-light flex items-center justify-between">
             <h3 className="text-sm font-semibold text-brand-black">Outstanding Invoices</h3>
-            <span className="text-xs text-brand-gray-mid">{invoices.length} invoices · {fmtAmt(total)} total</span>
+            <span className="text-xs text-brand-gray-mid">{invoices.length} invoices · {fmtAmt(total)} total · {fmtAmt(overdue)} overdue</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-brand-gray-light/50">
-                  {["Invoice No", "Invoice Date", "Due Date", "Days Out", "Amount", "Status"].map((h) => (
+                  {["Voucher", "Invoice Date", "Due Date", "Days Out", "Amount", "Status"].map((h) => (
                     <th key={h} className={`px-4 py-2.5 text-xs font-medium text-brand-gray-mid ${h === "Amount" ? "text-right" : "text-left"}`}>{h}</th>
                   ))}
                 </tr>

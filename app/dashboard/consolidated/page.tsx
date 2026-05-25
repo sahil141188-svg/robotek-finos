@@ -11,6 +11,8 @@ import { Header } from "@/components/layout/header";
 import { getCompanies } from "@/app/actions/companies";
 import { COMPANIES } from "@/lib/companies-data";
 import { fmtAmt } from "@/lib/bank-data";
+import { createClient } from "@/lib/supabase/server";
+import { fetchGroupAggregates } from "@/lib/supabase/group-aggregates";
 import {
   TrendingUp, TrendingDown, Wallet, ShieldCheck,
   Users, Building2, ArrowRight,
@@ -79,9 +81,21 @@ export default async function ConsolidatedDashboardPage() {
     redirect("/dashboard");
   }
 
-  // Fetch live companies from DB; fall back to static list if table isn't set up yet
-  const dbCompanies = await getCompanies();
-  const allCompanies = dbCompanies.length > 0 ? dbCompanies : COMPANIES;
+  // Fetch live per-company aggregates (revenue, AP, AR, cash) from transactions.
+  // Falls back to seeded `companies.*` figures if the aggregate query errors —
+  // then to the static demo list if the companies table isn't set up yet.
+  const supabase = await createClient();
+  let allCompanies: typeof COMPANIES = [];
+  try {
+    const live = await fetchGroupAggregates(supabase);
+    if (live.length > 0) allCompanies = live;
+  } catch (e) {
+    console.warn("[consolidated] group-aggregates failed, falling back:", (e as Error).message);
+  }
+  if (allCompanies.length === 0) {
+    const dbCompanies = await getCompanies();
+    allCompanies = dbCompanies.length > 0 ? dbCompanies : COMPANIES;
+  }
 
   // Compute group totals from whichever source we have
   // Only average compliance score over active companies that actually have data (score > 0)

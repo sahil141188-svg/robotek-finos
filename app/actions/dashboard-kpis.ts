@@ -18,6 +18,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getSelectedCompanyId } from "@/lib/company-cookie";
+import { buildPartyAging } from "@/lib/supabase/party-aging";
 
 export type DashboardKPI = {
   revenue: { current: number; vs_last_month_pct: number };
@@ -77,22 +78,21 @@ function getMonthsForComparison(): { current: string; previous: string } {
 
 /**
  * Heuristic: detect if a ledger name is revenue-related.
- * FIX N9: Removed the "classify everything else as revenue" OR clause.
- * That fallback inflated revenue by including payroll, freight, and other
- * non-revenue ledgers that just didn't match the expense keyword list.
- * Now requires a positive match against known revenue keywords only.
+ * Matches Busy's "Sale GST" / "Sale Local" / "Sale Inter-state" etc.
  */
 function isRevenueLedger(ledgerName: string): boolean {
   const name = ledgerName.toLowerCase();
-  return /\b(sales|service|revenue|income|trade receivable)\b/.test(name);
+  return /\b(sales?|service|revenue|income|trade receivable)\b/.test(name);
 }
 
 /**
- * Heuristic: detect if a ledger is COGS-related
+ * Heuristic: detect if a ledger is COGS-related.
+ * In Busy the contra account for purchases is literally "Purchase" plus
+ * line items like "Raw Material" / "Consumable Expenses".
  */
 function isCOGSLedger(ledgerName: string): boolean {
   const name = ledgerName.toLowerCase();
-  return /\b(cost of goods|cogs|manufacturing|raw materials|labor|mfg|assembly|production|material)\b/.test(name);
+  return /\b(purchase|cost of goods|cogs|manufacturing|raw materials?|labor|labour|mfg|assembly|production|material|consumable)\b/.test(name);
 }
 
 /**
@@ -116,7 +116,7 @@ function isARLedger(ledgerName: string): boolean {
  */
 function isCashLedger(ledgerName: string): boolean {
   const name = ledgerName.toLowerCase();
-  return /\b(cash|bank|hdfc|sbi|axis|icici|kotak|yes bank|indusind)\b/.test(name);
+  return /\b(cash|bank|hdfc|sbi|axis|icici|kotak|idbi|yes bank|indusind|paytm|on hand)\b/.test(name);
 }
 
 /**
@@ -124,7 +124,19 @@ function isCashLedger(ledgerName: string): boolean {
  */
 function isTaxLedger(ledgerName: string): boolean {
   const name = ledgerName.toLowerCase();
-  return /\b(tax|gst|tds|tcs|gst payable|gst receivable|advance tax|tds payable)\b/.test(name);
+  return /\b(cgst|sgst|igst|gst|tds|tcs|advance tax|custom duty|tax payable)\b/.test(name);
+}
+
+/** Detect Busy voucher type for a sale (SupO = Supply Outward) */
+function isSalesVoucher(voucherType: string): boolean {
+  const v = voucherType.toLowerCase();
+  return v === "supo" || v === "sales" || v === "sale" || v === "sirt" || v === "sale return";
+}
+
+/** Detect Busy voucher type for a purchase (SupI = Supply Inward) */
+function isPurchaseVoucher(voucherType: string): boolean {
+  const v = voucherType.toLowerCase();
+  return v === "supi" || v === "purchase" || v === "purc" || v === "purchase return";
 }
 
 /**
@@ -141,122 +153,163 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
     const { current: currentMonth, previous: previousMonth } = getMonthsForComparison();
 
     // Query transactions for current FY, scoped to the selected company when set.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let txnQuery = (supabase as any)
-      .from("transactions")
-      .select("*")
-      .eq("financial_year", currentFY);
-    if (companyId) txnQuery = txnQuery.eq("company_id", companyId);
-
-    let { data: currentFYData, error: currentError } = await txnQuery;
-
-    // Pre-migration fallback: if company_id column doesn't exist, retry without filter
-    if (currentError && (currentError as { code?: string }).code === "42703" && companyId) {
-      console.warn("[dashboard-kpis] company_id column missing — run migration 006. Showing all-company data.");
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fallback = await (supabase as any)
-        .from("transactions")
-        .select("*")
-        .eq("financial_year", currentFY);
-      currentFYData  = fallback.data;
-      currentError   = fallback.error;
-    }
-
-    if (currentError) throw currentError;
-    const transactions = (currentFYData || []) as Array<{
+    // Supabase enforces a 1000-row default limit; paginate via .range() so we
+    // capture every row in a full Day Book (4k-10k entries is normal).
+    type Txn = {
       transaction_date: string;
+      voucher_type: string;
       ledger_name: string;
       amount: number;
       dr_cr: "DR" | "CR";
-    }>;
+    };
+    const transactions: Txn[] = [];
+    const PAGE = 1000;
+    let fromRow = 0;
+    let companyMissing = false;
+    while (true) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let txnQuery = (supabase as any)
+        .from("transactions")
+        .select("transaction_date, voucher_type, ledger_name, amount, dr_cr")
+        .eq("financial_year", currentFY);
+      if (companyId && !companyMissing) txnQuery = txnQuery.eq("company_id", companyId);
 
-    // Compute current period (MTD) totals
-    const currentMonthTxns = transactions.filter((t) =>
-      t.transaction_date.startsWith(currentMonth)
-    );
-
-    let revenue = 0,
-      cogs = 0,
-      apTotal = 0,
-      arTotal = 0,
-      cashBalance = 0,
-      taxLiability = 0,
-      opex = 0;
-
-    for (const txn of currentMonthTxns) {
-      const amt = txn.amount;
-
-      if (isRevenueLedger(txn.ledger_name)) {
-        // Revenue is CR to Sales accounts
-        if (txn.dr_cr === "CR") revenue += amt;
-      } else if (isCOGSLedger(txn.ledger_name)) {
-        // COGS is DR to cost accounts
-        if (txn.dr_cr === "DR") cogs += amt;
-      } else if (isAPLedger(txn.ledger_name)) {
-        // AP is CR to payable accounts
-        if (txn.dr_cr === "CR") apTotal += amt;
-      } else if (isARLedger(txn.ledger_name)) {
-        // AR is DR to receivable accounts
-        if (txn.dr_cr === "DR") arTotal += amt;
-      } else if (isCashLedger(txn.ledger_name)) {
-        // Net cash effect
-        cashBalance += txn.dr_cr === "DR" ? amt : -amt;
-      } else if (isTaxLedger(txn.ledger_name)) {
-        // Tax liabilities
-        if (txn.dr_cr === "CR") taxLiability += amt;
-      } else {
-        // Operating expenses (anything not categorized above)
-        if (txn.dr_cr === "DR") opex += amt;
+      const { data: page, error } = await txnQuery.range(fromRow, fromRow + PAGE - 1);
+      if (error) {
+        if ((error as { code?: string }).code === "42703" && companyId) {
+          console.warn("[dashboard-kpis] company_id column missing — run migration 006.");
+          companyMissing = true;
+          continue; // retry this page without the company filter
+        }
+        throw error;
       }
+      if (!page || page.length === 0) break;
+      transactions.push(...(page as Txn[]));
+      if (page.length < PAGE) break;
+      fromRow += PAGE;
     }
 
-    // Compute previous period totals for comparison
-    const previousMonthTxns = transactions.filter((t) =>
-      t.transaction_date.startsWith(previousMonth)
-    );
+    // ── Per-month classifier ──────────────────────────────────────────────
+    // Built around Busy's voucher_type signal. For each month we compute
+    // revenue/COGS via two heuristics depending on the data shape:
+    //   (A) "Day Book" shape: contra ledgers like "Sale GST" present —
+    //       revenue = Σ CR to Sale ledgers; COGS = Σ DR to Purchase ledgers
+    //   (B) "Register only" shape: each row is just one customer/vendor DR/CR —
+    //       revenue = Σ DR (customer side of sales voucher); COGS = Σ CR
+    //       (vendor side of purchase voucher); equivalent to gross invoice value.
+    // We take whichever produces the larger figure per month — Day Book wins
+    // when both heuristics fire because (A) excludes GST while (B) includes it.
+    function totalsForMonth(monthPrefix: string) {
+      const rows = transactions.filter((t) => t.transaction_date.startsWith(monthPrefix));
+      let revenueA = 0, revenueB = 0;
+      let cogsA = 0, cogsB = 0;
+      let cashFlow = 0, taxLiab = 0, opex = 0;
 
-    let prevRevenue = 0,
-      prevCogs = 0,
-      prevOpex = 0,
-      prevCash = 0,
-      prevTax = 0;
+      for (const t of rows) {
+        const amt = Number(t.amount);
+        const isSale = isSalesVoucher(t.voucher_type);
+        const isPurc = isPurchaseVoucher(t.voucher_type);
 
-    for (const txn of previousMonthTxns) {
-      const amt = txn.amount;
-      if (isRevenueLedger(txn.ledger_name) && txn.dr_cr === "CR") prevRevenue += amt;
-      else if (isCOGSLedger(txn.ledger_name) && txn.dr_cr === "DR") prevCogs += amt;
-      else if (isCashLedger(txn.ledger_name))
-        prevCash += txn.dr_cr === "DR" ? amt : -amt;
-      else if (isTaxLedger(txn.ledger_name) && txn.dr_cr === "CR") prevTax += amt;
-      else if (!isAPLedger(txn.ledger_name) && !isARLedger(txn.ledger_name))
-        if (txn.dr_cr === "DR") prevOpex += amt;
+        // Revenue heuristic A — CR to "Sale*" ledger
+        if (isSale && t.dr_cr === "CR" && isRevenueLedger(t.ledger_name)) {
+          revenueA += amt;
+        }
+        // Revenue heuristic B — DR side of a sales voucher (= customer charge,
+        // includes GST). Used when Day Book contras are absent.
+        if (isSale && t.dr_cr === "DR" && !isTaxLedger(t.ledger_name) && !isRevenueLedger(t.ledger_name)) {
+          revenueB += amt;
+        }
+
+        // COGS heuristic A — DR to Purchase ledger
+        if (isPurc && t.dr_cr === "DR" && isCOGSLedger(t.ledger_name)) {
+          cogsA += amt;
+        }
+        // COGS heuristic B — CR side of purchase voucher (= vendor liability)
+        if (isPurc && t.dr_cr === "CR" && !isTaxLedger(t.ledger_name) && !isCOGSLedger(t.ledger_name)) {
+          cogsB += amt;
+        }
+
+        // Cash movement: any txn touching a bank/cash ledger
+        if (isCashLedger(t.ledger_name)) {
+          cashFlow += t.dr_cr === "DR" ? amt : -amt;
+        }
+        // Tax liability: CR to tax ledgers (output GST/TDS) minus DR (input credit)
+        else if (isTaxLedger(t.ledger_name)) {
+          taxLiab += t.dr_cr === "CR" ? amt : -amt;
+        }
+        // Opex: DR to "Journal" expense accounts (not vendor/customer ledgers)
+        else if (
+          t.dr_cr === "DR" &&
+          (t.voucher_type.toLowerCase() === "jrnl" || t.voucher_type.toLowerCase() === "journal") &&
+          !isCOGSLedger(t.ledger_name) && !isRevenueLedger(t.ledger_name) &&
+          !isAPLedger(t.ledger_name) && !isARLedger(t.ledger_name)
+        ) {
+          opex += amt;
+        }
+      }
+      const revenue = Math.max(revenueA, revenueB);
+      const cogs = Math.max(cogsA, cogsB);
+      return { revenue, cogs, cashFlow, taxLiab, opex };
     }
 
-    // Compute gross margin
-    const grossMargin = revenue > 0 ? ((revenue - cogs) / revenue) * 100 : 0;
-    const prevGrossMargin = prevRevenue > 0 ? ((prevRevenue - prevCogs) / prevRevenue) * 100 : 0;
+    const cur  = totalsForMonth(currentMonth);
+    const prev = totalsForMonth(previousMonth);
 
-    // Compute percentage changes
-    const revenueChange = prevRevenue > 0 ? ((revenue - prevRevenue) / prevRevenue) * 100 : 0;
-    const cogsChange = prevCogs > 0 ? ((cogs - prevCogs) / prevCogs) * 100 : 0;
-    const marginChange = prevGrossMargin > 0 ? grossMargin - prevGrossMargin : 0;
-    const cashChange = prevCash !== 0 ? ((cashBalance - prevCash) / Math.abs(prevCash)) * 100 : 0;
-    const taxChange = prevTax > 0 ? ((taxLiability - prevTax) / prevTax) * 100 : 0;
-    const opexChange = prevOpex > 0 ? ((opex - prevOpex) / prevOpex) * 100 : 0;
+    // ── Cash balance: prefer bank_accounts.closing_balance when available ─
+    // The transaction-derived "cashFlow" is a net delta for the month, which
+    // isn't a useful "Cash Balance" KPI on its own. Use the sum of imported
+    // closing balances across all bank accounts as a snapshot.
+    let cashSnapshot = 0;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let bq = (supabase as any).from("bank_accounts").select("closing_balance");
+      if (companyId) bq = bq.eq("company_id", companyId);
+      const { data: bankAccts } = await bq;
+      if (bankAccts && bankAccts.length > 0) {
+        // closing_balance is stored in paisa → convert to rupees
+        cashSnapshot = bankAccts.reduce(
+          (sum: number, b: { closing_balance: number }) => sum + Number(b.closing_balance) / 100,
+          0,
+        );
+      } else {
+        cashSnapshot = cur.cashFlow;
+      }
+    } catch {
+      cashSnapshot = cur.cashFlow;
+    }
 
-    // Estimate overdue amounts (simplified: assume 20% of AP/AR is overdue if no explicit dates)
-    const apOverdue = apTotal * 0.2;
-    const arOverdue = arTotal * 0.2;
+    // ── AP / AR: use shared aging engine for accurate totals ──────────────
+    let apTotal = 0, apOverdue = 0, arTotal = 0, arOverdue = 0;
+    try {
+      const [ap, ar] = await Promise.all([
+        buildPartyAging(supabase, "vendor", companyId),
+        buildPartyAging(supabase, "customer", companyId),
+      ]);
+      apTotal = ap.summary.total;     apOverdue = ap.summary.overdue;
+      arTotal = ar.summary.total;     arOverdue = ar.summary.overdue;
+    } catch (e) {
+      console.warn("[dashboard-kpis] AP/AR aging unavailable:", (e as Error).message);
+    }
+
+    // ── Derived metrics ───────────────────────────────────────────────────
+    const grossMargin     = cur.revenue  > 0 ? ((cur.revenue  - cur.cogs)  / cur.revenue ) * 100 : 0;
+    const prevGrossMargin = prev.revenue > 0 ? ((prev.revenue - prev.cogs) / prev.revenue) * 100 : 0;
+
+    const revenueChange = prev.revenue > 0 ? ((cur.revenue - prev.revenue) / prev.revenue) * 100 : 0;
+    const cogsChange    = prev.cogs    > 0 ? ((cur.cogs    - prev.cogs)    / prev.cogs)    * 100 : 0;
+    const marginChange  = prevGrossMargin > 0 ? grossMargin - prevGrossMargin : 0;
+    const taxChange     = prev.taxLiab > 0 ? ((cur.taxLiab - prev.taxLiab) / prev.taxLiab) * 100 : 0;
+    const opexChange    = prev.opex    > 0 ? ((cur.opex    - prev.opex)    / prev.opex)    * 100 : 0;
 
     return {
-      revenue: { current: revenue, vs_last_month_pct: revenueChange },
-      cogs: { current: cogs, vs_last_month_pct: cogsChange },
-      gross_margin: { current: grossMargin, vs_last_month_pct: marginChange },
-      cash: { current: cashBalance, vs_last_month_pct: cashChange },
-      ap: { total: apTotal, overdue: apOverdue, vs_last_month_pct: 0 },
-      ar: { total: arTotal, overdue: arOverdue, vs_last_month_pct: 0 },
-      tax: { total: taxLiability, vs_last_month_pct: taxChange },
-      opex: { current: opex, vs_last_month_pct: opexChange },
+      revenue:      { current: cur.revenue,    vs_last_month_pct: revenueChange },
+      cogs:         { current: cur.cogs,       vs_last_month_pct: cogsChange    },
+      gross_margin: { current: grossMargin,    vs_last_month_pct: marginChange  },
+      cash:         { current: cashSnapshot,   vs_last_month_pct: 0             },
+      ap:           { total: apTotal,          overdue: apOverdue, vs_last_month_pct: 0 },
+      ar:           { total: arTotal,          overdue: arOverdue, vs_last_month_pct: 0 },
+      tax:          { total: cur.taxLiab,      vs_last_month_pct: taxChange     },
+      opex:         { current: cur.opex,       vs_last_month_pct: opexChange    },
     };
   } catch (error) {
     console.error("[dashboard-kpis] Error fetching KPIs:", error);
