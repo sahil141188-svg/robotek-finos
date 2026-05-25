@@ -7,6 +7,21 @@ import Link from "next/link";
 import { TrendingUp, AlertTriangle, Calendar, IndianRupee } from "lucide-react";
 import type { KpiSummary } from "@/lib/dashboard-data";
 
+/**
+ * Format a Lakhs value (KpiSummary fields are all in Lakhs after transform).
+ * Bug fix: previously the chips used `₹${lakhs}L` which:
+ *  1. Never switched to Crore notation for values >= 100L
+ *  2. Showed raw floating-point noise (e.g. "₹1.40000000001L")
+ *  3. Always prefixed "+" on the revenue % even for negative values
+ */
+function fmtLakhs(lakhs: number): string {
+  if (!isFinite(lakhs) || Math.abs(lakhs) < 0.005) return "—";
+  if (lakhs < 0) return `−${fmtLakhs(-lakhs)}`;
+  if (lakhs >= 100) return `₹${(lakhs / 100).toFixed(2)} Cr`;
+  if (lakhs >= 1)   return `₹${lakhs.toFixed(2)}L`;
+  return `₹${(lakhs * 100).toFixed(0)}K`;
+}
+
 interface HealthBannerProps {
   kpi: KpiSummary;
   healthScore: number; // 0–100
@@ -48,25 +63,25 @@ export function HealthBanner({ kpi, healthScore }: HealthBannerProps) {
         <Chip
           icon={<TrendingUp className="w-3.5 h-3.5 text-green-600" />}
           label="Revenue MTD"
-          value={`+${kpi.revenue.vs_last_month_pct}%`}
-          valueClass="text-green-600"
+          value={`${kpi.revenue.vs_last_month_pct >= 0 ? "+" : ""}${kpi.revenue.vs_last_month_pct.toFixed(1)}%`}
+          valueClass={kpi.revenue.vs_last_month_pct >= 0 ? "text-green-600" : "text-red-600"}
         />
         <Chip
           icon={<AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
           label="AP Overdue"
-          value={`₹${kpi.ap.overdue}L`}
+          value={fmtLakhs(kpi.ap.overdue)}
           valueClass="text-red-600"
         />
         <Chip
           icon={<AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
           label="AR Overdue"
-          value={`₹${kpi.ar.overdue}L`}
+          value={fmtLakhs(kpi.ar.overdue)}
           valueClass="text-amber-600"
         />
         <Chip
           icon={<IndianRupee className="w-3.5 h-3.5 text-brand-maroon" />}
           label="Tax Pending"
-          value={`₹${kpi.tax.total}L`}
+          value={fmtLakhs(kpi.tax.total)}
           valueClass="text-brand-maroon"
         />
         <Chip
