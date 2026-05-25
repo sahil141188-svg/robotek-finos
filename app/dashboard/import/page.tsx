@@ -583,9 +583,15 @@ export default function ImportPage() {
                 </>
               )}
             </div>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
               <Button variant="outline" onClick={reset}>
                 <RotateCcw className="w-4 h-4 mr-2" /> Import another file
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => { window.location.href = "/dashboard/imports"; }}
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" /> Manage Imported Data
               </Button>
               <Button
                 onClick={() => {

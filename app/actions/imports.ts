@@ -123,9 +123,20 @@ export async function deleteImport(importId: string): Promise<void> {
   }
 
   // 1. Delete linked data depending on module
-  // NOTE: banking imports are stored with module = "banking" (not "bank_statement")
-  if ((imp as any).module === "banking") {
-    // bank_statements cascade-deletes when bank_account is deleted
+  // NOTE: banking imports may be stored as "banking" OR "bank_statement"
+  const isBankImport = ["banking", "bank_statement"].includes((imp as any).module);
+  if (isBankImport) {
+    // Step 1a: delete bank_statements rows that reference accounts from this import
+    //          (handles cases where the cascade isn't set up on the FK)
+    const { data: accounts } = await admin
+      .from("bank_accounts")
+      .select("id")
+      .eq("import_id", importId);
+    if (accounts && accounts.length > 0) {
+      const ids = accounts.map((a: any) => a.id);
+      await (admin as any).from("bank_statements").delete().in("bank_account_id", ids);
+    }
+    // Step 1b: delete the bank_account rows themselves
     const { error: baErr } = await admin
       .from("bank_accounts")
       .delete()
@@ -138,7 +149,7 @@ export async function deleteImport(importId: string): Promise<void> {
       .delete()
       .eq("import_id", importId);
     if (txErr) {
-      // Non-fatal — transactions table may not exist yet
+      // Non-fatal — log the warning but continue so the file_imports record is removed
       console.warn("[deleteImport] Could not delete transactions:", txErr.message);
     }
   }
@@ -153,4 +164,7 @@ export async function deleteImport(importId: string): Promise<void> {
 
   revalidatePath("/dashboard/imports");
   revalidatePath("/dashboard/banking");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/payables");
+  revalidatePath("/dashboard/receivables");
 }
