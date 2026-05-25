@@ -38,6 +38,10 @@ export type ReminderSettings = {
   ar_days_before_due:     number;
   ar_days_after_due:      number;
   escalation_hours:       number;
+  /** Minimum days between consecutive WhatsApp reminders to the SAME customer. */
+  ar_min_days_between_reminders?: number;
+  /** Delay (ms) between API calls when sending in bulk — avoids WhatsApp rate limits. */
+  ar_inter_message_delay_ms?: number;
 };
 
 export type TemplateSettings = {
@@ -81,10 +85,12 @@ const DEFAULTS: AllNotificationSettings = {
     ar_days_before_due:     3,
     ar_days_after_due:      1,
     escalation_hours:       24,
+    ar_min_days_between_reminders: 3,
+    ar_inter_message_delay_ms:     2000,
   },
   templates: {
     ar_reminder:
-      "Dear {customer_name},\n\nThis is a reminder that invoice {invoice_no} for ₹{amount} is due on {due_date}.\n\nPlease arrange payment at the earliest.\n\nRegards,\n{company_name} Finance Team",
+      "Dear *{customer_name}*,\n\nFriendly reminder — your outstanding balance with *{company_name}* is *₹{amount}* (oldest invoice dated {due_date}, {days_overdue} days outstanding).\n\nKindly arrange payment at your earliest convenience. If you have already paid, please share the UTR.\n\nThank you,\n{company_name} Accounts Team",
     compliance_reminder:
       "Hi {user_name},\n\nAction required: {compliance_title} is due on {due_date}.\n\nPlease complete this filing on time to avoid penalties.\n\nRobotek FinOS — Compliance Calendar",
     task_reminder:

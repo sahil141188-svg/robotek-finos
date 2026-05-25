@@ -15,6 +15,7 @@ import { requireAuth } from "@/lib/auth";
 import { listOverdueCustomers } from "@/app/actions/reminders";
 import { getNotificationSettings } from "@/app/actions/notification-settings";
 import { ReminderCenter } from "@/components/reminders/reminder-center";
+import { createClient } from "@/lib/supabase/server";
 import { AlertCircle, MessageSquare } from "lucide-react";
 import Link from "next/link";
 
@@ -24,11 +25,20 @@ export default async function RemindersPage() {
   const { profile } = await requireAuth();
   if (!["ceo", "cfo", "accounts"].includes(profile.role)) redirect("/dashboard");
 
-  const { customers, companyId } = await listOverdueCustomers();
+  const { customers, companyId, cooldownDays } = await listOverdueCustomers();
   const settings = await getNotificationSettings();
   const waEnabled = settings.whatsapp.enabled &&
     ((settings.whatsapp.provider === "meta"   && !!settings.whatsapp.meta_token && !!settings.whatsapp.meta_phone_id) ||
      (settings.whatsapp.provider === "twilio" && !!settings.whatsapp.account_sid && !!settings.whatsapp.auth_token && !!settings.whatsapp.from_number));
+
+  // Resolve the company display name for the message template preview
+  let companyName = "Your Company";
+  if (companyId) {
+    const supabase = await createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any).from("companies").select("name").eq("id", companyId).maybeSingle();
+    if (data?.name) companyName = data.name;
+  }
 
   return (
     <>
@@ -87,7 +97,13 @@ export default async function RemindersPage() {
             </p>
           </div>
         ) : (
-          <ReminderCenter customers={customers} waEnabled={waEnabled} template={settings.templates.ar_reminder} />
+          <ReminderCenter
+            customers={customers}
+            waEnabled={waEnabled}
+            template={settings.templates.ar_reminder}
+            cooldownDays={cooldownDays}
+            companyName={companyName}
+          />
         )}
       </main>
     </>
