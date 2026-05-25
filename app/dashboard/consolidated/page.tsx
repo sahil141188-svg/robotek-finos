@@ -127,7 +127,7 @@ export default async function ConsolidatedDashboardPage() {
           <KpiTile
             label="Group Revenue (May)"
             value={fmtAmt(GROUP_TOTALS.monthly_revenue)}
-            sub="All 10 companies"
+            sub={`All ${allCompanies.length} companies`}
             icon={TrendingUp}
             color="bg-brand-red"
           />

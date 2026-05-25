@@ -506,15 +506,36 @@ export function validateRows(rows: MappedRow[], module = "transactions"): Valida
   const valid: MappedRow[] = [];
   const voucherCounts = new Map<string, number>();
 
-  // Count voucher number occurrences (for duplicate detection)
+  // Count voucher number occurrences (for duplicate detection).
+  // Bug #17 fix: double-entry bookkeeping legitimately has the same voucher
+  // appearing twice — once as DR and once as CR. Flag a voucher as duplicate
+  // only when it appears more than TWICE, or when both occurrences have the
+  // same DR/CR direction (i.e., not a balanced double-entry pair).
   rows.forEach((r) => {
     if (r.voucher_number) {
       voucherCounts.set(r.voucher_number, (voucherCounts.get(r.voucher_number) ?? 0) + 1);
     }
   });
 
+  // Build a set of vouchers that are genuine duplicates (same direction > 2 times,
+  // or appearing more than 2 times regardless of direction).
+  const voucherDirections = new Map<string, Set<"dr" | "cr">>();
+  rows.forEach((r) => {
+    if (!r.voucher_number) return;
+    if (!voucherDirections.has(r.voucher_number)) voucherDirections.set(r.voucher_number, new Set());
+    if (r.dr_amount > 0) voucherDirections.get(r.voucher_number)!.add("dr");
+    if (r.cr_amount > 0) voucherDirections.get(r.voucher_number)!.add("cr");
+  });
+
   const duplicates = Array.from(voucherCounts.entries())
-    .filter(([, count]) => count > 1)
+    .filter(([vno, count]) => {
+      if (count <= 2) {
+        // Exactly 2 occurrences — only a duplicate if BOTH are the same direction
+        const dirs = voucherDirections.get(vno);
+        return !(dirs && dirs.has("dr") && dirs.has("cr")); // NOT a balanced DR+CR pair
+      }
+      return true; // > 2 occurrences is always a duplicate
+    })
     .map(([vno]) => vno);
   const dupeSet = new Set(duplicates);
 

@@ -220,7 +220,8 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
               <SelectTrigger id="role">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              {/* Bug #16 fix: z-50 keeps dropdown below the sheet close button */}
+              <SelectContent className="z-50">
                 {ROLES.map((r) => (
                   <SelectItem key={r} value={r}>
                     {ROLE_LABELS[r]}
