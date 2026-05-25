@@ -296,20 +296,39 @@ export default async function DashboardPage() {
         </Suspense>
 
         {/* ── 4. Revenue Trend + Cost Breakdown ────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <RevenueChart data={REVENUE_TREND} />
-          </div>
-          <div>
-            <ExpenseChart data={EXPENSE_BREAKDOWN} />
-          </div>
-        </div>
+        {(() => {
+          // Charts expect values in LAKHS. The KPI server returns rupees.
+          const TO_L = (n: number) => n / 100000;
+          const revenueTrend = liveKPI?.charts?.revenueTrend?.map((p) => ({
+            month: p.month, period: p.period,
+            revenue: TO_L(p.revenue), cogs: TO_L(p.cogs), grossProfit: TO_L(p.grossProfit),
+          })) ?? REVENUE_TREND;
+          const expenseBreakdown = liveKPI?.charts?.expenseBreakdown?.map((e) => ({
+            category: e.category, amount: TO_L(e.amount), color: e.color,
+          })) ?? EXPENSE_BREAKDOWN;
+          const aging = liveKPI?.charts?.aging?.map((b) => ({
+            bucket: b.bucket, ap: TO_L(b.ap), ar: TO_L(b.ar),
+          })) ?? AGING_DATA;
 
-        {/* ── 5. Aging + Compliance ─────────────────────────────────────── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <AgingChart data={AGING_DATA} />
-          <ComplianceMini items={UPCOMING_COMPLIANCE} />
-        </div>
+          return (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2">
+                  <RevenueChart data={revenueTrend} />
+                </div>
+                <div>
+                  <ExpenseChart data={expenseBreakdown} />
+                </div>
+              </div>
+
+              {/* ── 5. Aging + Compliance ─────────────────────────────────────── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <AgingChart data={aging} />
+                <ComplianceMini items={UPCOMING_COMPLIANCE} />
+              </div>
+            </>
+          );
+        })()}
 
       </main>
     </>

@@ -29,6 +29,26 @@ export type DashboardKPI = {
   ar: { total: number; overdue: number; vs_last_month_pct: number };
   tax: { total: number; vs_last_month_pct: number };
   opex: { current: number; vs_last_month_pct: number };
+  // Optional chart-ready series (server populates when transactions exist).
+  charts?: {
+    revenueTrend: Array<{
+      month: string;          // "Apr", "May", ...
+      period: string;         // "Apr 2026"
+      revenue: number;        // in rupees
+      cogs: number;
+      grossProfit: number;
+    }>;
+    expenseBreakdown: Array<{
+      category: string;
+      amount: number;         // in rupees
+      color: string;
+    }>;
+    aging: Array<{
+      bucket: string;         // "0-30d" / "31-60d" / "61-90d" / "90+d"
+      ap: number;             // in rupees
+      ar: number;
+    }>;
+  };
 };
 
 /** Get current financial year (April to March) */
@@ -278,8 +298,10 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
       cashSnapshot = cur.cashFlow;
     }
 
-    // ── AP / AR: use shared aging engine for accurate totals ──────────────
+    // ── AP / AR: use shared aging engine for accurate totals + buckets ────
     let apTotal = 0, apOverdue = 0, arTotal = 0, arOverdue = 0;
+    let apBuckets = { b0: 0, b1: 0, b2: 0, b3: 0 };
+    let arBuckets = { b0: 0, b1: 0, b2: 0, b3: 0 };
     try {
       const [ap, ar] = await Promise.all([
         buildPartyAging(supabase, "vendor", companyId),
@@ -287,9 +309,65 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
       ]);
       apTotal = ap.summary.total;     apOverdue = ap.summary.overdue;
       arTotal = ar.summary.total;     arOverdue = ar.summary.overdue;
+      apBuckets = {
+        b0: ap.summary.bucket0to30, b1: ap.summary.bucket31to60,
+        b2: ap.summary.bucket61to90, b3: ap.summary.bucket90plus,
+      };
+      arBuckets = {
+        b0: ar.summary.bucket0to30, b1: ar.summary.bucket31to60,
+        b2: ar.summary.bucket61to90, b3: ar.summary.bucket90plus,
+      };
     } catch (e) {
       console.warn("[dashboard-kpis] AP/AR aging unavailable:", (e as Error).message);
     }
+
+    // ── Revenue / COGS trend: last 6 months ───────────────────────────────
+    const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const today = new Date();
+    const trend: Array<{ month: string; period: string; revenue: number; cogs: number; grossProfit: number }> = [];
+    for (let offset = 5; offset >= 0; offset--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - offset, 1);
+      const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const t = totalsForMonth(prefix);
+      trend.push({
+        month: MONTH_LABELS[d.getMonth()],
+        period: `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`,
+        revenue: t.revenue,
+        cogs: t.cogs,
+        grossProfit: t.revenue - t.cogs,
+      });
+    }
+
+    // ── Expense breakdown: top OpEx ledgers for current month ─────────────
+    const CHART_COLORS = ["#E52D31", "#F7DA11", "#9A9596", "#852321", "#1F1B20", "#3b82f6", "#10b981", "#a855f7"];
+    const opexByLedger = new Map<string, number>();
+    for (const t of transactions) {
+      if (!t.transaction_date.startsWith(currentMonth)) continue;
+      const vt = t.voucher_type.toLowerCase();
+      if (t.dr_cr !== "DR") continue;
+      if (vt !== "jrnl" && vt !== "journal") continue;
+      if (isCOGSLedger(t.ledger_name) || isRevenueLedger(t.ledger_name) ||
+          isAPLedger(t.ledger_name)   || isARLedger(t.ledger_name) ||
+          isCashLedger(t.ledger_name) || isTaxLedger(t.ledger_name)) continue;
+      opexByLedger.set(t.ledger_name, (opexByLedger.get(t.ledger_name) || 0) + Number(t.amount));
+    }
+    const expenseBreakdown = [...opexByLedger.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([category, amount], idx) => ({
+        category,
+        amount,
+        color: CHART_COLORS[idx % CHART_COLORS.length],
+      }));
+
+    // ── Aging chart series ────────────────────────────────────────────────
+    const agingChart = [
+      { bucket: "0-30d",  ap: apBuckets.b0, ar: arBuckets.b0 },
+      { bucket: "31-60d", ap: apBuckets.b1, ar: arBuckets.b1 },
+      { bucket: "61-90d", ap: apBuckets.b2, ar: arBuckets.b2 },
+      { bucket: "90+d",   ap: apBuckets.b3, ar: arBuckets.b3 },
+    ];
 
     // ── Derived metrics ───────────────────────────────────────────────────
     const grossMargin     = cur.revenue  > 0 ? ((cur.revenue  - cur.cogs)  / cur.revenue ) * 100 : 0;
@@ -310,6 +388,11 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
       ar:           { total: arTotal,          overdue: arOverdue, vs_last_month_pct: 0 },
       tax:          { total: cur.taxLiab,      vs_last_month_pct: taxChange     },
       opex:         { current: cur.opex,       vs_last_month_pct: opexChange    },
+      charts: {
+        revenueTrend:     trend,
+        expenseBreakdown,
+        aging:            agingChart,
+      },
     };
   } catch (error) {
     console.error("[dashboard-kpis] Error fetching KPIs:", error);
