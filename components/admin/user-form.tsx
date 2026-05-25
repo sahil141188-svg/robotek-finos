@@ -114,6 +114,9 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         if (isEditing && user) {
           await updateUser(user.id, {
             full_name: fullName,
+            // Bug fix: include email so the upsert can INSERT if the profile
+            // row is missing (synthetic auth-only user → avoids NOT NULL error)
+            email: user.email,
             role,
             is_active: isActive,
             permissions,
