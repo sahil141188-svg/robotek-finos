@@ -27,6 +27,21 @@ export type ExpenseSummary = {
   byMonth: Array<{ month: string; period: string; amount: number }>;
   byVendor: Array<{ vendor: string; amount: number; pct: number }>;
   recentTxns: ExpenseRow[];
+
+  /** Category × month matrix — last 6 months side-by-side, with trend flag */
+  categoryMatrix: {
+    monthHeaders: Array<{ key: string; label: string; isCurrent: boolean }>;
+    rows: Array<{
+      category: string;
+      cells: number[];             // length = monthHeaders.length
+      total6m: number;             // sum across the 6 months
+      avg6m: number;
+      latest: number;
+      trend: "spike" | "up" | "flat" | "down" | "new";
+      trendNote: string;           // e.g. "+25% vs avg" or "first month"
+    }>;
+    monthTotals: number[];
+  };
 };
 
 /** Category buckets, ordered most-specific → least. Each is a /regex/. */
@@ -195,5 +210,67 @@ export async function fetchExpenseSummary(
     ? Math.round(((totalMTD - totalPrev) / totalPrev) * 100)
     : 0;
 
-  return { totalMTD, totalPrevMonth: totalPrev, monthOverMonthPct, byCategory, byMonth, byVendor, recentTxns };
+  // ── Build the 6-month category × month matrix ─────────────────────────
+  // Headers for the last 6 months (oldest → newest)
+  const monthHeaders: ExpenseSummary["categoryMatrix"]["monthHeaders"] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    monthHeaders.push({
+      key,
+      label: `${MONTH_LABELS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`,
+      isCurrent: i === 0,
+    });
+  }
+
+  // Build category × month grid from every expense row (all 6 months)
+  const grid = new Map<string, number[]>(); // category → cells[6]
+  for (const r of expRows) {
+    const key = r.date.slice(0, 7);
+    const colIdx = monthHeaders.findIndex((h) => h.key === key);
+    if (colIdx === -1) continue;            // outside the 6-month window
+    if (!grid.has(r.category)) grid.set(r.category, new Array(monthHeaders.length).fill(0));
+    grid.get(r.category)![colIdx] += r.amount;
+  }
+
+  // Build rows with trend analysis
+  const matrixRows: ExpenseSummary["categoryMatrix"]["rows"] = [];
+  for (const [category, cells] of grid) {
+    const total6m = cells.reduce((s, c) => s + c, 0);
+    if (total6m === 0) continue;
+    const latest = cells[cells.length - 1] ?? 0;
+    const nonZeroCells = cells.filter((c) => c > 0);
+    const avg6m = nonZeroCells.length > 0 ? total6m / nonZeroCells.length : 0;
+    const priorMonths = cells.slice(0, -1);
+    const priorAvg = priorMonths.filter((c) => c > 0).length > 0
+      ? priorMonths.reduce((s, c) => s + c, 0) / priorMonths.filter((c) => c > 0).length
+      : 0;
+
+    // Classify trend
+    let trend: "spike" | "up" | "flat" | "down" | "new";
+    let trendNote: string;
+    if (priorAvg === 0 && latest > 0) { trend = "new"; trendNote = "first month"; }
+    else if (latest === 0)             { trend = "down"; trendNote = "no spend this month"; }
+    else {
+      const diff = (latest - priorAvg) / priorAvg;
+      const pct = Math.round(diff * 100);
+      if (diff >= 0.5)        { trend = "spike"; trendNote = `+${pct}% vs avg`; }
+      else if (diff >= 0.15)  { trend = "up";    trendNote = `+${pct}% vs avg`; }
+      else if (diff <= -0.15) { trend = "down";  trendNote = `${pct}% vs avg`; }
+      else                    { trend = "flat";  trendNote = `${pct >= 0 ? "+" : ""}${pct}% vs avg`; }
+    }
+
+    matrixRows.push({ category, cells, total6m, avg6m, latest, trend, trendNote });
+  }
+  matrixRows.sort((a, b) => b.total6m - a.total6m);
+
+  const monthColTotals = monthHeaders.map((_, i) =>
+    matrixRows.reduce((s, r) => s + (r.cells[i] ?? 0), 0)
+  );
+
+  return {
+    totalMTD, totalPrevMonth: totalPrev, monthOverMonthPct,
+    byCategory, byMonth, byVendor, recentTxns,
+    categoryMatrix: { monthHeaders, rows: matrixRows, monthTotals: monthColTotals },
+  };
 }

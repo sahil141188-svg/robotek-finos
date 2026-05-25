@@ -133,11 +133,20 @@ function trendText(pct: number, label = "vs last month"): string {
 // Fetch fresh data on every navigation — prevents stale RSC cache causing 503 blank pages
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ p?: string }>;
+}) {
   const { profile } = await requireAuth();
 
+  // Period selector — drives all KPI tiles + breakdown chart
+  const sp = await searchParams;
+  const period: "mtd" | "qtd" | "fytd" =
+    sp.p === "qtd" ? "qtd" : sp.p === "fytd" ? "fytd" : "mtd";
+
   // Fetch live KPI data from transactions table
-  const liveKPI = await fetchDashboardKPIs();
+  const liveKPI = await fetchDashboardKPIs(period);
   // Fetch bank accounts to detect whether bank data has been imported
   const bankAccounts = await fetchBankAccounts();
 
@@ -160,7 +169,7 @@ export default async function DashboardPage() {
   const complianceChipClass = overdueCount > 0 ? "text-red-600 font-bold" : "text-brand-black";
 
   const healthScore = computeHealthScore(kpi);
-  const period = currentMonthLabel();
+  const monthLabel = currentMonthLabel();
 
   return (
     <>
@@ -172,6 +181,36 @@ export default async function DashboardPage() {
       />
 
       <main className="flex-1 p-6 space-y-5">
+
+        {/* ── Period selector — drives all tiles and the expense breakdown chart ── */}
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-xs text-brand-gray-mid">
+            Viewing: <strong className="text-brand-black">{liveKPI?.periodLabel ?? period}</strong>
+            {liveKPI?.comparePeriodLabel && (
+              <span> · vs <span className="text-brand-black">{liveKPI.comparePeriodLabel}</span></span>
+            )}
+          </div>
+          <div className="inline-flex rounded-lg border border-border overflow-hidden text-xs">
+            {[
+              { k: "mtd",  label: "MTD" },
+              { k: "qtd",  label: "QTD" },
+              { k: "fytd", label: "FY YTD" },
+            ].map((opt) => (
+              <Link
+                key={opt.k}
+                href={`/dashboard?p=${opt.k}`}
+                scroll={false}
+                className={`px-3 py-1.5 border-r border-border last:border-r-0 transition-colors ${
+                  (liveKPI?.selectedPeriod ?? period) === opt.k
+                    ? "bg-brand-red text-white font-semibold"
+                    : "bg-white text-brand-gray-mid hover:bg-brand-gray-light"
+                }`}
+              >
+                {opt.label}
+              </Link>
+            ))}
+          </div>
+        </div>
 
         {/* ── Demo-data notice — shown only when truly no data is imported ─────── */}
         {isShowingSampleData && (
@@ -229,7 +268,7 @@ export default async function DashboardPage() {
           {/* Row 1 — FIX N6: values now driven by live kpi variable, not hardcoded strings */}
           <KpiCard
             title="Revenue MTD"
-            period={period}
+            period={monthLabel}
             value={fmtL(kpi.revenue.mtd)}
             trend={kpi.revenue.vs_last_month_pct >= 0 ? "up" : "down"}
             trendText={trendText(kpi.revenue.vs_last_month_pct)}
@@ -237,7 +276,7 @@ export default async function DashboardPage() {
           />
           <KpiCard
             title="COGS MTD"
-            period={period}
+            period={monthLabel}
             value={fmtL(kpi.cogs.mtd)}
             trend={kpi.cogs.vs_last_month_pct <= 0 ? "up" : "down"}
             trendText={trendText(kpi.cogs.vs_last_month_pct)}
@@ -245,7 +284,7 @@ export default async function DashboardPage() {
           />
           <KpiCard
             title="Gross Margin"
-            period={period}
+            period={monthLabel}
             value={kpi.gross_margin.pct > 0 ? `${kpi.gross_margin.pct.toFixed(1)}%` : "—"}
             trend={kpi.gross_margin.vs_last_month_pp >= 0 ? "up" : "down"}
             trendText={`${kpi.gross_margin.vs_last_month_pp >= 0 ? "+" : ""}${kpi.gross_margin.vs_last_month_pp.toFixed(1)}pp vs last month`}
@@ -284,7 +323,7 @@ export default async function DashboardPage() {
           />
           <KpiCard
             title="OpEx MTD"
-            period={period}
+            period={monthLabel}
             value={fmtL(kpi.opex.mtd)}
             trend={kpi.opex.vs_last_month_pct <= 0 ? "up" : "down"}
             trendText={trendText(kpi.opex.vs_last_month_pct)}

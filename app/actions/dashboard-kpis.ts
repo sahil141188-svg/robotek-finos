@@ -20,6 +20,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getSelectedCompanyId } from "@/lib/company-cookie";
 import { buildPartyAging } from "@/lib/supabase/party-aging";
 
+export type DashboardPeriodKey = "mtd" | "qtd" | "fytd";
+
 export type DashboardKPI = {
   revenue: { current: number; vs_last_month_pct: number };
   cogs: { current: number; vs_last_month_pct: number };
@@ -29,6 +31,11 @@ export type DashboardKPI = {
   ar: { total: number; overdue: number; vs_last_month_pct: number };
   tax: { total: number; vs_last_month_pct: number };
   opex: { current: number; vs_last_month_pct: number };
+  /** Human label for the selected period ("May 2026", "Q1 FY26-27", "FY 26-27 YTD") */
+  periodLabel: string;
+  /** Label for the comparable previous period */
+  comparePeriodLabel: string;
+  selectedPeriod: DashboardPeriodKey;
   // Optional chart-ready series (server populates when transactions exist).
   charts?: {
     revenueTrend: Array<{
@@ -162,7 +169,80 @@ function isPurchaseVoucher(voucherType: string): boolean {
 /**
  * Main query function — fetch and compute all KPIs from transactions
  */
-export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
+/** Convert a DashboardPeriodKey + today's date to two month-prefix arrays. */
+function resolvePeriodPrefixes(period: DashboardPeriodKey): {
+  primary: string[]; primaryLabel: string;
+  compare: string[]; compareLabel: string;
+} {
+  const today = new Date();
+  const yyyy  = today.getFullYear();
+  const mm    = today.getMonth() + 1;
+  const MONTH = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const pad   = (n: number) => String(n).padStart(2, "0");
+  const fyStart = mm >= 4 ? yyyy : yyyy - 1;
+  const fy      = `${fyStart}-${String(fyStart + 1).slice(2)}`;
+
+  switch (period) {
+    case "mtd": {
+      const prev = new Date(yyyy, mm - 2, 1);
+      return {
+        primary: [`${yyyy}-${pad(mm)}`],
+        primaryLabel: `${MONTH[mm - 1]} ${yyyy}`,
+        compare: [`${prev.getFullYear()}-${pad(prev.getMonth() + 1)}`],
+        compareLabel: `${MONTH[prev.getMonth()]} ${prev.getFullYear()}`,
+      };
+    }
+    case "qtd": {
+      const fyQuarter = Math.floor(((mm - 4 + 12) % 12) / 3) + 1;
+      const qStartMonth = ((fyQuarter - 1) * 3 + 4 - 1) % 12 + 1;
+      const qStartYear  = fyQuarter === 4 ? fyStart + 1 : fyStart;
+      const primary: string[] = [];
+      for (let i = 0; i < 3; i++) {
+        const m = ((qStartMonth - 1 + i) % 12) + 1;
+        const y = qStartMonth + i > 12 ? qStartYear + 1 : qStartYear;
+        primary.push(`${y}-${pad(m)}`);
+      }
+      const prevQ      = fyQuarter === 1 ? 4 : fyQuarter - 1;
+      const prevQFy    = fyQuarter === 1 ? fyStart - 1 : fyStart;
+      const prevQStartM = ((prevQ - 1) * 3 + 4 - 1) % 12 + 1;
+      const prevQStartY = prevQ === 4 ? prevQFy + 1 : prevQFy;
+      const compare: string[] = [];
+      for (let i = 0; i < 3; i++) {
+        const m = ((prevQStartM - 1 + i) % 12) + 1;
+        const y = prevQStartM + i > 12 ? prevQStartY + 1 : prevQStartY;
+        compare.push(`${y}-${pad(m)}`);
+      }
+      const prevFyLabel = `${prevQFy}-${String(prevQFy + 1).slice(2)}`;
+      return {
+        primary, primaryLabel: `Q${fyQuarter} FY${fy} (to date)`,
+        compare, compareLabel: `Q${prevQ} FY${prevFyLabel}`,
+      };
+    }
+    case "fytd": {
+      const primary: string[] = [];
+      for (let i = 0; i < 12; i++) {
+        const m = ((4 - 1 + i) % 12) + 1;
+        const y = 4 + i > 12 ? fyStart + 1 : fyStart;
+        primary.push(`${y}-${pad(m)}`);
+      }
+      const prevFy = `${fyStart - 1}-${String(fyStart).slice(2)}`;
+      const compare: string[] = [];
+      for (let i = 0; i < 12; i++) {
+        const m = ((4 - 1 + i) % 12) + 1;
+        const y = 4 + i > 12 ? fyStart : fyStart - 1;
+        compare.push(`${y}-${pad(m)}`);
+      }
+      return {
+        primary, primaryLabel: `FY ${fy} YTD`,
+        compare, compareLabel: `FY ${prevFy} (full)`,
+      };
+    }
+  }
+}
+
+export async function fetchDashboardKPIs(
+  period: DashboardPeriodKey = "mtd",
+): Promise<DashboardKPI | null> {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -171,6 +251,7 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
     const companyId = await getSelectedCompanyId();
     const currentFY = getCurrentFinancialYear();
     const { current: currentMonth, previous: previousMonth } = getMonthsForComparison();
+    const periodSet = resolvePeriodPrefixes(period);
 
     // Pre-load party names so we can exclude their DR sides from OpEx
     // (a Jrnl DR to a vendor/customer is an AP/AR settlement, not an expense).
@@ -231,8 +312,9 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
     //       (vendor side of purchase voucher); equivalent to gross invoice value.
     // We take whichever produces the larger figure per month — Day Book wins
     // when both heuristics fire because (A) excludes GST while (B) includes it.
-    function totalsForMonth(monthPrefix: string) {
-      const rows = transactions.filter((t) => t.transaction_date.startsWith(monthPrefix));
+    function totalsForPeriod(monthPrefixes: string[]) {
+      const set = new Set(monthPrefixes);
+      const rows = transactions.filter((t) => set.has(t.transaction_date.slice(0, 7)));
       let revenueA = 0, revenueB = 0;
       let cogsA = 0, cogsB = 0;
       let cashFlow = 0, taxLiab = 0, opex = 0;
@@ -287,8 +369,9 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
       return { revenue, cogs, cashFlow, taxLiab, opex };
     }
 
-    const cur  = totalsForMonth(currentMonth);
-    const prev = totalsForMonth(previousMonth);
+    // Aggregate using the resolved period (MTD/QTD/FYTD) and comparable.
+    const cur  = totalsForPeriod(periodSet.primary);
+    const prev = totalsForPeriod(periodSet.compare);
 
     // ── Cash balance: prefer bank_accounts.closing_balance when available ─
     // The transaction-derived "cashFlow" is a net delta for the month, which
@@ -344,7 +427,7 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
     for (let offset = 5; offset >= 0; offset--) {
       const d = new Date(today.getFullYear(), today.getMonth() - offset, 1);
       const prefix = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      const t = totalsForMonth(prefix);
+      const t = totalsForPeriod([prefix]);
       trend.push({
         month: MONTH_LABELS[d.getMonth()],
         period: `${MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`,
@@ -354,11 +437,12 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
       });
     }
 
-    // ── Expense breakdown: top OpEx ledgers for current month ─────────────
+    // ── Expense breakdown: top OpEx ledgers for the selected period ───────
     const CHART_COLORS = ["#E52D31", "#F7DA11", "#9A9596", "#852321", "#1F1B20", "#3b82f6", "#10b981", "#a855f7"];
     const opexByLedger = new Map<string, number>();
+    const primarySet = new Set(periodSet.primary);
     for (const t of transactions) {
-      if (!t.transaction_date.startsWith(currentMonth)) continue;
+      if (!primarySet.has(t.transaction_date.slice(0, 7))) continue;
       const vt = t.voucher_type.toLowerCase();
       if (t.dr_cr !== "DR") continue;
       if (vt !== "jrnl" && vt !== "journal") continue;
@@ -404,6 +488,9 @@ export async function fetchDashboardKPIs(): Promise<DashboardKPI | null> {
       ar:           { total: arTotal,          overdue: arOverdue, vs_last_month_pct: 0 },
       tax:          { total: cur.taxLiab,      vs_last_month_pct: taxChange     },
       opex:         { current: cur.opex,       vs_last_month_pct: opexChange    },
+      periodLabel:        periodSet.primaryLabel,
+      comparePeriodLabel: periodSet.compareLabel,
+      selectedPeriod:     period,
       charts: {
         revenueTrend:     trend,
         expenseBreakdown,

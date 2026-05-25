@@ -89,6 +89,88 @@ export default async function ExpensesPage() {
           </div>
         )}
 
+        {/* 6-month category × month matrix */}
+        {!isEmpty && summary.categoryMatrix.rows.length > 0 && (
+          <div className="bg-white rounded-xl border border-border overflow-hidden">
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-brand-black">Monthly comparison — last 6 months</h3>
+              <p className="text-[11px] text-brand-gray-mid">
+                Trend column flags spikes (&gt;50% above prior-month average)
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-brand-gray-light/50 text-xs text-brand-gray-mid">
+                    <th className="px-3 py-2.5 text-left font-medium sticky left-0 bg-brand-gray-light/50">Category</th>
+                    {summary.categoryMatrix.monthHeaders.map((h) => (
+                      <th key={h.key} className={`px-3 py-2.5 text-right font-medium whitespace-nowrap ${h.isCurrent ? "text-brand-red" : ""}`}>
+                        {h.label}{h.isCurrent ? " ●" : ""}
+                      </th>
+                    ))}
+                    <th className="px-3 py-2.5 text-right font-medium bg-brand-gray-light">6m Total</th>
+                    <th className="px-3 py-2.5 text-left font-medium w-40">Trend</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {summary.categoryMatrix.rows.map((r) => {
+                    const trendChip =
+                      r.trend === "spike" ? "bg-red-100 text-red-800 border-red-200" :
+                      r.trend === "up"    ? "bg-amber-100 text-amber-800 border-amber-200" :
+                      r.trend === "down"  ? "bg-blue-100 text-blue-800 border-blue-200" :
+                      r.trend === "new"   ? "bg-purple-100 text-purple-800 border-purple-200" :
+                      "bg-brand-gray-light text-brand-gray-mid border-border";
+                    const trendIcon =
+                      r.trend === "spike" ? "⚡" :
+                      r.trend === "up"    ? "↑" :
+                      r.trend === "down"  ? "↓" :
+                      r.trend === "new"   ? "✨" : "→";
+                    return (
+                      <tr key={r.category} className="hover:bg-brand-gray-light/30">
+                        <td className="px-3 py-2.5 font-medium text-brand-black sticky left-0 bg-white">{r.category}</td>
+                        {r.cells.map((v, i) => {
+                          const isCurrent = summary.categoryMatrix.monthHeaders[i].isCurrent;
+                          return (
+                            <td key={i} className={`px-3 py-2.5 text-right tabular-nums whitespace-nowrap ${v > 0 ? "text-brand-black" : "text-brand-gray-mid/40"} ${isCurrent ? "font-semibold" : ""}`}>
+                              {v > 0 ? fmtAmt(v) : "—"}
+                            </td>
+                          );
+                        })}
+                        <td className="px-3 py-2.5 text-right font-bold tabular-nums whitespace-nowrap bg-brand-gray-light/40">{fmtAmt(r.total6m)}</td>
+                        <td className="px-3 py-2.5">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border font-medium ${trendChip}`}>
+                            {trendIcon} {r.trendNote}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border bg-brand-gray-light font-bold">
+                    <td className="px-3 py-2.5 sticky left-0 bg-brand-gray-light">Total</td>
+                    {summary.categoryMatrix.monthTotals.map((t, i) => (
+                      <td key={i} className="px-3 py-2.5 text-right tabular-nums whitespace-nowrap">{t > 0 ? fmtAmt(t) : "—"}</td>
+                    ))}
+                    <td className="px-3 py-2.5 text-right tabular-nums whitespace-nowrap text-brand-red">{fmtAmt(summary.categoryMatrix.monthTotals.reduce((s, t) => s + t, 0))}</td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <div className="px-5 py-2.5 bg-brand-gray-light/40 border-t border-border">
+              <p className="text-[10px] text-brand-gray-mid leading-snug">
+                ⚡ Spike = current month &gt;50% above prior-month average ·
+                ↑ Up = +15-50% ·
+                → Flat = ±15% ·
+                ↓ Down = lower than usual ·
+                ✨ New = first month with activity in this category.
+                Click "Import" above to refresh after each Busy day-book export.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Category breakdown + Monthly trend */}
         {!isEmpty && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -33,14 +33,20 @@ export type PnLSection = {
   net: number;           // net profit
 };
 
+export type PnLPeriodKey =
+  | "this_month" | "last_month"
+  | "this_quarter" | "last_quarter"
+  | "this_fy"    | "last_fy";
+
 export type PnL = {
   fy: string;
-  currentMonth:  PnLSection;
-  previousMonth: PnLSection;
-  ytd:           PnLSection;
-  currentLabel: string;
-  previousLabel: string;
+  primary:   PnLSection;
+  compare:   PnLSection;
+  ytd:       PnLSection;
+  primaryLabel: string;
+  compareLabel: string;
   ytdLabel: string;
+  selectedPeriod: PnLPeriodKey;
 };
 
 function isSalesVoucher(v: string): boolean {
@@ -105,18 +111,134 @@ function emptySection(): PnLSection {
 
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/** Resolve a PnLPeriodKey to two date-range filters: primary + comparable. */
+function resolvePeriodRanges(period: PnLPeriodKey): {
+  primary:  { start: string; end: string; label: string };
+  compare:  { start: string; end: string; label: string };
+  ytd:      { start: string; end: string; label: string };
+  fy: string;
+} {
+  const today  = new Date();
+  const yyyy   = today.getFullYear();
+  const month  = today.getMonth() + 1; // 1-indexed
+  const fyStartYear = month >= 4 ? yyyy : yyyy - 1;
+  const fy = `${fyStartYear}-${String(fyStartYear + 1).slice(2)}`;
+
+  const iso = (y: number, m: number, d: number) =>
+    `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const last = (y: number, m: number) => new Date(y, m, 0).getDate(); // last day of month m (1-indexed)
+  const monthLabel = (m: number) => MONTH_LABELS[m - 1];
+
+  // YTD always = FY-start → today
+  const ytd = {
+    start: iso(fyStartYear, 4, 1),
+    end:   iso(yyyy, month, today.getDate()),
+    label: `FY ${fy} YTD`,
+  };
+
+  // Helper: get quarter (1-4) within an FY. Q1 = Apr-Jun, Q2 = Jul-Sep, etc.
+  const fyQuarter = (m: number): number => Math.floor(((m - 4 + 12) % 12) / 3) + 1;
+  const qStartMonth = (q: number) => ((q - 1) * 3 + 4 - 1) % 12 + 1;       // Q1 → 4, Q2 → 7, Q3 → 10, Q4 → 1
+  const qStartYear  = (q: number, fyStart: number) => q === 4 ? fyStart + 1 : fyStart;
+
+  switch (period) {
+    case "this_month": {
+      const lastDay = last(yyyy, month);
+      const prevDate  = new Date(yyyy, month - 2, 1);
+      const pyyyy = prevDate.getFullYear(), pm = prevDate.getMonth() + 1;
+      return {
+        primary: { start: iso(yyyy, month, 1), end: iso(yyyy, month, lastDay),
+                   label: `${monthLabel(month)} ${yyyy}` },
+        compare: { start: iso(pyyyy, pm, 1), end: iso(pyyyy, pm, last(pyyyy, pm)),
+                   label: `${monthLabel(pm)} ${pyyyy}` },
+        ytd, fy,
+      };
+    }
+    case "last_month": {
+      const lm = new Date(yyyy, month - 2, 1);
+      const lmY = lm.getFullYear(), lmM = lm.getMonth() + 1;
+      const before = new Date(yyyy, month - 3, 1);
+      const bY = before.getFullYear(), bM = before.getMonth() + 1;
+      return {
+        primary: { start: iso(lmY, lmM, 1), end: iso(lmY, lmM, last(lmY, lmM)), label: `${monthLabel(lmM)} ${lmY}` },
+        compare: { start: iso(bY, bM, 1),   end: iso(bY, bM, last(bY, bM)),     label: `${monthLabel(bM)} ${bY}`  },
+        ytd, fy,
+      };
+    }
+    case "this_quarter": {
+      const q   = fyQuarter(month);
+      const sm  = qStartMonth(q);
+      const sy  = qStartYear(q, fyStartYear);
+      return {
+        primary: { start: iso(sy, sm, 1), end: iso(yyyy, month, today.getDate()), label: `Q${q} FY${fy} (to date)` },
+        compare: (() => {
+          const pq = q === 1 ? 4 : q - 1;
+          const pStartFY = q === 1 ? fyStartYear - 1 : fyStartYear;
+          const psm = qStartMonth(pq);
+          const psy = qStartYear(pq, pStartFY);
+          // Last month of prev quarter
+          const lastMonthOfQ = ((psm + 2 - 1) % 12) + 1;
+          const lastYearOfQ = lastMonthOfQ < psm ? psy + 1 : psy;
+          const prevFyLabel = `${pStartFY}-${String(pStartFY + 1).slice(2)}`;
+          return {
+            start: iso(psy, psm, 1),
+            end: iso(lastYearOfQ, lastMonthOfQ, last(lastYearOfQ, lastMonthOfQ)),
+            label: `Q${pq} FY${prevFyLabel}`,
+          };
+        })(),
+        ytd, fy,
+      };
+    }
+    case "last_quarter": {
+      const curQ = fyQuarter(month);
+      const lq   = curQ === 1 ? 4 : curQ - 1;
+      const lqFyStart = curQ === 1 ? fyStartYear - 1 : fyStartYear;
+      const lqSm = qStartMonth(lq);
+      const lqSy = qStartYear(lq, lqFyStart);
+      const lqLastM = ((lqSm + 2 - 1) % 12) + 1;
+      const lqLastY = lqLastM < lqSm ? lqSy + 1 : lqSy;
+      // Quarter before that
+      const bq = lq === 1 ? 4 : lq - 1;
+      const bqFyStart = lq === 1 ? lqFyStart - 1 : lqFyStart;
+      const bqSm = qStartMonth(bq);
+      const bqSy = qStartYear(bq, bqFyStart);
+      const bqLastM = ((bqSm + 2 - 1) % 12) + 1;
+      const bqLastY = bqLastM < bqSm ? bqSy + 1 : bqSy;
+      const lqFyLabel = `${lqFyStart}-${String(lqFyStart + 1).slice(2)}`;
+      const bqFyLabel = `${bqFyStart}-${String(bqFyStart + 1).slice(2)}`;
+      return {
+        primary: { start: iso(lqSy, lqSm, 1), end: iso(lqLastY, lqLastM, last(lqLastY, lqLastM)), label: `Q${lq} FY${lqFyLabel}` },
+        compare: { start: iso(bqSy, bqSm, 1), end: iso(bqLastY, bqLastM, last(bqLastY, bqLastM)), label: `Q${bq} FY${bqFyLabel}` },
+        ytd, fy,
+      };
+    }
+    case "this_fy": {
+      const prevFy = `${fyStartYear - 1}-${String(fyStartYear).slice(2)}`;
+      return {
+        primary: { start: iso(fyStartYear, 4, 1), end: iso(yyyy, month, today.getDate()), label: `FY ${fy} YTD` },
+        compare: { start: iso(fyStartYear - 1, 4, 1), end: iso(fyStartYear, 3, 31), label: `FY ${prevFy} (full)` },
+        ytd, fy,
+      };
+    }
+    case "last_fy": {
+      const lastFy = `${fyStartYear - 1}-${String(fyStartYear).slice(2)}`;
+      const beforeFy = `${fyStartYear - 2}-${String(fyStartYear - 1).slice(2)}`;
+      return {
+        primary: { start: iso(fyStartYear - 1, 4, 1), end: iso(fyStartYear, 3, 31), label: `FY ${lastFy}` },
+        compare: { start: iso(fyStartYear - 2, 4, 1), end: iso(fyStartYear - 1, 3, 31), label: `FY ${beforeFy}` },
+        ytd, fy,
+      };
+    }
+  }
+}
+
 export async function fetchPnL(
   supabase: SupabaseClient<Database>,
   companyId: string | null,
+  period: PnLPeriodKey = "this_month",
 ): Promise<PnL> {
-  const today = new Date();
-  const curM   = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
-  const prevD  = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-  const prevM  = `${prevD.getFullYear()}-${String(prevD.getMonth() + 1).padStart(2, "0")}`;
-
-  // FY runs Apr-Mar
-  const fyStartYear = today.getMonth() + 1 >= 4 ? today.getFullYear() : today.getFullYear() - 1;
-  const fy = `${fyStartYear}-${String(fyStartYear + 1).slice(2)}`;
+  const ranges = resolvePeriodRanges(period);
+  const { primary: primaryRange, compare: compareRange, ytd: ytdRange, fy } = ranges;
 
   // Pre-load party names so we can exclude their Pymt/Jrnl movements from OpEx
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -129,7 +251,7 @@ export async function fetchPnL(
   for (const v of (vendors ?? []) as Array<{ name: string }>)   partyNames.add(v.name.toLowerCase().trim());
   for (const c of (customers ?? []) as Array<{ name: string }>) partyNames.add(c.name.toLowerCase().trim());
 
-  // Pull all transactions in current FY
+  // Pull all transactions for the company (across FYs) — we filter by date in code
   type Txn = {
     transaction_date: string;
     voucher_type: string;
@@ -140,11 +262,15 @@ export async function fetchPnL(
   const txns: Txn[] = [];
   const PAGE = 1000;
   let from = 0;
+  // Earliest date we need = min(compareRange.start, ytdRange.start)
+  const minStart = compareRange.start < ytdRange.start ? compareRange.start : ytdRange.start;
+  const maxEnd   = primaryRange.end > ytdRange.end ? primaryRange.end : ytdRange.end;
   while (true) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let q = (supabase as any).from("transactions")
       .select("transaction_date, voucher_type, ledger_name, amount, dr_cr")
-      .eq("financial_year", fy);
+      .gte("transaction_date", minStart)
+      .lte("transaction_date", maxEnd);
     if (companyId) q = q.eq("company_id", companyId);
     const { data, error } = await q.range(from, from + PAGE - 1);
     if (error) break;
@@ -211,17 +337,21 @@ export async function fetchPnL(
     return s;
   }
 
-  const currentMonth  = aggregate((t) => t.transaction_date.startsWith(curM));
-  const previousMonth = aggregate((t) => t.transaction_date.startsWith(prevM));
-  const ytd           = aggregate(() => true);
+  const inRange = (r: { start: string; end: string }) =>
+    (t: Txn) => t.transaction_date >= r.start && t.transaction_date <= r.end;
+
+  const primary = aggregate(inRange(primaryRange));
+  const compare = aggregate(inRange(compareRange));
+  const ytd     = aggregate(inRange(ytdRange));
 
   return {
     fy,
-    currentMonth,
-    previousMonth,
+    primary,
+    compare,
     ytd,
-    currentLabel: `${MONTH_LABELS[today.getMonth()]} ${today.getFullYear()}`,
-    previousLabel: `${MONTH_LABELS[prevD.getMonth()]} ${prevD.getFullYear()}`,
-    ytdLabel: `FY ${fy} YTD`,
+    primaryLabel: primaryRange.label,
+    compareLabel: compareRange.label,
+    ytdLabel: ytdRange.label,
+    selectedPeriod: period,
   };
 }
