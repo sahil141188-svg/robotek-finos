@@ -89,10 +89,13 @@ export async function updateTaskStatus(
   };
   if (newStatus === "completed") updates.completed_at = new Date().toISOString();
 
-  const { error } = await db
-    .from("tasks")
-    .update(updates)
-    .eq("id", taskId) as { error: { message: string } | null };
+  // Bug #10 fix: scope update to the caller's company so a user from Company A
+  // cannot change tasks that belong to Company B by guessing a task UUID.
+  const companyId = await getSelectedCompanyId();
+  let updateQuery = db.from("tasks").update(updates).eq("id", taskId);
+  if (companyId) updateQuery = updateQuery.eq("company_id", companyId);
+
+  const { error } = await updateQuery as { error: { message: string } | null };
 
   if (error) return { success: false, message: error.message };
 

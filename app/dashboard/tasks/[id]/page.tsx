@@ -100,7 +100,13 @@ export default async function TaskDetailPage({
   const eff       = effectiveStatus(task, TODAY);
   const rel       = relativeDate(task.due_date, TODAY);
   const statusMeta = STATUS_META[eff];
-  const roleInfo  = ROLE_LABELS[task.assigned_to_role] ?? { initials: "?", color: "bg-gray-400 text-white", label: "" };
+  // Bug #22 fix: task.assigned_to_role can be null/empty for real DB rows.
+  // Accessing ROLE_LABELS[null] returns undefined → .color crashes at runtime.
+  // Ternary + explicit fallback avoids the "" short-circuit TS error.
+  const ROLE_FALLBACK = { initials: "?", color: "bg-gray-400 text-white", label: "Team" };
+  const roleInfo = task.assigned_to_role
+    ? (ROLE_LABELS[task.assigned_to_role] ?? ROLE_FALLBACK)
+    : ROLE_FALLBACK;
   const activities = TASK_ACTIVITIES[task.id] ?? [];
   const isDone    = task.status === "completed" || task.status === "cancelled";
 
@@ -116,7 +122,8 @@ export default async function TaskDetailPage({
         showImport={false}
       />
 
-      <main className="flex-1 p-6 max-w-3xl space-y-5">
+      {/* Bug #30 fix: pb-24 on mobile so action buttons aren't hidden under viewport */}
+      <main className="flex-1 p-4 sm:p-6 pb-24 sm:pb-6 max-w-3xl space-y-5">
 
         <Link
           href="/dashboard/tasks"

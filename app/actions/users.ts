@@ -74,10 +74,12 @@ export async function createUserWithPassword(formData: FormData) {
     app_metadata: { role },
   });
 
-  // Upsert the profile row (the trigger may have already created it)
-  const supabase = await createClient();
+  // Bug #1 fix: use admin client (service role) to upsert the profile row.
+  // createClient() is RLS-bound to the CEO's session — the INSERT targets a
+  // different user's UUID (not auth.uid()), so RLS silently rejects it and the
+  // new user ends up with no profile row.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: profileError } = await (supabase as any)
+  const { error: profileError } = await (admin as any)
     .from("users")
     .upsert({
       id: data.user.id,
@@ -117,13 +119,9 @@ export async function inviteUser(formData: FormData) {
     app_metadata: { role },
   });
 
-  // Upsert the profile row (the trigger may have already created it)
-  const supabase = await createClient();
-  // Cast required because Supabase's generated types don't include all optional cols
-  const db = supabase as unknown as {
-    from: (t: string) => { upsert: (row: object) => Promise<{ error: Error | null }> };
-  };
-  const { error: profileError } = await db.from("users").upsert({
+  // Bug #2 fix: same RLS issue as Bug #1 — must use admin client for foreign UUID upsert
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: profileError } = await (admin as any).from("users").upsert({
     id:         data.user.id,
     email,
     full_name,
@@ -152,11 +150,15 @@ export async function updateUser(
 ) {
   await assertCEO();
 
-  // Use UPDATE (not upsert) — the user row already exists.
-  // Upsert would attempt an INSERT first which fails the NOT NULL email constraint.
-  const supabase = await createClient();
+  // Bug #3 fix: must use admin client (service role) here.
+  // createClient() is RLS-bound to the CEO session — the UPDATE targets a
+  // *different* user's UUID so RLS silently updates 0 rows without returning
+  // an error.  The action appeared to succeed (no throw) but the DB row was
+  // never changed — that is why role/permission edits showed "Updated ✓" but
+  // reverted instantly on refresh.
+  const admin = getAdminClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await (admin as any)
     .from("users")
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq("id", userId);
@@ -188,9 +190,14 @@ export async function deleteUser(
   const { error: authError } = await admin.auth.admin.deleteUser(userId);
   if (authError) return { success: false, error: authError.message };
 
-  // Also delete the profile row (belt-and-suspenders; may already cascade)
+  // Bug #4 fix: await and check the profile row delete — was fire-and-forget.
+  // If this fails (FK constraint), stale profile row stays and user reappears.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (admin as any).from("users").delete().eq("id", userId);
+  const { error: profileDeleteErr } = await (admin as any).from("users").delete().eq("id", userId);
+  if (profileDeleteErr) {
+    console.error("[deleteUser] profile row delete failed:", profileDeleteErr.message);
+    // Non-fatal: auth account is gone so user cannot log in — continue.
+  }
 
   revalidatePath("/dashboard/admin");
   return { success: true };
@@ -202,9 +209,11 @@ export async function deleteUser(
 export async function toggleUserActive(userId: string, isActive: boolean) {
   await assertCEO();
 
-  const supabase = await createClient();
+  // Bug #3 (extended): use admin client — RLS blocks updating other users' rows
+  const admin = getAdminClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("users") as any)
+  const { error } = await (admin as any)
+    .from("users")
     .update({ is_active: isActive, updated_at: new Date().toISOString() })
     .eq("id", userId);
 

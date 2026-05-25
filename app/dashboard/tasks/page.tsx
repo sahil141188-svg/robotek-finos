@@ -17,9 +17,18 @@ import type { SampleTask } from "@/lib/tasks-data";
 // Dynamic today — never hardcode a date string or overdue detection breaks
 const TODAY = new Date().toISOString().slice(0, 10);
 
+/** Bug #29 fix: compute FY label dynamically so it doesn't become stale */
+function getCurrentFYLabel(): string {
+  const m = new Date().getMonth() + 1; // 1-indexed
+  const y = new Date().getFullYear();
+  const start = m >= 4 ? y : y - 1;
+  return `FY ${start}-${String(start + 1).slice(2)}`;
+}
+
 export default async function TasksPage() {
-  // Fetch real tasks from DB filtered by selected company, fall back to empty array
-  let tasks: SampleTask[] = SAMPLE_TASKS;
+  // Bug #9 fix: initialise to [] — not SAMPLE_TASKS — so DB errors don't
+  // surface stale sample data and are surfaced as an empty state instead.
+  let tasks: SampleTask[] = [];
   try {
     const supabase = await createClient();
     const db = supabase as any;
@@ -65,7 +74,7 @@ export default async function TasksPage() {
                 )}
               </p>
               <p className="text-xs text-brand-gray-mid mt-0.5 hidden sm:block">
-                FY 2026-27 · Assign, track, escalate
+                {getCurrentFYLabel()} · Assign, track, escalate
               </p>
             </div>
           </div>

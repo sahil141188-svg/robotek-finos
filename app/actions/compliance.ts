@@ -100,8 +100,12 @@ export async function updateComplianceStatus(
   const sample = COMPLIANCE_ITEMS.find((i) => i.id === payload.id);
   if (!sample) return { success: false, message: "Compliance item not found" };
 
+  // Bug #8 fix: include company_id so the row is scoped correctly.
+  // Without it the upserted row has no company context and the
+  // getComplianceItems filter (.eq("company_id", …)) never matches it.
+  const companyId = await getSelectedCompanyId();
   const now = new Date().toISOString();
-  const upsertData: ComplianceInsert = {
+  const upsertData: ComplianceInsert & { company_id?: string } = {
     id:                     payload.id,
     category:               sample.category,
     title:                  sample.title,
@@ -116,15 +120,18 @@ export async function updateComplianceStatus(
     is_recurring:           sample.is_recurring,
     created_at:             now,
     updated_at:             now,
+    ...(companyId ? { company_id: companyId } : {}),
   };
 
   const { error } = await db
     .from("compliance_items")
     .upsert(upsertData, { onConflict: "id" }) as { error: { message: string } | null };
 
+  // Bug #5 fix: was returning success:true even when the DB write failed.
+  // The caller showed a green toast while the status was never persisted.
   if (error) {
-    // Non-fatal: Supabase may not have this column structure yet
     console.error("Compliance upsert error:", error.message);
+    return { success: false, message: `Failed to save: ${error.message}` };
   }
 
   revalidatePath("/dashboard/compliance", "layout");

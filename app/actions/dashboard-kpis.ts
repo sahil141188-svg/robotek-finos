@@ -52,16 +52,25 @@ function getPreviousFinancialYear(): string {
   return `${year - 2}-${String(year - 1).slice(2)}`;
 }
 
-/** Get current and previous month for MTD comparison */
+/** Get current and previous month for MTD comparison.
+ *
+ * Bug #17 fix: `String(today.getMonth()).padStart(2,"0")` gives "00" in January
+ * because getMonth() is 0-based (January = 0). The query
+ * `transaction_date.startsWith("2026-00")` never matches anything — the entire
+ * previous-month comparison returned zero and every KPI showed 0% trend.
+ */
 function getMonthsForComparison(): { current: string; previous: string } {
   const today = new Date();
-  const currentMonth = String(today.getMonth() + 1).padStart(2, "0");
-  const previousMonth = String(today.getMonth()).padStart(2, "0");
-  const currentYear = today.getFullYear();
-  const previousYear = today.getMonth() === 0 ? currentYear - 1 : currentYear;
+  const currentMonth = String(today.getMonth() + 1).padStart(2, "0"); // 1-indexed
+  const currentYear  = today.getFullYear();
+
+  // Previous month: January (getMonth()=0) → December of previous year
+  const prevMonthNum  = today.getMonth(); // 0-based; January = 0
+  const previousMonth = prevMonthNum === 0 ? "12" : String(prevMonthNum).padStart(2, "0");
+  const previousYear  = prevMonthNum === 0 ? currentYear - 1 : currentYear;
 
   return {
-    current: `${currentYear}-${currentMonth}`,
+    current:  `${currentYear}-${currentMonth}`,
     previous: `${previousYear}-${previousMonth}`,
   };
 }

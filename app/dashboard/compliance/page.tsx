@@ -1,23 +1,24 @@
 /**
  * Compliance Calendar Page — Module 3
  *
- * Server component: loads all compliance items and renders the interactive
- * ComplianceContent client component.
- *
- * RULE 1: Every item is clickable → /dashboard/compliance/[id]
- * RULE 6: Financial year April–March
+ * Bug #6 fix: was using static COMPLIANCE_ITEMS directly — any status updates
+ * the user persisted (filed, paid) were invisible on the list page because the
+ * DB was never queried.  Now calls getComplianceItems() which merges DB state
+ * onto the seed data.
  */
 
 import { Header } from "@/components/layout/header";
 import { ComplianceContent } from "@/components/compliance/compliance-content";
-import { COMPLIANCE_ITEMS, computeComplianceScore } from "@/lib/compliance-data";
+import { getComplianceItems, } from "@/app/actions/compliance";
+import { computeComplianceScore } from "@/lib/compliance-data";
 import { ShieldCheck } from "lucide-react";
 
-// Dynamic today — never hardcode a date string or overdue detection breaks
 const TODAY = new Date().toISOString().slice(0, 10);
 
-export default function CompliancePage() {
-  const items = COMPLIANCE_ITEMS;
+export default async function CompliancePage() {
+  // Bug #6 fix: fetch live items (DB merged with seed data)
+  const items = await getComplianceItems();
+
   const score = computeComplianceScore(items, TODAY);
   const overdue = items.filter(
     (i) => i.status === "overdue" || (i.due_date < TODAY && i.status === "pending"),
@@ -41,7 +42,7 @@ export default function CompliancePage() {
         importModule="compliance"
       />
 
-      <main className="flex-1 p-6 space-y-6 max-w-6xl">
+      <main className="flex-1 p-4 sm:p-6 space-y-5 max-w-6xl pb-8">
 
         {/* Compliance health bar */}
         <div className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center gap-3 ${scoreBg}`}>
@@ -54,7 +55,7 @@ export default function CompliancePage() {
                 Compliance Score: {score}% — {scoreLabel}
               </p>
               <p className="text-xs opacity-80 mt-0.5">
-                FY 2026-27 · {items.length} total items · {overdue} overdue · All Indian statutory deadlines tracked
+                {items.length} total items · {overdue} overdue · All Indian statutory deadlines tracked
               </p>
             </div>
           </div>

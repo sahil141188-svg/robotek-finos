@@ -14,22 +14,23 @@ import { Header } from "@/components/layout/header";
 import { StatusBadge } from "@/components/compliance/status-badge";
 import { ComplianceDetailActions } from "@/components/compliance/compliance-detail-actions";
 import {
-  COMPLIANCE_ITEMS,
   CATEGORY_META,
   fmtDate,
   daysFromToday,
 } from "@/lib/compliance-data";
+import { getComplianceItems } from "@/app/actions/compliance";
 import {
   ArrowLeft, Calendar, FileText, AlertTriangle,
   CheckCircle2, Clock, Info,
 } from "lucide-react";
 
+// Bug #21 fix: remove generateStaticParams — static build snapshots the page
+// at build time so DB updates (filed, paid) are never reflected.
+// force-dynamic ensures every visit re-fetches from DB.
+export const dynamic = "force-dynamic";
+
 // Dynamic today — never hardcode a date string or overdue detection breaks
 const TODAY = new Date().toISOString().slice(0, 10);
-
-export async function generateStaticParams() {
-  return COMPLIANCE_ITEMS.map((item) => ({ id: item.id }));
-}
 
 export default async function ComplianceDetailPage({
   params,
@@ -37,7 +38,10 @@ export default async function ComplianceDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const item = COMPLIANCE_ITEMS.find((i) => i.id === id);
+  // Bug #7 fix: load live items (DB merged with seed data) instead of
+  // reading COMPLIANCE_ITEMS directly — filed/paid state was always stale.
+  const items = await getComplianceItems();
+  const item = items.find((i) => i.id === id);
   if (!item) notFound();
 
   const days    = daysFromToday(item.due_date, TODAY);
