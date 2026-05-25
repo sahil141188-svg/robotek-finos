@@ -10,6 +10,7 @@ import { Header } from "@/components/layout/header";
 import { TaskContent } from "@/components/tasks/task-content";
 import { SAMPLE_TASKS, effectiveStatus } from "@/lib/tasks-data";
 import { createClient } from "@/lib/supabase/server";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
 import { Plus, ListChecks } from "lucide-react";
 import type { SampleTask } from "@/lib/tasks-data";
 
@@ -17,15 +18,15 @@ import type { SampleTask } from "@/lib/tasks-data";
 const TODAY = new Date().toISOString().slice(0, 10);
 
 export default async function TasksPage() {
-  // Fetch real tasks from DB, fall back to empty array (SAMPLE_TASKS = [])
+  // Fetch real tasks from DB filtered by selected company, fall back to empty array
   let tasks: SampleTask[] = SAMPLE_TASKS;
   try {
     const supabase = await createClient();
     const db = supabase as any;
-    const { data, error } = await db
-      .from("tasks")
-      .select("*")
-      .order("due_date", { ascending: true });
+    const companyId = await getSelectedCompanyId();
+    let query = db.from("tasks").select("*").order("due_date", { ascending: true });
+    if (companyId) query = query.eq("company_id", companyId);
+    const { data, error } = await query;
     if (!error && data && data.length > 0) {
       tasks = data as SampleTask[];
     }

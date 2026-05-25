@@ -14,6 +14,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getSelectedCompanyId } from "@/lib/company-cookie";
 import type { MappedRow } from "@/lib/import-utils";
 import type { Database } from "@/types/database";
 
@@ -78,6 +79,20 @@ export async function importTransactions(
     return { success: false, importId: null, rowsImported: 0, rowsFailed: 0, errors: ["You do not have permission to import data."] };
   }
 
+  // Resolve company_id: use the selected company cookie, or fall back to the
+  // primary company (lowest sort_order) so every row always has a company tag.
+  const selectedCompanyId = await getSelectedCompanyId();
+  let companyId: string | null = selectedCompanyId;
+  if (!companyId) {
+    const { data: firstCompany } = await db
+      .from("companies")
+      .select("id")
+      .order("sort_order", { ascending: true })
+      .limit(1)
+      .maybeSingle() as { data: { id: string } | null };
+    companyId = firstCompany?.id ?? null;
+  }
+
   // Infer financial year from majority of rows
   const fyMap = new Map<string, number>();
   rows.forEach((r) => fyMap.set(r.financial_year, (fyMap.get(r.financial_year) ?? 0) + 1));
@@ -89,7 +104,8 @@ export async function importTransactions(
     uploaded_by: user.id, status: "processing",
     rows_imported: 0, rows_failed: 0,
     financial_year: financialYear, can_rollback: true,
-  };
+    ...(companyId ? { company_id: companyId } : {}),
+  } as FileImportInsert & { company_id?: string };
   const { data: importRecord, error: importErr } = await db
     .from("file_imports")
     .insert(insertData)
@@ -117,15 +133,18 @@ export async function importTransactions(
 
   let existingVouchers = new Set<string>();
   if (voucherNumbers.length > 0) {
-    // Check in chunks to avoid Supabase "in" query limits
+    // Check in chunks to avoid Supabase "in" query limits.
+    // Scope to the same company so vouchers from Company A don't block Company B.
     const CHUNK = 200;
     for (let c = 0; c < voucherNumbers.length; c += CHUNK) {
       const chunk = voucherNumbers.slice(c, c + CHUNK);
-      const { data: existing } = await db
+      let dupQuery = db
         .from("transactions")
         .select("voucher_number")
         .in("voucher_number", chunk)
-        .eq("financial_year", financialYear) as { data: { voucher_number: string }[] | null };
+        .eq("financial_year", financialYear);
+      if (companyId) dupQuery = dupQuery.eq("company_id", companyId);
+      const { data: existing } = await dupQuery as { data: { voucher_number: string }[] | null };
       if (existing) existing.forEach((r) => existingVouchers.add(r.voucher_number));
     }
   }
@@ -142,7 +161,7 @@ export async function importTransactions(
   for (let i = 0; i < deduped.length; i += BATCH_SIZE) {
     const batch = deduped.slice(i, i + BATCH_SIZE);
 
-    const inserts: TransactionInsert[] = batch.map((r) => ({
+    const inserts = batch.map((r) => ({
       transaction_date: r.transaction_date,
       voucher_number:   r.voucher_number,
       voucher_type:     r.voucher_type || "Journal",
@@ -152,6 +171,7 @@ export async function importTransactions(
       narration:        r.narration,
       financial_year:   r.financial_year,
       import_id:        importId,
+      ...(companyId ? { company_id: companyId } : {}),
     }));
 
     const { error: batchErr, count } = await db
