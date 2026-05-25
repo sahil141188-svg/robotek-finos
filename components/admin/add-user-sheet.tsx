@@ -29,22 +29,24 @@ export function AddUserSheet() {
       {/* Base UI Dialog.Trigger uses render prop (not asChild) for slot composition */}
       <SheetTrigger
         render={
-          <button className="inline-flex items-center gap-2 h-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] font-medium bg-brand-red hover:bg-brand-maroon text-white transition-colors">
-            <UserPlus className="w-3.5 h-3.5" />
+          <button className="inline-flex items-center gap-2 h-9 sm:h-8 rounded-xl px-4 sm:px-3 text-sm sm:text-[0.8rem] font-semibold bg-brand-red hover:bg-brand-maroon text-white transition-colors shadow-sm">
+            <UserPlus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             Add User
           </button>
         }
       />
-      <SheetContent className="w-[500px] sm:max-w-[500px] overflow-y-auto">
-        <SheetHeader className="mb-6">
-          <SheetTitle>Add New User</SheetTitle>
-          <SheetDescription>
+      {/* w-full on mobile, 520px on sm+ — full-screen sheet on phone */}
+      <SheetContent className="w-full sm:w-[520px] sm:max-w-[520px] overflow-y-auto p-0">
+        <SheetHeader className="px-5 pt-5 pb-4 border-b border-border sticky top-0 bg-white z-10">
+          <SheetTitle className="text-lg">Add New User</SheetTitle>
+          <SheetDescription className="text-sm">
             Set the user&apos;s email, password, role, company access, and module permissions.
             No invitation email — the user logs in directly with these credentials.
           </SheetDescription>
         </SheetHeader>
-        {/* Bug #7 fix: onSuccess closes the sheet */}
-        <UserForm onSuccess={() => setOpen(false)} />
+        <div className="px-5 py-5">
+          <UserForm onSuccess={() => setOpen(false)} />
+        </div>
       </SheetContent>
     </Sheet>
   );

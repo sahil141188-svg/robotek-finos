@@ -4,6 +4,18 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Mobile Font Size ─────────────────────────────────────────────────────── */
+/* Base 16px on mobile prevents iOS auto-zoom on input focus.
+   Slightly larger text improves readability on small screens. */
+html {
+  font-size: 16px;          /* mobile base — do NOT go below 16px (triggers iOS zoom) */
+}
+@media (min-width: 640px) {
+  html {
+    font-size: 15px;        /* desktop can be slightly tighter */
+  }
+}
+
 /* ── PWA / Home Screen Responsive Fix ────────────────────────────────────── */
 /* Critical for mobile home screen (installed PWA) responsiveness */
 html, body {

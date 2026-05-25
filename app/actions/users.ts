@@ -175,6 +175,28 @@ export async function updateUser(
 }
 
 // ─────────────────────────────────────────────────────────
+// Delete a user (CEO only)
+// Removes from Supabase Auth AND the public.users profile table.
+// ─────────────────────────────────────────────────────────
+export async function deleteUser(
+  userId: string,
+): Promise<{ success: boolean; error?: string }> {
+  await assertCEO();
+  const admin = getAdminClient();
+
+  // Delete from Supabase Auth (this is authoritative)
+  const { error: authError } = await admin.auth.admin.deleteUser(userId);
+  if (authError) return { success: false, error: authError.message };
+
+  // Also delete the profile row (belt-and-suspenders; may already cascade)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (admin as any).from("users").delete().eq("id", userId);
+
+  revalidatePath("/dashboard/admin");
+  return { success: true };
+}
+
+// ─────────────────────────────────────────────────────────
 // Toggle active / inactive
 // ─────────────────────────────────────────────────────────
 export async function toggleUserActive(userId: string, isActive: boolean) {

@@ -29,22 +29,22 @@ export default async function AdminPage() {
         breadcrumbs={[{ label: "Admin" }]}
         showImport={false}
       />
-      <main className="flex-1 p-6 space-y-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-5 sm:space-y-6 pb-8">
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="rounded-xl border border-border bg-white p-4">
-            <p className="text-xs text-muted-foreground mb-1">Total Users</p>
-            <p className="text-2xl font-bold text-brand-black">{users.length}</p>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl border border-border bg-white p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Total</p>
+            <p className="text-2xl sm:text-3xl font-bold text-brand-black">{users.length}</p>
           </div>
-          <div className="rounded-xl border border-border bg-white p-4">
-            <p className="text-xs text-muted-foreground mb-1">Active</p>
-            <p className="text-2xl font-bold text-green-700">
+          <div className="rounded-xl border border-border bg-white p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Active</p>
+            <p className="text-2xl sm:text-3xl font-bold text-green-700">
               {users.filter((u) => u.is_active).length}
             </p>
           </div>
-          <div className="rounded-xl border border-border bg-white p-4">
-            <p className="text-xs text-muted-foreground mb-1">Inactive</p>
-            <p className="text-2xl font-bold text-muted-foreground">
+          <div className="rounded-xl border border-border bg-white p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-1">Inactive</p>
+            <p className="text-2xl sm:text-3xl font-bold text-muted-foreground">
               {users.filter((u) => !u.is_active).length}
             </p>
           </div>
