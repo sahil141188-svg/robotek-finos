@@ -25,6 +25,9 @@ function getCurrentFYLabel(): string {
   return `FY ${start}-${String(start + 1).slice(2)}`;
 }
 
+
+export const dynamic = "force-dynamic";
+
 export default async function TasksPage() {
   // Bug #9 fix: initialise to [] — not SAMPLE_TASKS — so DB errors don't
   // surface stale sample data and are surfaced as an empty state instead.

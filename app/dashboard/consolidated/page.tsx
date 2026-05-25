@@ -68,6 +68,9 @@ function ScoreBar({ score }: { score: number }) {
   );
 }
 
+
+export const dynamic = "force-dynamic";
+
 export default async function ConsolidatedDashboardPage() {
   const { profile } = await requireAuth();
 

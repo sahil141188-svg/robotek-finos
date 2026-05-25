@@ -7,6 +7,9 @@ import { NotificationSettings } from "@/components/admin/notification-settings";
  * Notification & Reminder Settings — Admin (CEO only).
  * Configure SMTP email, WhatsApp API, and reminder schedules.
  */
+
+export const dynamic = "force-dynamic";
+
 export default async function AdminSettingsPage() {
   const { profile } = await requireAuth();
   if (profile.role !== "ceo") redirect("/dashboard");

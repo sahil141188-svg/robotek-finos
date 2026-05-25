@@ -40,6 +40,9 @@ const PRIORITIES: { value: TaskPriority; label: string; dot: string }[] = [
   { value: "low",    label: "Low",    dot: "⚪" },
 ];
 
+
+export const dynamic = "force-dynamic";
+
 export default function NewTaskPage() {
   const router  = useRouter();
   const [isPending, startTransition] = useTransition();

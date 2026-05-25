@@ -8,6 +8,9 @@ import { getIntelligenceReport } from "@/app/actions/ai-insights";
  * Shows health score, anomalies, duplicates, fraud signals, GST issues,
  * cashflow forecast, vendor risk, and the CFO morning briefing.
  */
+
+export const dynamic = "force-dynamic";
+
 export default async function IntelPage() {
   await requireAuth();
   const report = await getIntelligenceReport();

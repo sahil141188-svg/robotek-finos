@@ -11,6 +11,9 @@ import { CustomerTable } from "@/components/receivables/customer-table";
 import { SAMPLE_CUSTOMERS, AR_SUMMARY, fmtAmt } from "@/lib/receivables-data";
 import { TrendingUp, AlertTriangle, Clock, Users, Upload } from "lucide-react";
 
+
+export const dynamic = "force-dynamic";
+
 export default function ReceivablesPage() {
   const { total, overdue, avg_dso, customers, bucket0to30, bucket31to60, bucket61to90, bucket90plus } = AR_SUMMARY;
   // Guard against division by zero when no data imported yet

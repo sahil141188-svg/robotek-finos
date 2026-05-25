@@ -25,6 +25,9 @@ type Props = {
   params: Promise<{ module: string; period: string }>;
 };
 
+
+export const dynamic = "force-dynamic";
+
 export default async function TransactionPage({ params }: Props) {
   await requireAuth();
   const { module, period } = await params;

@@ -6,6 +6,9 @@ import { ProfileForm } from "@/components/profile/profile-form";
  * User Profile — any logged-in user.
  * Update display name, WhatsApp number, and notification preferences.
  */
+
+export const dynamic = "force-dynamic";
+
 export default async function ProfilePage() {
   const { profile } = await requireAuth();
 

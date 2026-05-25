@@ -14,6 +14,9 @@ import { Users, Settings } from "lucide-react";
  * Lists all users with their roles, status, and permissions.
  * Provides create user (invite) and edit user functionality.
  */
+
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const { profile } = await requireAuth();
 

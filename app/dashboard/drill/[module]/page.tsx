@@ -30,6 +30,9 @@ function formatValue(value: number, unit: "lakhs" | "percent") {
   return `₹${value.toFixed(1)} L`;
 }
 
+
+export const dynamic = "force-dynamic";
+
 export default async function DrillPage({ params }: Props) {
   await requireAuth();
   const { module } = await params;

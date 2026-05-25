@@ -11,6 +11,9 @@ import { VendorTable } from "@/components/payables/vendor-table";
 import { SAMPLE_VENDORS, AP_SUMMARY, fmtAmt } from "@/lib/payables-data";
 import { TrendingDown, AlertTriangle, Clock, Building2, Upload } from "lucide-react";
 
+
+export const dynamic = "force-dynamic";
+
 export default function PayablesPage() {
   const { total, overdue, avg_dpo, vendors, bucket0to30, bucket31to60, bucket61to90, bucket90plus } = AP_SUMMARY;
   // Guard against division by zero when no data imported yet
