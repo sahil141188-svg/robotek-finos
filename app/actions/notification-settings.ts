@@ -114,8 +114,18 @@ export async function getNotificationSettings(): Promise<AllNotificationSettings
 
     const map = new Map(data.map((r) => [r.key, r.value]));
 
+    const rawWhatsapp = { ...DEFAULTS.whatsapp, ...(map.get("whatsapp") as Partial<WhatsAppConfig> ?? {}) };
+
+    // Bug #15 fix: account_sid must start with "AC" (Twilio format) or be empty.
+    // If it contains an email address or other invalid value (data mapping error),
+    // reset it to empty string to avoid displaying wrong data in the form.
+    if (rawWhatsapp.account_sid && !rawWhatsapp.account_sid.startsWith("AC")) {
+      console.warn("[notification-settings] account_sid has invalid format — clearing:", rawWhatsapp.account_sid);
+      rawWhatsapp.account_sid = "";
+    }
+
     return {
-      whatsapp:  { ...DEFAULTS.whatsapp,  ...(map.get("whatsapp")  as Partial<WhatsAppConfig>   ?? {}) },
+      whatsapp:  rawWhatsapp,
       email:     { ...DEFAULTS.email,     ...(map.get("email")     as Partial<EmailSettings>    ?? {}) },
       reminders: { ...DEFAULTS.reminders, ...(map.get("reminders") as Partial<ReminderSettings> ?? {}) },
       templates: { ...DEFAULTS.templates, ...(map.get("templates") as Partial<TemplateSettings> ?? {}) },

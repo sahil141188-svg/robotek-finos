@@ -10,7 +10,7 @@ import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus, Printer, Download, ExternalLink, AlertCircle, Info } from "lucide-react";
 import {
   SCORECARD_DATA, trendClass, trendIcon,
-  type PeriodTab, type MetricRow,
+  type PeriodTab, type MetricRow, type ScorecardData,
 } from "@/lib/review-data";
 import { downloadExcel, printAsPDF } from "@/lib/export-utils";
 
@@ -20,9 +20,16 @@ const TABS: { key: PeriodTab; label: string }[] = [
   { key: "quarterly", label: "Quarterly" },
 ];
 
-export function ReviewContent() {
+interface ReviewContentProps {
+  /** Live scorecard data pre-fetched by the server component (Bug #13 fix). */
+  liveData?: Record<PeriodTab, ScorecardData>;
+}
+
+export function ReviewContent({ liveData }: ReviewContentProps) {
   const [period, setPeriod] = useState<PeriodTab>("monthly");
-  const data = SCORECARD_DATA[period];
+  // Prefer live server-fetched data; fall back to static placeholder
+  const scorecard = liveData ?? SCORECARD_DATA;
+  const data = scorecard[period];
 
   const handlePrint = () => {
     if (typeof window !== "undefined") window.print();
