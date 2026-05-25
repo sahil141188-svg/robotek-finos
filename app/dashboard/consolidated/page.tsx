@@ -13,6 +13,7 @@ import { COMPANIES } from "@/lib/companies-data";
 import { fmtAmt } from "@/lib/bank-data";
 import { createClient } from "@/lib/supabase/server";
 import { fetchGroupAggregates } from "@/lib/supabase/group-aggregates";
+import { fetchIntercompanyMatrix } from "@/lib/supabase/intercompany-queries";
 import {
   TrendingUp, TrendingDown, Wallet, ShieldCheck,
   Users, Building2, ArrowRight,
@@ -95,6 +96,14 @@ export default async function ConsolidatedDashboardPage() {
   if (allCompanies.length === 0) {
     const dbCompanies = await getCompanies();
     allCompanies = dbCompanies.length > 0 ? dbCompanies : COMPANIES;
+  }
+
+  // Intercompany matrix (fuzzy name matching across vendors/customers)
+  let intercompanyRows: Awaited<ReturnType<typeof fetchIntercompanyMatrix>> = [];
+  try {
+    intercompanyRows = await fetchIntercompanyMatrix(supabase);
+  } catch (e) {
+    console.warn("[consolidated] intercompany matrix failed:", (e as Error).message);
   }
 
   // Compute group totals from whichever source we have
@@ -399,6 +408,58 @@ export default async function ConsolidatedDashboardPage() {
             })}
           </div>
         </div>
+
+        {/* Intercompany reconciliation matrix */}
+        {intercompanyRows.length > 0 && (
+          <div className="bg-white rounded-xl border border-border overflow-hidden">
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-brand-black">Intercompany balances</h3>
+                <p className="text-[11px] text-brand-gray-mid mt-0.5">
+                  Net positions across group companies (fuzzy-matched by ledger name)
+                </p>
+              </div>
+              <span className="text-xs text-brand-gray-mid">{intercompanyRows.length} flows</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-brand-gray-light/50 text-xs text-brand-gray-mid">
+                    <th className="px-4 py-2.5 text-left font-medium">Owner</th>
+                    <th className="px-4 py-2.5 text-left font-medium">Counterparty</th>
+                    <th className="px-4 py-2.5 text-right font-medium">Receivable from</th>
+                    <th className="px-4 py-2.5 text-right font-medium">Payable to</th>
+                    <th className="px-4 py-2.5 text-right font-medium">Net</th>
+                    <th className="px-4 py-2.5 text-left font-medium">Matched ledgers</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {intercompanyRows.map((r) => (
+                    <tr key={`${r.ownerCompanyId}-${r.partnerCompanyId}`} className="hover:bg-brand-gray-light/30">
+                      <td className="px-4 py-2.5 font-semibold text-brand-black">{r.ownerCompanyName}</td>
+                      <td className="px-4 py-2.5 text-brand-gray-mid">{r.partnerCompanyName}</td>
+                      <td className="px-4 py-2.5 text-right text-blue-700 tabular-nums">{r.receivable > 0 ? fmtAmt(r.receivable) : "—"}</td>
+                      <td className="px-4 py-2.5 text-right text-red-700  tabular-nums">{r.payable    > 0 ? fmtAmt(r.payable)    : "—"}</td>
+                      <td className={`px-4 py-2.5 text-right font-semibold tabular-nums ${r.net >= 0 ? "text-green-700" : "text-red-700"}`}>
+                        {r.net >= 0 ? "+" : "−"}{fmtAmt(Math.abs(r.net))}
+                      </td>
+                      <td className="px-4 py-2.5 text-[10px] text-brand-gray-mid truncate max-w-xs" title={r.matchedLedgers.join("; ")}>
+                        {r.matchedLedgers.slice(0, 2).join(", ")}{r.matchedLedgers.length > 2 ? "…" : ""}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-5 py-2.5 bg-brand-gray-light/40 border-t border-border">
+              <p className="text-[10px] text-brand-gray-mid leading-snug">
+                Ideally each pair sums to zero: A→B receivable = B→A payable. Mismatches indicate
+                unreconciled flows (timing, FY cutoff, name aliases). Click a row to drill into the
+                ledger (planned).
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Navigate to individual company */}
         <div className="bg-brand-gray-light/50 rounded-xl border border-border p-4 text-center">
