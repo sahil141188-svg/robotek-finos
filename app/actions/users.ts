@@ -152,16 +152,14 @@ export async function updateUser(
 ) {
   await assertCEO();
 
-  // Use admin client so the upsert works even if the profile row is missing
-  // (handles the case where auth user exists but public.users row was never created)
-  const admin = getAdminClient();
+  // Use UPDATE (not upsert) — the user row already exists.
+  // Upsert would attempt an INSERT first which fails the NOT NULL email constraint.
+  const supabase = await createClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (admin as any)
+  const { error } = await (supabase as any)
     .from("users")
-    .upsert(
-      { id: userId, ...updates, updated_at: new Date().toISOString() },
-      { onConflict: "id" }
-    );
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", userId);
 
   if (error) throw new Error(error.message);
 
