@@ -120,11 +120,15 @@ export async function importBankStatement(
   const _fyStart = _now.getMonth() >= 3 ? _now.getFullYear() : _now.getFullYear() - 1;
   const financialYear = `${_fyStart}-${String(_fyStart + 1).slice(-2)}`;
 
+  // Detect file type from extension for accurate audit logging
+  const fileExt = fileName.split(".").pop()?.toLowerCase() ?? "unknown";
+  const fileType = ["xlsx", "xls", "csv"].includes(fileExt) ? "excel" : "pdf";
+
   const { data: importRecord, error: importErr } = await db
     .from("file_imports")
     .insert({
       file_name: fileName,
-      file_type: "pdf",
+      file_type: fileType,
       module: "banking",
       uploaded_by: user.id,
       status: "processing",
@@ -154,6 +158,9 @@ export async function importBankStatement(
   let bankAccountId: string | null = null;
 
   // ── Import bank account metadata ──────────────────────────────────────────
+  // For PDF imports: bankMetadata is extracted by the parser (rich — bank name, acct number, etc.)
+  // For Excel imports: bankMetadata is null — we infer the bank name from the filename and
+  //   create a placeholder account so transactions can still be stored and shown on the dashboard.
 
   if (bankMetadata) {
     try {
@@ -221,6 +228,58 @@ export async function importBankStatement(
       }
     } catch (err) {
       errors.push(`Error importing bank account: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  } else if (transactions.length > 0) {
+    // ── Excel upload: no PDF metadata — infer bank name from filename ──────
+    // Create a minimal bank account record so transactions have a valid foreign key.
+    try {
+      const fileBase = fileName.replace(/\.[^.]+$/, ""); // strip extension
+
+      // Try to detect known bank names in the filename (case-insensitive)
+      const KNOWN_BANKS = [
+        "HDFC", "ICICI", "SBI", "Axis", "Kotak", "IDBI",
+        "PNB", "BOI", "Canara", "Union", "Yes Bank", "IndusInd",
+        "Federal", "IOB", "UCO",
+      ];
+      const fileUpper = fileBase.toUpperCase();
+      const matched = KNOWN_BANKS.find((b) => fileUpper.includes(b.toUpperCase()));
+      const bankName = matched
+        ? (matched.toLowerCase().includes("bank") ? matched : `${matched} Bank`)
+        : fileBase.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+      // Generate a pseudo account number that is unique per import
+      // (so re-importing the same file doesn't collide with a previous import's account)
+      const pseudoAcctNum = `XLS-${Date.now().toString(36).toUpperCase().slice(-8)}`;
+
+      const { data: acctData, error: acctErr } = await db
+        .from("bank_accounts")
+        .insert({
+          bank_name: bankName,
+          account_number: pseudoAcctNum,
+          account_number_last4: pseudoAcctNum.slice(-4),
+          account_type: "current",
+          account_holder_name: null,
+          opening_balance: 0,
+          closing_balance: 0,
+          import_id: importId,
+          ...(companyId ? { company_id: companyId } : {}),
+        })
+        .select("id")
+        .single();
+
+      if (acctErr) {
+        errors.push(`Failed to create bank account for Excel import: ${acctErr.message}`);
+      } else if (acctData) {
+        bankAccountId = acctData.id;
+        accountsImported = 1;
+        console.log("[import-banking] ✓ Created placeholder account for Excel import:", {
+          id: bankAccountId,
+          bank: bankName,
+          acct: pseudoAcctNum.slice(-4),
+        });
+      }
+    } catch (err) {
+      errors.push(`Error creating bank account: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 

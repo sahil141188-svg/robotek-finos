@@ -181,9 +181,38 @@ export default function ImportPage() {
       const ext = (file.name.split(".").pop()?.toLowerCase() ?? "xlsx") as
         "xlsx" | "xls" | "csv" | "pdf";
 
-      // For bank statements, use the specialized import action
-      if (selectedModule === "bank_statement" && isPDF && bankMetadata !== undefined) {
-        const result = await importBankStatement(bankMetadata, parsed.rows as RawRow[], file.name);
+      // Bank statements (PDF or Excel) → specialized banking import action
+      // Bug fix: removed the `isPDF` guard — Excel bank exports must also write to
+      // bank_statements table (not the Busy transactions table).
+      if (selectedModule === "bank_statement") {
+        // PDF rows already have {Date, Description, Debit, Credit, Balance} from the parser.
+        // Excel rows use the bank's own column names — remap them to standard keys now
+        // so importBankStatement can read them consistently regardless of file format.
+        let rowsForImport: RawRow[] = parsed.rows as RawRow[];
+        if (!isPDF) {
+          rowsForImport = (parsed.rows as RawRow[]).map((row) => ({
+            Date:
+              mapping.transaction_date
+                ? row[mapping.transaction_date as string]
+                : null,
+            Description:
+              (mapping.ledger_name   ? row[mapping.ledger_name   as string] : null) ??
+              (mapping.narration     ? row[mapping.narration     as string] : null) ??
+              "",
+            Debit:   mapping.dr_amount     ? row[mapping.dr_amount     as string] : null,
+            Credit:  mapping.cr_amount     ? row[mapping.cr_amount     as string] : null,
+            // Balance column name varies by bank: try common variants
+            Balance:
+              row["Balance"] ??
+              row["Bal"] ??
+              row["Closing Balance"] ??
+              row["Closing Bal"] ??
+              row["Running Balance"] ??
+              null,
+            Reference: mapping.voucher_number ? row[mapping.voucher_number as string] : null,
+          }));
+        }
+        const result = await importBankStatement(bankMetadata, rowsForImport, file.name);
         setResult(result);
       } else {
         // For other modules, use the standard import action
