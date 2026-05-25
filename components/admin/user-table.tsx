@@ -13,6 +13,7 @@
  */
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import type { Database } from "@/types/database";
 import { toggleUserActive, deleteUser } from "@/app/actions/users";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -44,6 +45,7 @@ interface UserTableProps {
 }
 
 export function UserTable({ users: initialUsers }: UserTableProps) {
+  const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>(initialUsers);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -311,6 +313,8 @@ export function UserTable({ users: initialUsers }: UserTableProps) {
                 onSuccess={() => {
                   setSheetOpen(false);
                   toast.success("User updated successfully");
+                  // Refresh server-component data so the list shows the new values
+                  router.refresh();
                 }}
               />
             )}
