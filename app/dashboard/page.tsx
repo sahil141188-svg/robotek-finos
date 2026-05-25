@@ -18,8 +18,6 @@ import type { KpiSummary } from "@/lib/dashboard-data";
 import { requireAuth } from "@/lib/auth";
 import { fetchDashboardKPIs } from "@/app/actions/dashboard-kpis";
 import { fetchBankAccounts } from "@/lib/supabase/banking-queries";
-import { listOverdueCustomers } from "@/app/actions/reminders";
-import { fmtAmt } from "@/lib/payables-data";
 import { COMPLIANCE_ITEMS } from "@/lib/compliance-data";
 import { Header } from "@/components/layout/header";
 import { KpiCard } from "@/components/dashboard/kpi-card";
@@ -142,10 +140,6 @@ export default async function DashboardPage() {
   const liveKPI = await fetchDashboardKPIs();
   // Fetch bank accounts to detect whether bank data has been imported
   const bankAccounts = await fetchBankAccounts();
-  // Surface customers excluded from WhatsApp reminders due to missing phone
-  const { customers: arCustomers } = await listOverdueCustomers();
-  const missingPhoneCustomers = arCustomers.filter((c) => !c.phone);
-  const missingPhoneOutstanding = missingPhoneCustomers.reduce((s, c) => s + c.outstanding, 0);
 
   // Use live data if available, fallback to sample data
   const kpi: KpiSummary = liveKPI ? transformDashboardKPI(liveKPI) : SAMPLE_KPI;
@@ -206,25 +200,7 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* ── Reminder readiness — customers excluded due to missing phone ─── */}
-        {missingPhoneCustomers.length > 0 && (
-          <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-            <div className="flex-1 text-xs text-amber-800">
-              <strong>{missingPhoneCustomers.length} customer{missingPhoneCustomers.length === 1 ? "" : "s"} excluded from WhatsApp reminders</strong>
-              {" — "}
-              <strong>{fmtAmt(missingPhoneOutstanding)}</strong> outstanding has no phone number on file.
-              {" "}
-              <Link href="/dashboard/reminders" className="underline font-semibold hover:text-amber-900">
-                Fix inline on the Reminders page →
-              </Link>
-              {" "}or{" "}
-              <Link href="/dashboard/contacts" className="underline font-semibold hover:text-amber-900">
-                bulk-import contacts →
-              </Link>
-            </div>
-          </div>
-        )}
+        {/* Missing-phone warning is now shown app-wide in components/layout/global-alerts.tsx */}
 
         {/* ── 1. Business Health Banner ─────────────────────────────────── */}
         <HealthBanner

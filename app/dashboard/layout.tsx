@@ -2,6 +2,7 @@ import { requireAuth } from "@/lib/auth";
 import { getCompanies } from "@/app/actions/companies";
 import { getSelectedCompanyId } from "@/lib/company-cookie";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { GlobalAlerts } from "@/components/layout/global-alerts";
 import { COMPANIES } from "@/lib/companies-data";
 
 /**
@@ -38,6 +39,7 @@ export default async function DashboardLayout({
       companies={companies}
       initialCompanyId={initialCompanyId}
     >
+      <GlobalAlerts />
       {children}
     </DashboardShell>
   );

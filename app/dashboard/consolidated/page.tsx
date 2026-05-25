@@ -14,6 +14,7 @@ import { fmtAmt } from "@/lib/bank-data";
 import { createClient } from "@/lib/supabase/server";
 import { fetchGroupAggregates } from "@/lib/supabase/group-aggregates";
 import { fetchIntercompanyMatrix } from "@/lib/supabase/intercompany-queries";
+import { fetchGroupExpenseReport } from "@/lib/supabase/group-expenses-queries";
 import {
   TrendingUp, TrendingDown, Wallet, ShieldCheck,
   Users, Building2, ArrowRight,
@@ -104,6 +105,14 @@ export default async function ConsolidatedDashboardPage() {
     intercompanyRows = await fetchIntercompanyMatrix(supabase);
   } catch (e) {
     console.warn("[consolidated] intercompany matrix failed:", (e as Error).message);
+  }
+
+  // Group expense report (current month, per-company × per-category)
+  let groupExpenses: Awaited<ReturnType<typeof fetchGroupExpenseReport>> | null = null;
+  try {
+    groupExpenses = await fetchGroupExpenseReport(supabase);
+  } catch (e) {
+    console.warn("[consolidated] group expenses failed:", (e as Error).message);
   }
 
   // Compute group totals from whichever source we have
@@ -456,6 +465,127 @@ export default async function ConsolidatedDashboardPage() {
                 Ideally each pair sums to zero: A→B receivable = B→A payable. Mismatches indicate
                 unreconciled flows (timing, FY cutoff, name aliases). Click a row to drill into the
                 ledger (planned).
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Group expense report — combined OpEx breakdown across all companies */}
+        {groupExpenses && groupExpenses.grandTotal > 0 && (
+          <div className="bg-white rounded-xl border border-border overflow-hidden">
+            <div className="px-5 py-3 border-b border-border flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-brand-black">Group Expense Tracker</h3>
+                <p className="text-[11px] text-brand-gray-mid mt-0.5">
+                  Current-month OpEx across the group · {fmtAmt(groupExpenses.grandTotal)} total
+                  {groupExpenses.vsPrevMonthPct !== 0 && (
+                    <span className={`ml-2 font-semibold ${groupExpenses.vsPrevMonthPct >= 0 ? "text-red-700" : "text-green-700"}`}>
+                      {groupExpenses.vsPrevMonthPct >= 0 ? "↑" : "↓"} {Math.abs(groupExpenses.vsPrevMonthPct)}% vs last month
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="flex gap-2 text-[10px]">
+                <div className="bg-brand-gray-light rounded-lg px-3 py-1.5">
+                  <p className="text-brand-gray-mid">FY YTD</p>
+                  <p className="font-bold text-brand-black tabular-nums">{fmtAmt(groupExpenses.ytdTotal)}</p>
+                </div>
+                <div className="bg-brand-gray-light rounded-lg px-3 py-1.5">
+                  <p className="text-brand-gray-mid">Entities</p>
+                  <p className="font-bold text-brand-black">{groupExpenses.companies.length}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Category × company matrix */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-brand-gray-light/50 text-xs text-brand-gray-mid">
+                    <th className="px-4 py-2.5 text-left font-medium sticky left-0 bg-brand-gray-light/50">Category</th>
+                    {groupExpenses.companies.map((co) => (
+                      <th key={co.id} className="px-3 py-2.5 text-right font-medium whitespace-nowrap">{co.short_name}</th>
+                    ))}
+                    <th className="px-3 py-2.5 text-right font-medium bg-brand-gray-light">Group Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {groupExpenses.rows.map((r) => (
+                    <tr key={r.category} className="hover:bg-brand-gray-light/30">
+                      <td className="px-4 py-2.5 font-medium text-brand-black sticky left-0 bg-white">{r.category}</td>
+                      {groupExpenses.companies.map((co) => {
+                        const v = r.perCompany[co.id] ?? 0;
+                        return (
+                          <td key={co.id} className={`px-3 py-2.5 text-right tabular-nums whitespace-nowrap ${v > 0 ? "text-brand-black" : "text-brand-gray-mid/40"}`}>
+                            {v > 0 ? fmtAmt(v) : "—"}
+                          </td>
+                        );
+                      })}
+                      <td className="px-3 py-2.5 text-right font-bold tabular-nums whitespace-nowrap bg-brand-gray-light/40">{fmtAmt(r.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border bg-brand-gray-light font-bold">
+                    <td className="px-4 py-2.5 sticky left-0 bg-brand-gray-light">Total</td>
+                    {groupExpenses.companies.map((co) => (
+                      <td key={co.id} className="px-3 py-2.5 text-right tabular-nums whitespace-nowrap">{fmtAmt(groupExpenses.columnTotals[co.id] ?? 0)}</td>
+                    ))}
+                    <td className="px-3 py-2.5 text-right tabular-nums whitespace-nowrap text-brand-red">{fmtAmt(groupExpenses.grandTotal)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+
+            {/* Trend + top vendors side by side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 border-t border-border">
+              {/* Monthly trend */}
+              <div className="p-5 border-r border-border">
+                <h4 className="text-xs font-semibold text-brand-black mb-3">Last 6 months — group total</h4>
+                {(() => {
+                  const maxMonth = Math.max(1, ...groupExpenses!.monthlyTrend.map((m) => m.amount));
+                  return (
+                    <div className="space-y-2">
+                      {groupExpenses!.monthlyTrend.map((m, i) => (
+                        <div key={i} className="flex items-center gap-3 text-xs">
+                          <span className="w-16 text-brand-gray-mid shrink-0">{m.period.slice(0, 8)}</span>
+                          <div className="flex-1 h-2 bg-brand-gray-light rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-brand-red" style={{ width: `${(m.amount / maxMonth) * 100}%` }} />
+                          </div>
+                          <span className="text-brand-black w-24 text-right tabular-nums">{fmtAmt(m.amount)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Top vendors */}
+              <div className="p-5">
+                <h4 className="text-xs font-semibold text-brand-black mb-3">Top vendors / payees — current month</h4>
+                {groupExpenses.topVendors.length === 0 ? (
+                  <p className="text-xs text-brand-gray-mid">No vendor activity this month.</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {groupExpenses.topVendors.slice(0, 8).map((v, i) => (
+                      <li key={i} className="flex items-center justify-between text-xs gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-brand-black truncate">{v.vendor}</p>
+                          <p className="text-[10px] text-brand-gray-mid truncate">{v.companies.join(" · ")}</p>
+                        </div>
+                        <span className="font-semibold text-brand-black tabular-nums shrink-0">{fmtAmt(v.amount)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="px-5 py-2.5 bg-brand-gray-light/40 border-t border-border">
+              <p className="text-[10px] text-brand-gray-mid leading-snug">
+                OpEx = DR side of Journal / Payment vouchers to non-COGS, non-sales, non-bank,
+                non-tax ledgers. Switch to a specific company in the sidebar to drill into its
+                per-vendor and per-transaction detail in the Expense Tracker.
               </p>
             </div>
           </div>
