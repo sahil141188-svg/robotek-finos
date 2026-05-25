@@ -12,6 +12,7 @@
  * RULE 5: Indian number format (Lakhs / Crores).
  */
 
+import { Suspense } from "react";
 import type { DashboardKPI } from "@/app/actions/dashboard-kpis";
 import type { KpiSummary } from "@/lib/dashboard-data";
 import { requireAuth } from "@/lib/auth";
@@ -23,6 +24,7 @@ import { RevenueChart } from "@/components/dashboard/revenue-chart";
 import { ExpenseChart } from "@/components/dashboard/expense-chart";
 import { AgingChart } from "@/components/dashboard/aging-chart";
 import { ComplianceMini } from "@/components/dashboard/compliance-mini";
+import { DailySummaryCard, DailySummaryCardSkeleton } from "@/components/dashboard/daily-summary-card";
 import {
   SAMPLE_KPI,
   REVENUE_TREND,
@@ -238,7 +240,12 @@ export default async function DashboardPage() {
           />
         </div>
 
-        {/* ── 3. Revenue Trend + Cost Breakdown ────────────────────────── */}
+        {/* ── 3. "What changed today?" AI summary ──────────────────────── */}
+        <Suspense fallback={<DailySummaryCardSkeleton />}>
+          <DailySummaryCard />
+        </Suspense>
+
+        {/* ── 4. Revenue Trend + Cost Breakdown ────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <RevenueChart data={REVENUE_TREND} />
@@ -248,7 +255,7 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* ── 4. Aging + Compliance ─────────────────────────────────────── */}
+        {/* ── 5. Aging + Compliance ─────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <AgingChart data={AGING_DATA} />
           <ComplianceMini items={UPCOMING_COMPLIANCE} />
