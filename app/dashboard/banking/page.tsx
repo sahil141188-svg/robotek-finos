@@ -155,9 +155,29 @@ export default async function BankingPage() {
 
         {/* ── Account cards ─────────────────────────────────────────── */}
         {bankAccounts.length === 0 ? (
-          <div className="bg-white rounded-xl border border-border p-8 text-center">
-            <p className="text-sm text-brand-gray-mid mb-2">No bank accounts imported yet</p>
-            <p className="text-xs text-brand-gray-mid">Import a bank statement to see your accounts and transactions here</p>
+          <div className="bg-white rounded-xl border border-dashed border-brand-red/30 p-10 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-brand-red/10 flex items-center justify-center mx-auto">
+              <Landmark className="w-7 h-7 text-brand-red" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-brand-black">No bank accounts imported yet</p>
+              <p className="text-xs text-brand-gray-mid mt-1 leading-relaxed">
+                Import your bank statement (Excel or CSV) to see account balances,<br />
+                weekly cash flow, and inflow/outflow breakdown.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 items-center justify-center text-xs text-brand-gray-mid">
+              <span className="font-medium text-brand-black">Supported banks:</span>
+              {["HDFC", "IDBI", "Kotak", "SBI", "ICICI", "Axis", "PNB"].map((b) => (
+                <span key={b} className="px-2 py-0.5 rounded-full bg-brand-gray-light border border-border">{b}</span>
+              ))}
+            </div>
+            <Link
+              href="/dashboard/import?module=bank_statement"
+              className="inline-flex items-center gap-2 h-9 rounded-lg px-5 text-sm font-semibold bg-brand-red hover:bg-brand-maroon text-white transition-colors"
+            >
+              Import Bank Statement
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
