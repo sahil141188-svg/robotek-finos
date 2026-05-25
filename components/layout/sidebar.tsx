@@ -11,7 +11,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 import {
   LayoutDashboard, Upload, CalendarCheck, CheckSquare,
   TrendingDown, TrendingUp, FileText, Bell, LogOut,
-  Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen,
+  Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen, Brain,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -33,6 +33,7 @@ const NAV_ITEMS: {
   { href: "/dashboard/banking",      label: "Bank Statements",       icon: Landmark,        permKey: "view_banking" },
   { href: "/dashboard/review",       label: "Review Engine",         icon: FileText,        permKey: "view_review" },
   { href: "/dashboard/alerts",       label: "Alerts",                icon: Bell,            permKey: "view_alerts" },
+  { href: "/dashboard/intel",        label: "Intelligence Hub",      icon: Brain,           permKey: null },
 ];
 
 interface SidebarProps {
