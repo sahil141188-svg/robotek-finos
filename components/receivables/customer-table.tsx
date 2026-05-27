@@ -7,7 +7,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { ArrowUpDown, AlertTriangle, MessageSquare } from "lucide-react";
+import { ArrowUpDown, AlertTriangle, MessageSquare, Search, X } from "lucide-react";
 import {
   SAMPLE_CUSTOMERS, customerTotal, customerOverdue, fmtAmt, fmtD,
   type SampleCustomer,
@@ -24,6 +24,7 @@ interface Props {
 
 export function CustomerTable({ customers }: Props) {
   const [filter, setFilter]   = useState<Filter>("All");
+  const [search, setSearch]   = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("overdue");
   const [sortAsc, setSortAsc] = useState(false);
 
@@ -31,6 +32,14 @@ export function CustomerTable({ customers }: Props) {
     let list = customers;
     if (filter === "Overdue")  list = list.filter((c) => customerOverdue(c) > 0);
     if (filter === "Critical") list = list.filter((c) => c.ag90plus > 0 || c.ag61to90 > 0);
+    const q = search.trim().toLowerCase();
+    if (q) list = list.filter((c) =>
+      c.name.toLowerCase().includes(q) ||
+      (c.gstin ?? "").toLowerCase().includes(q) ||
+      (c.contact_person ?? "").toLowerCase().includes(q) ||
+      (c.phone ?? "").toLowerCase().includes(q) ||
+      (c.email ?? "").toLowerCase().includes(q)
+    );
     return [...list].sort((a, b) => {
       if (sortKey === "name")    { return sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name); }
       let av = 0, bv = 0;
@@ -42,7 +51,7 @@ export function CustomerTable({ customers }: Props) {
       if (sortKey === "ag90plus")  { av = a.ag90plus;  bv = b.ag90plus; }
       return sortAsc ? av - bv : bv - av;
     });
-  }, [customers, filter, sortKey, sortAsc]);
+  }, [customers, filter, search, sortKey, sortAsc]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc((a) => !a);
@@ -109,21 +118,43 @@ export function CustomerTable({ customers }: Props) {
 
   return (
     <div className="bg-white rounded-xl border border-border overflow-hidden">
-      {/* Filter tabs */}
-      <div className="flex items-center gap-1 px-4 py-3 border-b border-border bg-brand-gray-light">
-        {(["All", "Overdue", "Critical"] as Filter[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
-              filter === f
-                ? f === "Critical" ? "bg-red-600 text-white" : f === "Overdue" ? "bg-orange-500 text-white" : "bg-brand-red text-white"
-                : "text-brand-gray-mid hover:text-brand-black"
-            }`}
-          >
-            {f} ({filterCounts[f]})
-          </button>
-        ))}
+      {/* Filter tabs + search */}
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-border bg-brand-gray-light">
+        <div className="flex items-center gap-1">
+          {(["All", "Overdue", "Critical"] as Filter[]).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all ${
+                filter === f
+                  ? f === "Critical" ? "bg-red-600 text-white" : f === "Overdue" ? "bg-orange-500 text-white" : "bg-brand-red text-white"
+                  : "text-brand-gray-mid hover:text-brand-black"
+              }`}
+            >
+              {f} ({filterCounts[f]})
+            </button>
+          ))}
+        </div>
+        {/* Search box */}
+        <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <Search className="w-3.5 h-3.5 text-brand-gray-mid absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search customer / GSTIN / phone / email…"
+            className="w-full text-xs border border-border rounded-lg pl-8 pr-7 py-1.5 bg-white"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-brand-gray-mid hover:text-brand-black"
+              aria-label="Clear search"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
         <span className="ml-auto text-xs text-brand-gray-mid">{filtered.length} customers</span>
         <ExportButtons onExcelClick={handleExcelExport} onPDFClick={handlePDFExport} />
       </div>
