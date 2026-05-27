@@ -37,6 +37,7 @@ const NAV_ITEMS: {
   { href: "/dashboard/cashflow",     label: "Cash Flow",             icon: ArrowRightLeft,  permKey: "view_dashboard" },
   { href: "/dashboard/duties",       label: "Imports & Duties",      icon: Ship,            permKey: "view_dashboard" },
   { href: "/dashboard/contacts",     label: "Contacts",              icon: Users,           permKey: "view_dashboard" },
+  { href: "/dashboard/customers",    label: "Customers (Group)",     icon: Users,           permKey: "view_receivables" },
   { href: "/dashboard/reminders",    label: "Send Reminders",        icon: Send,            permKey: "view_receivables" },
   { href: "/dashboard/review",       label: "Review Engine",         icon: FileText,        permKey: "view_review" },
   { href: "/dashboard/alerts",       label: "Alerts",                icon: Bell,            permKey: "view_alerts" },
