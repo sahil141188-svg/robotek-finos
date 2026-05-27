@@ -430,11 +430,14 @@ export async function parseExcelFile(file: File): Promise<ParsedFile> {
 
 // ─── Date parsing helpers ─────────────────────────────────────────────────────
 
+// Anchored at start only — bank exports often include a trailing time
+// component (e.g. "26/05/2026 18:30:13" or "2026-05-25 14:07:55.000 ").
+// We match the date prefix and ignore whatever follows.
 const DATE_FORMATS = [
-  /^(\d{4})-(\d{2})-(\d{2})$/, // yyyy-mm-dd (ISO — from xlsx cellDates)
-  /^(\d{2})\/(\d{2})\/(\d{4})$/, // dd/mm/yyyy (Indian)
-  /^(\d{2})-(\d{2})-(\d{4})$/, // dd-mm-yyyy
-  /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, // d/m/yyyy
+  /^(\d{4})-(\d{2})-(\d{2})\b/, // yyyy-mm-dd (ISO — from xlsx cellDates / IDBI XLS)
+  /^(\d{2})\/(\d{2})\/(\d{4})\b/, // dd/mm/yyyy (Indian)
+  /^(\d{2})-(\d{2})-(\d{4})\b/, // dd-mm-yyyy
+  /^(\d{1,2})\/(\d{1,2})\/(\d{4})\b/, // d/m/yyyy
 ];
 
 /** Parse a raw date cell value to ISO yyyy-mm-dd */
@@ -458,7 +461,10 @@ export function parseDate(raw: string | number | null): string | null {
   for (const fmt of DATE_FORMATS) {
     const m = s.match(fmt);
     if (m) {
-      if (fmt === DATE_FORMATS[0]) return s; // already ISO
+      if (fmt === DATE_FORMATS[0]) {
+        // ISO yyyy-mm-dd prefix — emit just the date portion
+        return `${m[1]}-${m[2]}-${m[3]}`;
+      }
       if (fmt === DATE_FORMATS[1] || fmt === DATE_FORMATS[2] || fmt === DATE_FORMATS[3]) {
         const [, dd, mm, yyyy] = m;
         return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
@@ -488,10 +494,12 @@ export function parseDateWithFormat(
   // Excel serial numbers and ISO strings are unambiguous — delegate as-is
   if (typeof raw === "number") return parseDate(raw);
   const s = raw.toString().trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s; // already ISO
+  // Match ISO prefix (allows trailing time, e.g. "2026-05-25 14:07:55.000")
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})\b/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
 
   if (format !== "auto") {
-    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/);
     if (m) {
       const [, first, second, yyyy] = m;
       const [dd, mm] = format === "DD-MM-YYYY" ? [first, second] : [second, first];
