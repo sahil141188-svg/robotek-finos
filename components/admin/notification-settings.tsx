@@ -281,19 +281,19 @@ export function NotificationSettings() {
             {whatsapp.provider === "maytapi" && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <Label>Product ID (UUID from Maytapi dashboard → Products)</Label>
+                  <Label>Product ID (from Maytapi dashboard → Products)</Label>
                   <Input
                     value={whatsapp.maytapi_product_id ?? ""}
                     onChange={(e) => updateWhatsapp({ maytapi_product_id: e.target.value })}
-                    placeholder="e.g. 8a3f9d4c-2b1e-4ff5-9d2c-1e2b3a4f5d6e"
+                    placeholder="e.g. 12345 or UUID"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Phone ID (UUID of the connected WhatsApp phone in Maytapi)</Label>
+                  <Label>Phone ID (numeric ID of your connected WhatsApp phone in Maytapi)</Label>
                   <Input
                     value={whatsapp.maytapi_phone_id ?? ""}
                     onChange={(e) => updateWhatsapp({ maytapi_phone_id: e.target.value })}
-                    placeholder="e.g. 7c9b1d2e-3f4a-5b6c-7d8e-9f0a1b2c3d4e"
+                    placeholder="e.g. 34178"
                   />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
