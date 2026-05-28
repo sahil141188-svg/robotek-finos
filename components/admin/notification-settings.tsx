@@ -158,8 +158,12 @@ export function NotificationSettings() {
   }
 
   async function handleTestWhatsApp() {
-    const phone = testPhone.trim() || settings?.whatsapp.meta_phone_id;
-    if (!phone) { toast.error("Enter a phone number to test"); return; }
+    // For Meta the meta_phone_id is a numeric API ID (not a phone), so we can
+    // only fall back to it for backwards compat. Maytapi & Twilio always need
+    // an explicit recipient — sender numbers aren't meaningful as recipients.
+    const phone = testPhone.trim()
+      || (settings?.whatsapp.provider === "meta" ? settings?.whatsapp.meta_phone_id : "");
+    if (!phone) { toast.error("Enter a phone number to test (with country code, e.g. +91…)"); return; }
     setTestPending(true);
     try {
       const result = await sendTestWhatsApp(phone);
@@ -230,13 +234,14 @@ export function NotificationSettings() {
               <Label>WhatsApp Provider</Label>
               <Select
                 value={whatsapp.provider}
-                onValueChange={(v) => { if (v === "meta" || v === "twilio") updateWhatsapp({ provider: v }); }}
+                onValueChange={(v) => { if (v === "meta" || v === "twilio" || v === "maytapi") updateWhatsapp({ provider: v }); }}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="meta">Meta Cloud API (official — recommended)</SelectItem>
+                  <SelectItem value="meta">Meta Cloud API (official Business API)</SelectItem>
+                  <SelectItem value="maytapi">Maytapi (third-party gateway)</SelectItem>
                   <SelectItem value="twilio">Twilio WhatsApp Business API</SelectItem>
                 </SelectContent>
               </Select>
@@ -268,6 +273,55 @@ export function NotificationSettings() {
                     onChange={(e) => updateWhatsapp({ meta_phone_id: e.target.value })}
                     placeholder="123456789012345"
                   />
+                </div>
+              </div>
+            )}
+
+            {/* Maytapi fields */}
+            {whatsapp.provider === "maytapi" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Product ID (UUID from Maytapi dashboard → Products)</Label>
+                  <Input
+                    value={whatsapp.maytapi_product_id ?? ""}
+                    onChange={(e) => updateWhatsapp({ maytapi_product_id: e.target.value })}
+                    placeholder="e.g. 8a3f9d4c-2b1e-4ff5-9d2c-1e2b3a4f5d6e"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Phone ID (UUID of the connected WhatsApp phone in Maytapi)</Label>
+                  <Input
+                    value={whatsapp.maytapi_phone_id ?? ""}
+                    onChange={(e) => updateWhatsapp({ maytapi_phone_id: e.target.value })}
+                    placeholder="e.g. 7c9b1d2e-3f4a-5b6c-7d8e-9f0a1b2c3d4e"
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label>API Token (x-maytapi-key — from Maytapi → Account → API Token)</Label>
+                  <div className="relative">
+                    <Input
+                      type={showWaToken ? "text" : "password"}
+                      value={whatsapp.maytapi_token ?? ""}
+                      onChange={(e) => updateWhatsapp({ maytapi_token: e.target.value })}
+                      placeholder="Your Maytapi API token"
+                      className="pr-10"
+                    />
+                    <button type="button" onClick={() => setShowWaToken((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-gray-mid hover:text-brand-black">
+                      {showWaToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="sm:col-span-2 text-[11px] text-brand-gray-mid bg-brand-gray-light/50 rounded-lg p-3">
+                  <p className="font-semibold text-brand-black mb-1">Where to find these in Maytapi</p>
+                  <ol className="list-decimal list-inside space-y-0.5">
+                    <li>Log in at <a href="https://console.maytapi.com" target="_blank" rel="noopener" className="text-brand-red underline">console.maytapi.com</a></li>
+                    <li><strong>Product ID</strong> → Products section → copy the UUID of your product</li>
+                    <li><strong>Phone ID</strong> → inside that product → your connected WhatsApp phone has a UUID listed</li>
+                    <li><strong>API Token</strong> → Account settings → API Token tab</li>
+                    <li>Make sure the phone shows status <strong>"connected"</strong> in Maytapi before testing</li>
+                  </ol>
+                  <p className="mt-2">No 24-hour window restriction (unlike Meta) — Maytapi can message any number anytime since it uses the WhatsApp Web bridge.</p>
                 </div>
               </div>
             )}
@@ -311,7 +365,7 @@ export function NotificationSettings() {
             )}
 
             {/* Status banner */}
-            {!whatsapp.meta_token && !whatsapp.account_sid ? (
+            {!whatsapp.meta_token && !whatsapp.account_sid && !whatsapp.maytapi_token ? (
               <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>

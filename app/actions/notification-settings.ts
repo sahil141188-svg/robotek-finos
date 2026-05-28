@@ -61,13 +61,16 @@ export type AllNotificationSettings = {
 
 const DEFAULTS: AllNotificationSettings = {
   whatsapp: {
-    enabled:       false,
-    provider:      "meta",
-    meta_token:    "",
-    meta_phone_id: "",
-    account_sid:   "",
-    auth_token:    "",
-    from_number:   "",
+    enabled:            false,
+    provider:           "meta",
+    meta_token:         "",
+    meta_phone_id:      "",
+    account_sid:        "",
+    auth_token:         "",
+    from_number:        "",
+    maytapi_product_id: "",
+    maytapi_phone_id:   "",
+    maytapi_token:      "",
   },
   email: {
     enabled:       true,

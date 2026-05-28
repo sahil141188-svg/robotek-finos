@@ -1,9 +1,10 @@
 /**
  * WhatsApp sender service for Robotek FinOS.
  *
- * Supports two providers:
- *   • Meta Cloud API  (recommended — official WhatsApp Business API)
+ * Supports three providers:
+ *   • Meta Cloud API  (official WhatsApp Business API)
  *   • Twilio          (alternative)
+ *   • Maytapi         (third-party gateway via WhatsApp Web bridge)
  *
  * When no credentials are configured the function logs a dry-run and
  * returns { sent: false, skipped: true } so the rest of the codebase
@@ -18,7 +19,7 @@
 
 export type WhatsAppConfig = {
   enabled:      boolean;
-  provider:     "meta" | "twilio";
+  provider:     "meta" | "twilio" | "maytapi";
   /** Meta Cloud API */
   meta_token:   string;
   meta_phone_id:string;
@@ -26,6 +27,10 @@ export type WhatsAppConfig = {
   account_sid:  string;
   auth_token:   string;
   from_number:  string;  // e.g. "whatsapp:+14155238886"
+  /** Maytapi (third-party WhatsApp gateway) */
+  maytapi_product_id?: string;  // UUID of the product in your Maytapi dashboard
+  maytapi_phone_id?:   string;  // UUID of the WhatsApp phone connected in Maytapi
+  maytapi_token?:      string;  // x-maytapi-key header value
 };
 
 export type SendResult = {
@@ -55,11 +60,9 @@ export async function sendWhatsApp(
   const recipient = to.startsWith("+") ? to : `+91${to}`;
 
   try {
-    if (config.provider === "meta") {
-      return await sendViaMeta(config, recipient, body);
-    } else {
-      return await sendViaTwilio(config, recipient, body);
-    }
+    if (config.provider === "meta")    return await sendViaMeta(config, recipient, body);
+    if (config.provider === "maytapi") return await sendViaMaytapi(config, recipient, body);
+    return await sendViaTwilio(config, recipient, body);
   } catch (err) {
     const error = err instanceof Error ? err.message : "Unknown error";
     console.error(`[whatsapp] send failed to ${recipient}:`, error);
@@ -147,6 +150,61 @@ async function sendViaTwilio(
 
   const data = (await res.json()) as { sid: string };
   return { sent: true, messageId: data.sid };
+}
+
+// ── Maytapi ─────────────────────────────────────────────────────────────────
+//
+// API: https://maytapi.com/whatsapp-api-documentation
+//   POST https://api.maytapi.com/api/{productId}/{phoneId}/sendMessage
+//   Headers: x-maytapi-key: {token}
+//   Body: { to_number: "919876543210", type: "text", message: "..." }
+//
+// No 24-hour window or template restriction (gateway uses WhatsApp Web).
+//
+// Important: Maytapi expects `to_number` WITHOUT a leading `+` — just
+// country code + number, e.g. "919876543210".
+
+async function sendViaMaytapi(
+  config: WhatsAppConfig,
+  to:     string,
+  body:   string,
+): Promise<SendResult> {
+  if (!config.maytapi_product_id || !config.maytapi_phone_id || !config.maytapi_token) {
+    console.warn("[whatsapp] Maytapi credentials not set — dry-run mode");
+    console.log(`[whatsapp] DRY-RUN → to:${to} | body:${body.slice(0, 80)}…`);
+    return { sent: false, skipped: true };
+  }
+
+  // Strip the leading + from E.164 (Maytapi rejects it)
+  const toNumber = to.replace(/^\+/, "");
+
+  const url = `https://api.maytapi.com/api/${config.maytapi_product_id}/${config.maytapi_phone_id}/sendMessage`;
+
+  const payload = {
+    to_number: toNumber,
+    type:      "text",
+    message:   body,
+  };
+
+  const res = await fetch(url, {
+    method:  "POST",
+    headers: {
+      "Content-Type":  "application/json",
+      "x-maytapi-key": config.maytapi_token,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const detail = await res.text();
+    return { sent: false, error: `Maytapi API ${res.status}: ${detail}` };
+  }
+
+  const data = (await res.json()) as { success?: boolean; data?: { msgId?: string }; message?: string };
+  if (data.success === false) {
+    return { sent: false, error: `Maytapi: ${data.message ?? "unknown error"}` };
+  }
+  return { sent: true, messageId: data.data?.msgId };
 }
 
 // ── Template renderer ────────────────────────────────────────────────────────
