@@ -241,6 +241,20 @@ var TOT = 0;
 var bOpen = false;
 var lang = localStorage.getItem("rb_lang") || "en";
 
+/* SC routing — reads ?sc= on first visit, saves, uses forever after */
+function initSC(){
+  var params=new URLSearchParams(window.location.search);
+  var sc=params.get("sc");
+  if(sc){
+    // strip non-digits, ensure country code
+    sc=sc.replace(/\D/g,"");
+    if(sc.length===10) sc="91"+sc;
+    localStorage.setItem("rb_sc",sc);
+  }
+  var saved=localStorage.getItem("rb_sc");
+  if(saved) WA=saved;
+}
+
 var T = {
   en:{
     tagline:"Name of Confidence", since:"Since 2004",
@@ -651,6 +665,7 @@ function downloadQR(){var a=document.createElement("a");a.href="/stock/qr.png";a
 
 /* ---------- BOOT ---------- */
 function boot(){
+  initSC();
   applyLang();
   refreshWho();
   if(!getCust().name)openName();
