@@ -211,7 +211,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
    ============================================================ */
 var CONFIG = {
   SHEET_ID: "1jNYhM-pkzGvV13ggc7LaRpe5zFz5PWe9oxLhBSWSy20",   // from the sheet URL .../d/THIS_PART/edit
-  SHEET_NAME: "",                          // tab name; leave "" to use the first/default tab
+  SHEET_NAME: "Stock List",                // the tab holding product data
   WHATSAPP: "918920239953",                // your order WhatsApp number (with country code, no +)
   ORDER_LOG_URL: "https://script.google.com/macros/s/AKfycbwVp6SXct5WhWWA9FxJI-nsT_TDE0XQEINnwnL7joMgSzC5GPK_AhhxkSbS3PXpzm8r/exec",   // Apps Script web-app URL (auto-logs orders to Orders tab)
   // 0-based column positions in your sheet:
@@ -359,7 +359,7 @@ function applyLang(){
 }
 
 function slug(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"cat";}
-function truthy(v){if(v==null)return false;var s=String(v).trim().toLowerCase();return s==="yes"||s==="y"||s==="true"||s==="1"||s==="✓"||s==="x";}
+function truthy(v){if(v==null)return false;var s=String(v).trim().toLowerCase();return s==="yes"||s==="y"||s==="true"||s==="1"||s==="✓"||s==="x"||s==="fast"||s==="new";}
 function inStock(v){if(v==null||String(v).trim()==="")return true;var s=String(v).trim().toLowerCase();if(s==="no"||s==="n"||s==="0"||s==="false"||s==="out"||s==="oos")return false;return true;}
 function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
 
