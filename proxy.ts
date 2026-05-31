@@ -6,6 +6,15 @@ import { NextResponse, type NextRequest } from "next/server";
  * and authenticated users away from auth pages to /dashboard.
  */
 export async function proxy(request: NextRequest) {
+  // Customer short link: the dedicated `robotekstock.*` host sends its root
+  // straight to the public stock page so customers can just type the bare domain.
+  const host = request.headers.get("host") || "";
+  if (host.startsWith("robotekstock.") && request.nextUrl.pathname === "/") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/stock";
+    return NextResponse.redirect(url);
+  }
+
   const supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
