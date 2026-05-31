@@ -16,11 +16,11 @@ OUT_DIR  = os.path.join(os.path.dirname(__file__), "..", "public", "stock", "sc-
 
 # ── ADD YOUR SCS HERE ────────────────────────────────────────────────────────
 SCS = [
-    # (label, number, tagline, extra_params)
-    ("Robotek Orders HO1",       "918920239953", "Order in Seconds!", ""),
-    ("Robotek Orders HO2",       "7217613621",   "Order in Seconds!", ""),
-    ("Robotek Experience Store", "7678596456",   "Scan & Order Now!", ""),
-    ("Robotek Gorakhpur",        "9839454510",   "Order in Seconds!", "tag=Dealer+Demand"),
+    # (label, ref_code, tagline)
+    ("Robotek Orders HO1",       "HO1",   "Order in Seconds!"),
+    ("Robotek Orders HO2",       "HO2",   "Order in Seconds!"),
+    ("Robotek Experience Store", "Store", "Scan & Order Now!"),
+    ("Robotek Gorakhpur",        "GKP",   "Order in Seconds!"),
 ]
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -31,9 +31,8 @@ def norm(num):
 
 os.makedirs(OUT_DIR, exist_ok=True)
 
-for name, raw, tagline, extra in SCS:
-    num  = norm(raw)
-    url  = f"{BASE_URL}?sc={num}" + (f"&{extra}" if extra else "")
+for name, ref, tagline in SCS:
+    url  = f"{BASE_URL}?ref={ref}"
     slug = re.sub(r"\s+", "_", name.strip().lower())
 
     qr = qrcode.QRCode(version=2, box_size=18, border=3,

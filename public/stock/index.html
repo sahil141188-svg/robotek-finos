@@ -241,16 +241,26 @@ var TOT = 0;
 var bOpen = false;
 var lang = localStorage.getItem("rb_lang") || "en";
 
-/* SC routing — reads ?sc= on first visit, saves, uses forever after */
+/* SC routing — short ref codes keep numbers private in URLs */
+var REFS = {
+  "HO1":   { sc:"918920239953", tag:"" },
+  "HO2":   { sc:"917217613621", tag:"" },
+  "Store": { sc:"917678596456", tag:"Store Orders" },
+  "GKP":   { sc:"919839454510", tag:"Dealer Demand" }
+};
 function initSC(){
   var params=new URLSearchParams(window.location.search);
-  var sc=params.get("sc");
-  var tag=params.get("tag");
-  if(sc){
+  var ref=params.get("ref");
+  var sc=params.get("sc");   // legacy fallback
+  var tag=params.get("tag"); // legacy fallback
+  if(ref && REFS[ref]){
+    sc=REFS[ref].sc;
+    tag=REFS[ref].tag;
+  } else if(sc){
     sc=sc.replace(/\D/g,"");
     if(sc.length===10) sc="91"+sc;
-    localStorage.setItem("rb_sc",sc);
   }
+  if(sc) localStorage.setItem("rb_sc",sc);
   if(tag) localStorage.setItem("rb_tag",tag);
   var saved=localStorage.getItem("rb_sc");
   if(saved) WA=saved;
