@@ -69,8 +69,10 @@ export function Sidebar({ profile }: SidebarProps) {
       className={cn(
         // Mobile: fixed slide-in panel
         "fixed inset-y-0 left-0 z-30 w-72 sm:w-64 bg-brand-black flex flex-col transition-transform duration-300 ease-in-out",
-        // Desktop: static in layout flow
-        "lg:static lg:translate-x-0 lg:z-auto lg:w-64",
+        // PWA safe-area: keep logo below iOS notch + sign-out above home indicator
+        "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
+        // Desktop: static in layout flow (body padding handles safe area)
+        "lg:static lg:translate-x-0 lg:z-auto lg:w-64 lg:pt-0 lg:pb-0",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
     >

@@ -41,7 +41,7 @@ function ShellInner({ profile, children }: { profile: UserRow; children: React.R
   const { isOpen, close } = useSidebar();
 
   return (
-    <div className="flex min-h-screen bg-brand-gray-light">
+    <div className="flex min-h-[100dvh] bg-brand-gray-light">
       {/* Mobile overlay backdrop */}
       {isOpen && (
         <div

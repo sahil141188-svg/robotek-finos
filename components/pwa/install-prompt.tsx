@@ -70,7 +70,7 @@ export function InstallPrompt() {
   if (!showAndroid && !showIOS) return null;
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 max-w-sm mx-auto">
+    <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-4 right-4 z-50 max-w-sm mx-auto">
       <div className="bg-brand-black text-white rounded-2xl shadow-2xl p-4 flex items-start gap-3">
         {/* App icon */}
         <div className="w-10 h-10 rounded-xl bg-brand-red flex items-center justify-center shrink-0">

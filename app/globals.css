@@ -17,45 +17,52 @@ html {
 }
 
 /* ── PWA / Home Screen Responsive Fix ────────────────────────────────────── */
-/* Critical for mobile home screen (installed PWA) responsiveness */
+/* When the app is installed to iOS home screen (standalone PWA), the iOS
+   status bar at the top and home-indicator bar at the bottom overlay our
+   content. We respect them via env(safe-area-inset-*).
+
+   Strategy:
+   - Body uses natural flow + min-height: 100dvh (dynamic viewport height)
+   - Body has padding for all 4 safe-area insets — content sits inside the
+     visible area, not behind the notch or home indicator
+   - Sticky / fixed elements need their OWN safe-area padding (see sidebar). */
+
 html, body {
   width: 100%;
-  height: 100%;
   margin: 0;
   padding: 0;
-  -webkit-user-select: none;
-  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html {
-  /* Support dynamic viewport height on mobile (address bar height changes) */
-  height: 100dvh;
-  height: 100vh;
+  /* Disable iOS text-size auto-adjust in landscape */
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  /* Respect safe area insets for notch/Dynamic Island */
-  padding:
-    max(0px, env(safe-area-inset-top))
-    max(0px, env(safe-area-inset-right))
-    max(0px, env(safe-area-inset-bottom))
-    max(0px, env(safe-area-inset-left));
-
-  /* Prevent content from being hidden behind notch/home indicator */
-  overflow: hidden;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  /* Dynamic viewport height — accounts for iOS Safari URL bar collapse */
+  min-height: 100dvh;
+  /* Respect safe-area insets so nothing renders under the notch / home bar */
+  padding-top:    env(safe-area-inset-top);
+  padding-right:  env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left:   env(safe-area-inset-left);
+  /* Prevent rubber-band scroll past the document edges on iOS PWA */
+  overscroll-behavior: none;
 }
 
-/* Allow scrolling in main content area */
+/* Smooth momentum scrolling inside the main content column */
 main {
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;  /* iOS momentum scrolling */
+  -webkit-overflow-scrolling: touch;
 }
+
+/* Utility for elements that must hug the screen edge (e.g. the fixed sidebar
+   that lives OUTSIDE body's normal flow). Wrap their inner content with this
+   so it shifts in by the inset. */
+.safe-pt { padding-top:    env(safe-area-inset-top); }
+.safe-pb { padding-bottom: env(safe-area-inset-bottom); }
+.safe-pl { padding-left:   env(safe-area-inset-left); }
+.safe-pr { padding-right:  env(safe-area-inset-right); }
 
 @theme inline {
   --color-background: var(--background);
