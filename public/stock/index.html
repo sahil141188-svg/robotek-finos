@@ -171,8 +171,8 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
    Fill these 2 values to go live (see README.md):
    ============================================================ */
 var CONFIG = {
-  SHEET_ID: "PASTE_YOUR_SHEET_ID_HERE",   // from the sheet URL .../d/THIS_PART/edit
-  SHEET_NAME: "Stock",                     // the tab name holding products
+  SHEET_ID: "1jNYhM-pkzGvV13ggc7LaRpe5zFz5PWe9oxLhBSWSy20",   // from the sheet URL .../d/THIS_PART/edit
+  SHEET_NAME: "",                          // tab name; leave "" to use the first/default tab
   WHATSAPP: "918920239953",                // your order WhatsApp number (with country code, no +)
   ORDER_LOG_URL: "",                       // Apps Script web-app URL (optional, for auto-logging)
   // 0-based column positions in your sheet:
@@ -212,7 +212,7 @@ function loadStock(){
     render(SAMPLE.slice(), true);
     return;
   }
-  var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json&sheet="+encodeURIComponent(CONFIG.SHEET_NAME);
+  var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json"+(CONFIG.SHEET_NAME?"&sheet="+encodeURIComponent(CONFIG.SHEET_NAME):"");
   fetch(url).then(function(r){return r.text();}).then(function(t){
     var json=JSON.parse(t.substring(t.indexOf("{"),t.lastIndexOf("}")+1));
     var rows=json.table.rows||[];
@@ -222,6 +222,7 @@ function loadStock(){
       function cell(idx){return c[idx]&&c[idx].v!=null?c[idx].v:"";}
       var name=cell(CONFIG.COL.name);
       if(!String(name).trim())continue;
+      if(/^\s*\[.*\]\s*$/.test(String(name)))continue;   // skip template placeholder rows like "[Add products here]"
       data.push([cell(CONFIG.COL.category)||"Other",name,cell(CONFIG.COL.box),cell(CONFIG.COL.stock),cell(CONFIG.COL.fast),cell(CONFIG.COL.new)]);
     }
     render(data, false);
