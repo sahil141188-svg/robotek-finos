@@ -110,25 +110,45 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .mbtn{width:100%;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer;margin-top:6px}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:#fff;font-size:13px;font-weight:500;padding:12px 20px;border-radius:10px;z-index:600;opacity:0;transition:.3s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.3)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-#installBtn{display:none;background:var(--yellow);color:var(--black);border:none;font-family:inherit;font-size:11px;font-weight:700;padding:6px 11px;border-radius:8px;cursor:pointer;margin-left:8px}
+#installBtn{display:none;background:var(--yellow);color:var(--black);border:none;font-family:inherit;font-size:11px;font-weight:700;padding:6px 11px;border-radius:8px;cursor:pointer}
+.ltog{display:flex;border:1.5px solid var(--border);border-radius:7px;overflow:hidden}
+.lbtn{background:transparent;border:none;font-family:inherit;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer;color:var(--muted);line-height:1}
+.lbtn.lact{background:var(--black);color:var(--yellow)}
+.qrbtn{background:none;border:none;font-size:15px;padding:0 4px;cursor:pointer;color:var(--muted);line-height:1}
+.qrwrap{text-align:center}
+.qrwrap img{width:210px;height:210px;border-radius:10px;border:2px solid var(--border);margin:8px 0}
+.qrurl{font-size:13px;font-weight:700;color:var(--red);margin:6px 0 10px}
+.qrdesc{font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.6}
+.qrdl{width:100%;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:14px;font-weight:700;padding:12px;border-radius:9px;cursor:pointer;margin-bottom:8px}
+.qrcl{width:100%;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;padding:11px;border-radius:9px;cursor:pointer}
 </style>
 </head>
 <body>
 
 <div class="hdr">
   <div class="hdr-top">
-    <div><div class="bname">ROBO<em>TEK</em></div><div class="bline">Name of Confidence &nbsp;&middot;&nbsp; Since 2004</div></div>
-    <div style="display:flex;align-items:center">
-      <div class="spill"><div class="spnum" id="stockNum">—</div><div class="splbl">In Stock</div></div>
+    <div>
+      <div class="bname">ROBO<em>TEK</em></div>
+      <div class="bline"><span id="t-tagline">Name of Confidence</span> &nbsp;&middot;&nbsp; <span id="t-since">Since 2004</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <div class="ltog">
+        <button id="langEn" class="lbtn lact" onclick="setLang('en')">EN</button>
+        <button id="langHi" class="lbtn" onclick="setLang('hi')">हि</button>
+      </div>
+      <div class="spill"><div class="spnum" id="stockNum">—</div><div class="splbl" id="t-instock">IN STOCK</div></div>
       <button id="installBtn" onclick="doInstall()">⤓ Install</button>
     </div>
   </div>
-  <div class="hmeta"><span class="live">Live Stock</span><span><span class="who" id="whoLbl" onclick="openName()">Set name</span> &nbsp;&middot;&nbsp; <span id="metaRight">Loading…</span></span></div>
+  <div class="hmeta">
+    <span class="live" id="t-live">Live Stock</span>
+    <span><span class="who" id="whoLbl" onclick="openName()">Set name</span> &nbsp;&middot;&nbsp; <span id="metaRight">Loading…</span> &nbsp;&middot;&nbsp; <button class="qrbtn" onclick="openQR()" title="Share QR">📲</button></span>
+  </div>
 </div>
 
 <div class="srchw">
   <div class="srchb"><span class="sico">&#9906;</span>
-    <input type="text" id="si" placeholder="Search — DC 101, BN47, SC 222, NB Yodha..." oninput="doSearch()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <input type="text" id="si" placeholder="Search — DC 101, BN47, SC 222..." oninput="doSearch()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
   <div class="sinf" id="sinf">&nbsp;</div>
 </div>
@@ -137,8 +157,8 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 
 <div class="bodyw">
   <div class="stats" id="stats" style="display:none">
-    <div class="stbox"><div class="stnum" id="stProducts">0</div><div class="stlbl">Products</div></div>
-    <div class="stbox"><div class="stnum" id="stCats">0</div><div class="stlbl">Categories</div></div>
+    <div class="stbox"><div class="stnum" id="stProducts">0</div><div class="stlbl" id="t-products">Products</div></div>
+    <div class="stbox"><div class="stnum" id="stCats">0</div><div class="stlbl" id="t-categories">Categories</div></div>
     <div class="stbox"><div class="stnum" style="color:var(--green)">Live</div><div class="stlbl" id="stDate">Today</div></div>
   </div>
   <div class="nores" id="nores">No products found.</div>
@@ -149,23 +169,36 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 <div id="bbar">
   <div class="bpnl" id="bpnl"></div>
   <div class="btog" onclick="toggleBasket()">
-    <div class="btl"><div class="bct" id="bct">0</div><div><div class="btxt">Your Order</div><div class="bsub" id="blistsub">Tap to review</div></div></div>
+    <div class="btl"><div class="bct" id="bct">0</div><div><div class="btxt" id="t-yourOrder">Your Order</div><div class="bsub" id="blistsub">Tap to review</div></div></div>
     <span class="barr" id="barr">&#9650;</span>
   </div>
   <div id="blist" style="display:none"></div>
   <div class="bact">
-    <button class="bcl" onclick="clearAll()">Clear</button>
-    <button class="bwa" onclick="placeOrder()">&#128172; Send Order on WhatsApp</button>
+    <button class="bcl" id="t-clear" onclick="clearAll()">Clear</button>
+    <button class="bwa" id="t-sendWA" onclick="placeOrder()">&#128172; Send Order on WhatsApp</button>
   </div>
 </div>
 
 <div class="ovl" id="nameOvl">
   <div class="modal">
-    <h2>Welcome to Robotek</h2>
-    <p>Quick intro so we know who's ordering. Saved on your device — you'll only do this once.</p>
-    <div class="fld"><label>Your Name / Shop Name</label><input id="inName" type="text" placeholder="e.g. Sharma Mobile, Delhi"></div>
-    <div class="fld"><label>WhatsApp Number (optional)</label><input id="inPhone" type="tel" inputmode="numeric" placeholder="10-digit number"></div>
-    <button class="mbtn" onclick="saveName()">Start Browsing Stock →</button>
+    <h2 id="t-welcomeTitle">Welcome to Robotek</h2>
+    <p id="t-welcomeDesc">Quick intro so we know who's ordering. Saved on your device — you'll only do this once.</p>
+    <div class="fld"><label id="t-nameLbl">Your Name / Shop Name</label><input id="inName" type="text" placeholder="e.g. Sharma Mobile, Delhi"></div>
+    <div class="fld"><label id="t-phoneLbl">WhatsApp Number (optional)</label><input id="inPhone" type="tel" inputmode="numeric" placeholder="10-digit number"></div>
+    <button class="mbtn" id="t-startBtn" onclick="saveName()">Start Browsing Stock →</button>
+  </div>
+</div>
+
+<div class="ovl" id="qrOvl">
+  <div class="modal">
+    <div class="qrwrap">
+      <h2 id="t-shareTitle">Share Robotek Stock</h2>
+      <p class="qrdesc" id="t-shareDesc">Scan to open on phone. Save & print to share with customers.</p>
+      <img src="/stock/qr.png" alt="QR Code">
+      <div class="qrurl">robotekstock.vercel.app</div>
+      <button class="qrdl" id="t-dlQR" onclick="downloadQR()">⬇ Save QR Image</button>
+      <button class="qrcl" id="t-clQR" onclick="closeQR()">Close</button>
+    </div>
   </div>
 </div>
 
@@ -206,6 +239,99 @@ function catIcon(name){var n=name.toLowerCase();for(var k in ICONS){if(n.indexOf
 var WA = CONFIG.WHATSAPP;
 var TOT = 0;
 var bOpen = false;
+var lang = localStorage.getItem("rb_lang") || "en";
+
+var T = {
+  en:{
+    tagline:"Name of Confidence", since:"Since 2004",
+    inStock:"IN STOCK", live:"Live Stock",
+    setName:"Set name", searchPh:"Search — DC 101, BN47, SC 222...",
+    products:"Products", categories:"Categories",
+    noResults:"No products found.", loading:"Loading live stock…",
+    all:"All", fast:"Fast Selling", newl:"New Launch",
+    selectAll:"Select All", out:"Out",
+    box:"Box", pcs:"Pcs", boxes:"Boxes",
+    pcsTotal:"pcs total", loose:"loose pieces",
+    yourOrder:"Your Order", tapReview:"Tap to review",
+    clear:"Clear", sendWA:"💬 Send Order on WhatsApp",
+    welcomeTitle:"Welcome to Robotek",
+    welcomeDesc:"Quick intro so we know who's ordering. Saved on your device — you'll only do this once.",
+    nameLbl:"Your Name / Shop Name", namePh:"e.g. Sharma Mobile, Delhi",
+    phoneLbl:"WhatsApp Number (optional)", phonePh:"10-digit number",
+    startBtn:"Start Browsing Stock →",
+    shareTitle:"Share Robotek Stock",
+    shareDesc:"Scan to open on phone. Save & print to share with customers.",
+    dlQR:"⬇ Save QR Image", clQR:"Close",
+    orderTitle:"*Robotek Order Request*",
+    fromLbl:"From", phoneLbl2:"Phone", dateLbl:"Date",
+    productsReq:"Products Required:", confirmTxt:"Kindly confirm pricing and dispatch.",
+    thanks:"Thank you.", looseTxt:"loose"
+  },
+  hi:{
+    tagline:"विश्वास का नाम", since:"2004 से",
+    inStock:"स्टॉक में", live:"लाइव स्टॉक",
+    setName:"नाम दर्ज करें", searchPh:"खोजें — DC 101, BN47, SC 222...",
+    products:"उत्पाद", categories:"श्रेणियाँ",
+    noResults:"कोई उत्पाद नहीं मिला।", loading:"स्टॉक लोड हो रहा है…",
+    all:"सभी", fast:"तेज बिकने वाले", newl:"नई लॉन्च",
+    selectAll:"सब चुनें", out:"आउट",
+    box:"बॉक्स", pcs:"पीस", boxes:"बॉक्स",
+    pcsTotal:"पीस कुल", loose:"खुले पीस",
+    yourOrder:"आपका ऑर्डर", tapReview:"देखने के लिए टैप करें",
+    clear:"हटाएं", sendWA:"💬 WhatsApp पर ऑर्डर भेजें",
+    welcomeTitle:"Robotek में आपका स्वागत है",
+    welcomeDesc:"ऑर्डर के लिए अपना नाम दर्ज करें। एक बार ही करना है।",
+    nameLbl:"आपका नाम / दुकान का नाम", namePh:"जैसे: शर्मा मोबाइल, दिल्ली",
+    phoneLbl:"WhatsApp नंबर (वैकल्पिक)", phonePh:"10 अंकों का नंबर",
+    startBtn:"स्टॉक देखें →",
+    shareTitle:"Robotek Stock शेयर करें",
+    shareDesc:"फोन पर खोलने के लिए स्कैन करें। प्रिंट करके ग्राहकों को दें।",
+    dlQR:"⬇ QR इमेज सेव करें", clQR:"बंद करें",
+    orderTitle:"*Robotek ऑर्डर अनुरोध*",
+    fromLbl:"नाम", phoneLbl2:"फ़ोन", dateLbl:"तारीख",
+    productsReq:"आवश्यक उत्पाद:", confirmTxt:"कृपया कीमत और डिस्पैच की पुष्टि करें।",
+    thanks:"धन्यवाद।", looseTxt:"खुला"
+  }
+};
+
+function setLang(l){
+  lang=l; localStorage.setItem("rb_lang",l); applyLang();
+}
+function applyLang(){
+  var t=T[lang];
+  document.getElementById("t-tagline").textContent=t.tagline;
+  document.getElementById("t-since").textContent=t.since;
+  document.getElementById("t-instock").textContent=t.inStock;
+  document.getElementById("t-live").textContent=t.live;
+  document.getElementById("whoLbl").textContent=getCust().name||t.setName;
+  document.getElementById("si").placeholder=t.searchPh;
+  document.getElementById("t-products").textContent=t.products;
+  document.getElementById("t-categories").textContent=t.categories;
+  document.getElementById("nores").textContent=t.noResults;
+  document.getElementById("loadbox").innerHTML='<div class="spin"></div>'+t.loading;
+  document.getElementById("t-yourOrder").textContent=t.yourOrder;
+  document.getElementById("t-clear").textContent=t.clear;
+  document.getElementById("t-sendWA").textContent=t.sendWA;
+  document.getElementById("t-welcomeTitle").textContent=t.welcomeTitle;
+  document.getElementById("t-welcomeDesc").textContent=t.welcomeDesc;
+  document.getElementById("t-nameLbl").textContent=t.nameLbl;
+  document.getElementById("inName").placeholder=t.namePh;
+  document.getElementById("t-phoneLbl").textContent=t.phoneLbl;
+  document.getElementById("inPhone").placeholder=t.phonePh;
+  document.getElementById("t-startBtn").textContent=t.startBtn;
+  document.getElementById("t-shareTitle").textContent=t.shareTitle;
+  document.getElementById("t-shareDesc").textContent=t.shareDesc;
+  document.getElementById("t-dlQR").textContent=t.dlQR;
+  document.getElementById("t-clQR").textContent=t.clQR;
+  document.getElementById("langEn").classList.toggle("lact",lang==="en");
+  document.getElementById("langHi").classList.toggle("lact",lang==="hi");
+  // update dynamic chips if rendered
+  document.querySelectorAll(".sabt").forEach(function(b){b.textContent=t.selectAll;});
+  document.querySelectorAll(".oosl").forEach(function(b){b.textContent=t.out;});
+  document.querySelectorAll(".qm[data-role='box']").forEach(function(b){b.textContent=t.box;});
+  document.querySelectorAll(".qm[data-role='pcs']").forEach(function(b){b.textContent=t.pcs;});
+  if(document.querySelectorAll(".chip").length>0) uB();
+}
 
 function slug(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"cat";}
 function truthy(v){if(v==null)return false;var s=String(v).trim().toLowerCase();return s==="yes"||s==="y"||s==="true"||s==="1"||s==="✓"||s==="x";}
@@ -240,10 +366,11 @@ function loadStock(){
 
 /* ---------- RENDER ---------- */
 function qctrlHtml(){
+  var t=T[lang];
   return '<div class="qctrl" onclick="event.stopPropagation()">'+
     '<div class="qtog">'+
-      '<button class="qm on" onclick="setMode(event,this,\'box\')">Box</button>'+
-      '<button class="qm" onclick="setMode(event,this,\'pcs\')">Pcs</button>'+
+      '<button class="qm on" data-role="box" onclick="setMode(event,this,\'box\')">'+t.box+'</button>'+
+      '<button class="qm" data-role="pcs" onclick="setMode(event,this,\'pcs\')">'+t.pcs+'</button>'+
     '</div>'+
     '<div class="qstep">'+
       '<button class="qs" onclick="stepQ(event,this,-1)">−</button>'+
@@ -254,14 +381,16 @@ function qctrlHtml(){
   '</div>';
 }
 function chipHtml(p){
+  var t=T[lang];
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
   if(!p.stock){
-    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'<span class="oosl">Out</span></span></span>';
+    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'<span class="oosl">'+t.out+'</span></span></span>';
   }
   return '<span class="chip" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'</span>'+qctrlHtml()+'</span>';
 }
 function sectionHtml(key,title,cls,icon,chips){
-  return '<div class="cs" data-cat="'+key+'"><div class="ch '+cls+'" onclick="tSec(this)"><span class="cico">'+icon+'</span><span class="cn">'+esc(title)+'</span><span class="cbdg">'+chips.length+' items</span><button class="sabt" onclick="sA(event,this.parentElement.parentElement)">Select All</button></div><div class="cgrid">'+chips.join("")+'</div></div>';
+  var t=T[lang];
+  return '<div class="cs" data-cat="'+key+'"><div class="ch '+cls+'" onclick="tSec(this)"><span class="cico">'+icon+'</span><span class="cn">'+esc(title)+'</span><span class="cbdg">'+chips.length+' items</span><button class="sabt" onclick="sA(event,this.parentElement.parentElement)">'+t.selectAll+'</button></div><div class="cgrid">'+chips.join("")+'</div></div>';
 }
 
 function render(rows, isSample){
@@ -282,16 +411,17 @@ function render(rows, isSample){
   TOT=products.length;
 
   // tabs
-  var tabs='<div class="tab active" onclick="fC(\'all\',this)">All &middot; '+TOT+'</div>';
-  if(fast.length)tabs+='<div class="tab" onclick="fC(\'fast\',this)">★ Fast Selling &middot; '+fast.length+'</div>';
-  if(news.length)tabs+='<div class="tab" onclick="fC(\'newl\',this)">✨ New Launch &middot; '+news.length+'</div>';
+  var t=T[lang];
+  var tabs='<div class="tab active" onclick="fC(\'all\',this)">'+t.all+' &middot; '+TOT+'</div>';
+  if(fast.length)tabs+='<div class="tab" onclick="fC(\'fast\',this)">★ '+t.fast+' &middot; '+fast.length+'</div>';
+  if(news.length)tabs+='<div class="tab" onclick="fC(\'newl\',this)">✨ '+t.newl+' &middot; '+news.length+'</div>';
   order.forEach(function(k){tabs+='<div class="tab" onclick="fC(\''+k+'\',this)">'+esc(groups[k].name)+' &middot; '+groups[k].items.length+'</div>';});
   document.getElementById("tw").innerHTML=tabs;
 
   // sections
   var html="";
-  if(fast.length)html+=sectionHtml("fast","Fast Selling","fh","★",fast.map(chipHtml));
-  if(news.length)html+=sectionHtml("newl","New Launch","nh","✨",news.map(chipHtml));
+  if(fast.length)html+=sectionHtml("fast",t.fast,"fh","★",fast.map(chipHtml));
+  if(news.length)html+=sectionHtml("newl",t.newl,"nh","✨",news.map(chipHtml));
   order.forEach(function(k){var g=groups[k];html+=sectionHtml(g.key,g.name,"",catIcon(g.name),g.items.map(chipHtml));});
   document.getElementById("sections").innerHTML=html;
 
@@ -312,14 +442,15 @@ function render(rows, isSample){
 function qLabel(chip){
   var oq=parseInt(chip.dataset.oq,10)||1;
   var mode=chip.dataset.mode||"box";
-  if(mode==="pcs") return oq+" pcs";
-  return oq===1?"1 Box":oq+" Boxes";
+  var t=T[lang];
+  if(mode==="pcs") return oq+" "+t.pcs;
+  return oq===1?"1 "+t.box:oq+" "+t.boxes;
 }
 function resetChip(el){
   el.dataset.oq="1"; el.dataset.mode="box";
   var inp=el.querySelector(".qnum"); if(inp)inp.value=1;
   var ms=el.querySelectorAll(".qm");
-  for(var i=0;i<ms.length;i++){ms[i].classList.toggle("on",ms[i].textContent==="Box");}
+  for(var i=0;i<ms.length;i++){ms[i].classList.toggle("on",ms[i].getAttribute("data-role")==="box");}
 }
 function tC(el){
   if(el.classList.contains("sel")){el.classList.remove("sel");resetChip(el);}
@@ -424,8 +555,9 @@ function uB(){
     var oq=parseInt(chip.dataset.oq,10)||1;
     var lbl=qLabel(chip);
     var sub="";
-    if(mode==="box"&&bx){var tot=oq*parseFloat(bx);sub="Bx:"+bx+" · "+tot+" pcs total";}
-    else if(mode==="pcs"){sub="loose pieces";}
+    var t=T[lang];
+    if(mode==="box"&&bx){var tot=oq*parseFloat(bx);sub="Bx:"+bx+" · "+tot+" "+t.pcsTotal;}
+    else if(mode==="pcs"){sub=t.loose;}
     var row=document.createElement("div");row.className="bitm";
     row.innerHTML="<div><div class='bnm'>"+esc(nm)+"</div><div class='bqt'>"+lbl+(sub?" · "+sub:"")+"</div></div><button class='brm' data-n='"+esc(nm)+"' onclick='rI(this)'>&#10005;</button>";
     list.appendChild(row);
@@ -460,18 +592,19 @@ function placeOrder(){
   var d=new Date();var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var ds=d.getDate()+" "+mo[d.getMonth()]+" "+d.getFullYear();
   var items=[];
-  var msg="*Robotek Order Request*\n";
-  if(cust.name)msg+="From: "+cust.name+"\n";
-  if(cust.phone)msg+="Phone: "+cust.phone+"\n";
-  msg+="Date: "+ds+"\n\nProducts Required:\n";
+  var t=T[lang];
+  var msg=t.orderTitle+"\n";
+  if(cust.name)msg+=t.fromLbl+": "+cust.name+"\n";
+  if(cust.phone)msg+=t.phoneLbl2+": "+cust.phone+"\n";
+  msg+=t.dateLbl+": "+ds+"\n\n"+t.productsReq+"\n";
   for(var i=0;i<sel.length;i++){
     var mode=sel[i].dataset.mode||"box";
     var oq=parseInt(sel[i].dataset.oq,10)||1;
     var bx=sel[i].getAttribute("data-bx"),nm=sel[i].getAttribute("data-name");
     var bxNum=bx?parseFloat(bx):0;
     if(mode==="pcs"){
-      msg+=(i+1)+". "+nm+" — "+oq+" pcs (loose)\n";
-      items.push({name:nm,qty:oq+" pcs",boxes:0,boxSize:bxNum||"",totalQty:oq,mode:"pcs"});
+      msg+=(i+1)+". "+nm+" — "+oq+" "+t.pcs+" ("+t.looseTxt+")\n";
+      items.push({name:nm,qty:oq+" "+t.pcs,boxes:0,boxSize:bxNum||"",totalQty:oq,mode:"pcs"});
     }else{
       var totalQty=bxNum?Math.round(oq*bxNum):"";
       var bxStr=bx?" (Bx:"+bx+"/box)":"";
@@ -480,7 +613,7 @@ function placeOrder(){
       items.push({name:nm,qty:qLabel(sel[i]),boxes:oq,boxSize:bxNum||"",totalQty:totalQty,mode:"box"});
     }
   }
-  msg+="\nKindly confirm pricing and dispatch.\n\nThank you.";
+  msg+="\n"+t.confirmTxt+"\n\n"+t.thanks;
   logOrder({customer:cust.name,phone:cust.phone,date:ds,items:items});
   window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");
 }
@@ -511,8 +644,14 @@ window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();def
 function doInstall(){if(!deferredPrompt){toast("Use browser menu → Add to Home Screen");return;}deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;document.getElementById("installBtn").style.display="none";});}
 window.addEventListener("appinstalled",function(){document.getElementById("installBtn").style.display="none";});
 
+/* ---------- QR SHARE ---------- */
+function openQR(){document.getElementById("qrOvl").classList.add("show");}
+function closeQR(){document.getElementById("qrOvl").classList.remove("show");}
+function downloadQR(){var a=document.createElement("a");a.href="/stock/qr.png";a.download="robotek-stock-qr.png";a.click();}
+
 /* ---------- BOOT ---------- */
 function boot(){
+  applyLang();
   refreshWho();
   if(!getCust().name)openName();
   loadStock();
