@@ -1,0 +1,17 @@
+{
+  "name": "Robotek — Live Stock",
+  "short_name": "Robotek Stock",
+  "description": "Live stock list and quick ordering for Robotek customers.",
+  "id": "/stock/",
+  "start_url": "/stock",
+  "scope": "/stock/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F0EEEF",
+  "theme_color": "#E52D31",
+  "icons": [
+    { "src": "/stock/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/stock/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/stock/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

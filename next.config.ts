@@ -26,6 +26,13 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "100mb",
     },
   },
+  // Clean URL for the public customer stock microsite served from public/stock/.
+  async rewrites() {
+    return [
+      { source: "/stock", destination: "/stock/index.html" },
+      { source: "/stock/", destination: "/stock/index.html" },
+    ];
+  },
 };
 
 export default withPWA(nextConfig);

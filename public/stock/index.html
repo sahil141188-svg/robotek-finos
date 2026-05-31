@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
+<title>Robotek — Live Stock</title>
+<meta name="theme-color" content="#E52D31">
+<link rel="manifest" href="/stock/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/stock/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Robotek Stock">
+<style>
+:root{--red:#E52D31;--black:#1F1B20;--yellow:#F7DA11;--green:#16A34A;--bg:#F0EEEF;--card:#FFF;--border:#E2E0E1;--text:#1F1B20;--muted:#6E6A6B}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+.hdr{position:sticky;top:0;z-index:100;background:var(--card);border-bottom:3px solid var(--red);box-shadow:0 2px 10px rgba(0,0,0,.08)}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 10px}
+.bname{font-size:24px;font-weight:700;letter-spacing:2.5px;color:var(--black);line-height:1}
+.bname em{color:var(--red);font-style:normal}
+.bline{font-size:9px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+.spill{background:var(--black);color:var(--yellow);border-radius:8px;padding:7px 13px;text-align:right}
+.spnum{font-size:20px;font-weight:700;line-height:1}
+.splbl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#888}
+.hmeta{background:#f7f5f6;border-top:1px solid var(--border);padding:5px 16px;display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.live{display:inline-flex;align-items:center;gap:5px;color:var(--green);font-weight:500}
+.live::before{content:"";width:6px;height:6px;background:var(--green);border-radius:50%;animation:blnk 1.8s infinite}
+@keyframes blnk{0%,100%{opacity:1}50%{opacity:.25}}
+.hmeta .who{color:var(--red);font-weight:600;cursor:pointer}
+.srchw{background:var(--card);padding:11px 14px;border-bottom:1px solid var(--border)}
+.srchb{position:relative}
+.srchb input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;padding:10px 14px 10px 40px;font-family:inherit;font-size:13.5px;color:var(--text);outline:none;transition:border-color .2s}
+.srchb input:focus{border-color:var(--red);background:#fff}
+.srchb input::placeholder{color:#b0acad}
+.sico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:17px;color:#bbb;pointer-events:none}
+.sinf{font-size:10px;color:var(--muted);text-align:right;margin-top:5px;font-weight:500}
+.sinf b{color:var(--red)}
+.tabsw{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--border)}
+.tabsw::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;font-family:inherit;font-size:12px;font-weight:600;white-space:nowrap;padding:6px 14px;border-radius:20px;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);cursor:pointer;transition:all .18s}
+.tab.active{background:var(--black);border-color:var(--black);color:var(--yellow)}
+.bodyw{padding:14px 14px 160px}
+.stats{display:flex;gap:9px;margin-bottom:14px}
+.stbox{flex:1;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 10px;text-align:center}
+.stnum{font-size:20px;font-weight:700;color:var(--red);line-height:1}
+.stlbl{font-size:9.5px;color:var(--muted);margin-top:2px;font-weight:500}
+.cs{margin-bottom:12px;border-radius:10px;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+.cs.hidden{display:none}
+.ch{display:flex;align-items:center;gap:9px;background:var(--black);padding:11px 13px;cursor:pointer;border-left:4px solid var(--yellow)}
+.ch.fh{background:linear-gradient(135deg,#d4a000,#F7DA11);border-left:4px solid #fff}
+.ch.fh .cn{color:#1F1B20}.ch.fh .cbdg{background:rgba(0,0,0,.12);color:#1F1B20;border-color:rgba(0,0,0,.2)}.ch.fh .sabt{border-color:rgba(0,0,0,.25);color:rgba(0,0,0,.6)}
+.ch.nh{background:linear-gradient(135deg,#1a237e,#3949ab);border-left:4px solid var(--yellow)}
+.cico{font-size:17px}
+.cn{font-size:13px;font-weight:600;color:#fff;flex:1;letter-spacing:.5px;text-transform:uppercase}
+.cbdg{background:rgba(247,218,17,.15);color:var(--yellow);font-size:10px;font-weight:600;padding:3px 9px;border-radius:12px;border:1px solid rgba(247,218,17,.3)}
+.sabt{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:inherit;font-size:10px;font-weight:500;padding:3px 9px;border-radius:12px;cursor:pointer;white-space:nowrap}
+.cgrid{background:var(--card);padding:10px;display:flex;flex-wrap:wrap;gap:7px}
+.ecat{width:100%;padding:16px;text-align:center;font-size:12px;color:var(--muted);font-style:italic}
+.chip{display:inline-flex;flex-direction:column;align-items:flex-start;padding:7px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--bg);font-family:inherit;font-size:12.5px;font-weight:500;color:var(--text);cursor:pointer;transition:background .15s,border-color .15s;user-select:none;line-height:1.3}
+.cr1{display:inline-flex;align-items:center;gap:5px;flex-wrap:wrap}
+.cdot{width:7px;height:7px;background:var(--green);border-radius:50%;flex-shrink:0}
+.chip.sel{background:var(--red);border-color:var(--red);color:#fff}
+.chip.sel .cdot{background:rgba(255,255,255,.6)}
+.chip.match{background:#fff8e1;border-color:#e8c800}
+.chip.oos{opacity:.5;cursor:not-allowed}
+.chip.oos .cdot{background:#bbb}
+.oosl{font-size:9px;font-weight:700;color:#b00;background:rgba(176,0,0,.1);border-radius:4px;padding:1px 5px}
+.cq{font-size:10px;font-weight:700;color:var(--muted);background:rgba(0,0,0,.07);border-radius:4px;padding:1px 6px;flex-shrink:0}
+.chip.sel .cq{color:rgba(255,255,255,.8);background:rgba(255,255,255,.18)}
+.presets{display:none;gap:5px;margin-top:7px;flex-wrap:wrap}
+.chip.sel .presets{display:flex}
+.pst{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);color:rgba(255,255,255,.9);border-radius:5px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
+.pst.on{background:#fff;color:var(--red);border-color:#fff}
+.pst:active{opacity:.8}
+.nores{display:none;text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+.loadbox{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
+.spin{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;margin:0 auto 14px;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+#bbar{position:fixed;bottom:0;left:0;right:0;z-index:200;display:none;flex-direction:column}
+#bbar.show{display:flex}
+.bpnl{background:var(--card);border-top:1px solid var(--border);max-height:0;overflow:hidden;transition:max-height .3s}
+.bpnl.open{max-height:280px;overflow-y:auto}
+.bitm{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid var(--border);font-size:13px}
+.bnm{font-weight:500;flex:1}.bqt{font-size:10px;color:var(--muted);margin-top:2px}
+.brm{background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;padding:0 4px}
+.brm:active{color:var(--red)}
+.bact{display:flex;gap:9px;padding:11px 14px;background:var(--card);border-top:1px solid var(--border)}
+.bcl{background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;padding:13px 16px;border-radius:9px;cursor:pointer}
+.bwa{flex:1;background:#25D366;color:#fff;border:none;font-family:inherit;font-size:14px;font-weight:700;padding:13px;border-radius:9px;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
+.btog{background:var(--black);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-top:3px solid var(--red)}
+.btl{display:flex;align-items:center;gap:10px}
+.bct{background:var(--red);color:#fff;font-size:13px;font-weight:700;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.btxt{font-size:13px;font-weight:600}.bsub{font-size:10px;color:#888;margin-top:1px}
+.barr{font-size:18px;color:#888;transition:transform .25s}.barr.up{transform:rotate(180deg)}
+.ovl{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:22px}
+.ovl.show{display:flex}
+.modal{background:#fff;border-radius:16px;width:100%;max-width:360px;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.modal h2{font-size:18px;color:var(--black);margin-bottom:4px}
+.modal p{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.fld input{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:14px;outline:none}
+.fld input:focus{border-color:var(--red)}
+.mbtn{width:100%;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer;margin-top:6px}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:#fff;font-size:13px;font-weight:500;padding:12px 20px;border-radius:10px;z-index:600;opacity:0;transition:.3s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#installBtn{display:none;background:var(--yellow);color:var(--black);border:none;font-family:inherit;font-size:11px;font-weight:700;padding:6px 11px;border-radius:8px;cursor:pointer;margin-left:8px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div><div class="bname">ROBO<em>TEK</em></div><div class="bline">Name of Confidence &nbsp;&middot;&nbsp; Since 2004</div></div>
+    <div style="display:flex;align-items:center">
+      <div class="spill"><div class="spnum" id="stockNum">—</div><div class="splbl">In Stock</div></div>
+      <button id="installBtn" onclick="doInstall()">⤓ Install</button>
+    </div>
+  </div>
+  <div class="hmeta"><span class="live">Live Stock</span><span><span class="who" id="whoLbl" onclick="openName()">Set name</span> &nbsp;&middot;&nbsp; <span id="metaRight">Loading…</span></span></div>
+</div>
+
+<div class="srchw">
+  <div class="srchb"><span class="sico">&#9906;</span>
+    <input type="text" id="si" placeholder="Search — DC 101, BN47, SC 222, NB Yodha..." oninput="doSearch()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+  </div>
+  <div class="sinf" id="sinf">&nbsp;</div>
+</div>
+
+<div class="tabsw" id="tw"></div>
+
+<div class="bodyw">
+  <div class="stats" id="stats" style="display:none">
+    <div class="stbox"><div class="stnum" id="stProducts">0</div><div class="stlbl">Products</div></div>
+    <div class="stbox"><div class="stnum" id="stCats">0</div><div class="stlbl">Categories</div></div>
+    <div class="stbox"><div class="stnum" style="color:var(--green)">Live</div><div class="stlbl" id="stDate">Today</div></div>
+  </div>
+  <div class="nores" id="nores">No products found.</div>
+  <div class="loadbox" id="loadbox"><div class="spin"></div>Loading live stock…</div>
+  <div id="sections"></div>
+</div>
+
+<div id="bbar">
+  <div class="bpnl" id="bpnl"></div>
+  <div class="btog" onclick="toggleBasket()">
+    <div class="btl"><div class="bct" id="bct">0</div><div><div class="btxt">Your Order</div><div class="bsub" id="blistsub">Tap to review</div></div></div>
+    <span class="barr" id="barr">&#9650;</span>
+  </div>
+  <div id="blist" style="display:none"></div>
+  <div class="bact">
+    <button class="bcl" onclick="clearAll()">Clear</button>
+    <button class="bwa" onclick="placeOrder()">&#128172; Send Order on WhatsApp</button>
+  </div>
+</div>
+
+<div class="ovl" id="nameOvl">
+  <div class="modal">
+    <h2>Welcome to Robotek</h2>
+    <p>Quick intro so we know who's ordering. Saved on your device — you'll only do this once.</p>
+    <div class="fld"><label>Your Name / Shop Name</label><input id="inName" type="text" placeholder="e.g. Sharma Mobile, Delhi"></div>
+    <div class="fld"><label>WhatsApp Number (optional)</label><input id="inPhone" type="tel" inputmode="numeric" placeholder="10-digit number"></div>
+    <button class="mbtn" onclick="saveName()">Start Browsing Stock →</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   ROBOTEK LIVE STOCK  —  CONFIG
+   Fill these 2 values to go live (see README.md):
+   ============================================================ */
+var CONFIG = {
+  SHEET_ID: "PASTE_YOUR_SHEET_ID_HERE",   // from the sheet URL .../d/THIS_PART/edit
+  SHEET_NAME: "Stock",                     // the tab name holding products
+  WHATSAPP: "918920239953",                // your order WhatsApp number (with country code, no +)
+  ORDER_LOG_URL: "",                       // Apps Script web-app URL (optional, for auto-logging)
+  // 0-based column positions in your sheet:
+  COL: { category:0, name:1, box:2, stock:3, fast:4, new:5 }
+};
+
+/* Sample data so the app works before you connect your sheet */
+var SAMPLE = [
+  ["Data Cable","DC 101",180,"Yes","Yes",""],
+  ["Data Cable","DC 101 Super",200,"Yes","",""],
+  ["Data Cable","DC 105",200,"Yes","","Yes"],
+  ["Data Cable","DC 121",60,"No","",""],
+  ["Smart Charger","SC 222",50,"Yes","Yes",""],
+  ["Smart Charger","SC 18W",40,"Yes","",""],
+  ["Neck Band","BN47",30,"Yes","","Yes"],
+  ["TWS Earbuds","NB Yodha",24,"Yes","Yes","Yes"],
+  ["Power Bank","PB 10000",20,"No","",""],
+  ["Polymer Battery","BP-410",100,"Yes","",""],
+  ["Polymer Battery","BP-510",100,"Yes","",""]
+];
+
+var ICONS = {cable:"🔌",charger:"⚡",neck:"🎧",tws:"🎧",band:"🎧",power:"🔋",bank:"🔋",battery:"🔋",speaker:"🔊",glass:"📱",hands:"🎤",free:"🎤"};
+function catIcon(name){var n=name.toLowerCase();for(var k in ICONS){if(n.indexOf(k)!==-1)return ICONS[k];}return "📦";}
+
+var WA = CONFIG.WHATSAPP;
+var TOT = 0;
+var bOpen = false;
+
+function slug(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"cat";}
+function truthy(v){if(v==null)return false;var s=String(v).trim().toLowerCase();return s==="yes"||s==="y"||s==="true"||s==="1"||s==="✓"||s==="x";}
+function inStock(v){if(v==null||String(v).trim()==="")return true;var s=String(v).trim().toLowerCase();if(s==="no"||s==="n"||s==="0"||s==="false"||s==="out"||s==="oos")return false;return true;}
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+/* ---------- LOAD DATA ---------- */
+function loadStock(){
+  if(CONFIG.SHEET_ID==="PASTE_YOUR_SHEET_ID_HERE" || !CONFIG.SHEET_ID){
+    render(SAMPLE.slice(), true);
+    return;
+  }
+  var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json&sheet="+encodeURIComponent(CONFIG.SHEET_NAME);
+  fetch(url).then(function(r){return r.text();}).then(function(t){
+    var json=JSON.parse(t.substring(t.indexOf("{"),t.lastIndexOf("}")+1));
+    var rows=json.table.rows||[];
+    var data=[];
+    for(var i=0;i<rows.length;i++){
+      var c=rows[i].c||[];
+      function cell(idx){return c[idx]&&c[idx].v!=null?c[idx].v:"";}
+      var name=cell(CONFIG.COL.name);
+      if(!String(name).trim())continue;
+      data.push([cell(CONFIG.COL.category)||"Other",name,cell(CONFIG.COL.box),cell(CONFIG.COL.stock),cell(CONFIG.COL.fast),cell(CONFIG.COL.new)]);
+    }
+    render(data, false);
+  }).catch(function(e){
+    document.getElementById("loadbox").innerHTML="Couldn't load live stock. Showing sample.<br><small>"+esc(e.message)+"</small>";
+    setTimeout(function(){render(SAMPLE.slice(), true);},1200);
+  });
+}
+
+/* ---------- RENDER ---------- */
+function presetsHtml(){
+  return '<span class="presets">'+
+    '<button class="pst" onclick="sP(event,this,\'0.5\')">1/2 Box</button>'+
+    '<button class="pst on" onclick="sP(event,this,\'1\')">1 Box</button>'+
+    '<button class="pst" onclick="sP(event,this,\'2\')">2 Box</button>'+
+    '<button class="pst" onclick="sP(event,this,\'3\')">3 Box</button>'+
+    '<button class="pst" onclick="sP(event,this,\'5\')">5 Box</button>'+
+    '<button class="pst" onclick="sP(event,this,\'10\')">10 Box</button></span>';
+}
+function chipHtml(p){
+  var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
+  if(!p.stock){
+    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'<span class="oosl">Out</span></span></span>';
+  }
+  return '<span class="chip" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-oq="1" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'</span>'+presetsHtml()+'</span>';
+}
+function sectionHtml(key,title,cls,icon,chips){
+  return '<div class="cs" data-cat="'+key+'"><div class="ch '+cls+'" onclick="tSec(this)"><span class="cico">'+icon+'</span><span class="cn">'+esc(title)+'</span><span class="cbdg">'+chips.length+' items</span><button class="sabt" onclick="sA(event,this.parentElement.parentElement)">Select All</button></div><div class="cgrid">'+chips.join("")+'</div></div>';
+}
+
+function render(rows, isSample){
+  var products=rows.map(function(r){
+    return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5])};
+  });
+  products.forEach(function(p){p.catKey=slug(p.cat);});
+
+  // group by category, preserve order of first appearance
+  var order=[],groups={};
+  products.forEach(function(p){
+    if(!groups[p.catKey]){groups[p.catKey]={key:p.catKey,name:p.cat,items:[]};order.push(p.catKey);}
+    groups[p.catKey].items.push(p);
+  });
+  var fast=products.filter(function(p){return p.fast;});
+  var news=products.filter(function(p){return p.new;});
+  var inStockCount=products.filter(function(p){return p.stock;}).length;
+  TOT=products.length;
+
+  // tabs
+  var tabs='<div class="tab active" onclick="fC(\'all\',this)">All &middot; '+TOT+'</div>';
+  if(fast.length)tabs+='<div class="tab" onclick="fC(\'fast\',this)">★ Fast Selling &middot; '+fast.length+'</div>';
+  if(news.length)tabs+='<div class="tab" onclick="fC(\'newl\',this)">✨ New Launch &middot; '+news.length+'</div>';
+  order.forEach(function(k){tabs+='<div class="tab" onclick="fC(\''+k+'\',this)">'+esc(groups[k].name)+' &middot; '+groups[k].items.length+'</div>';});
+  document.getElementById("tw").innerHTML=tabs;
+
+  // sections
+  var html="";
+  if(fast.length)html+=sectionHtml("fast","Fast Selling","fh","★",fast.map(chipHtml));
+  if(news.length)html+=sectionHtml("newl","New Launch","nh","✨",news.map(chipHtml));
+  order.forEach(function(k){var g=groups[k];html+=sectionHtml(g.key,g.name,"",catIcon(g.name),g.items.map(chipHtml));});
+  document.getElementById("sections").innerHTML=html;
+
+  // header / stats
+  document.getElementById("stockNum").textContent=inStockCount;
+  document.getElementById("stProducts").textContent=TOT;
+  document.getElementById("stCats").textContent=order.length;
+  var d=new Date();var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var ds=d.getDate()+" "+mo[d.getMonth()]+" "+d.getFullYear();
+  document.getElementById("stDate").textContent=ds;
+  document.getElementById("metaRight").textContent=ds+(isSample?" · SAMPLE":" · "+order.length+" Categories");
+  document.getElementById("sinf").innerHTML="Showing <b>"+TOT+"</b> of "+TOT+" products";
+  document.getElementById("loadbox").style.display="none";
+  document.getElementById("stats").style.display="flex";
+}
+
+/* ---------- INTERACTIONS ---------- */
+function ql(q){return q==="0.5"?"1/2 Box":q+(q==="1"?" Box":" Boxes");}
+function tC(el){
+  if(el.classList.contains("sel")){
+    el.classList.remove("sel");el.dataset.oq="1";
+    var b=el.querySelectorAll(".pst");for(var i=0;i<b.length;i++){b[i].className=b[i].textContent==="1 Box"?"pst on":"pst";}
+  }else{el.classList.add("sel");el.dataset.oq="1";}
+  uB();
+}
+function sP(ev,btn,qty){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
+  var chip=btn.parentElement.parentElement;chip.dataset.oq=qty;
+  var b=chip.querySelectorAll(".pst");for(var i=0;i<b.length;i++){b[i].className="pst";}
+  btn.className="pst on";uB();
+}
+function sA(ev,sec){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
+  var chips=sec.querySelectorAll(".chip:not(.oos)");var allSel=true;
+  for(var i=0;i<chips.length;i++){if(!chips[i].classList.contains("sel"))allSel=false;}
+  for(var i=0;i<chips.length;i++){
+    if(!allSel){chips[i].classList.add("sel");chips[i].dataset.oq="1";
+      var b=chips[i].querySelectorAll(".pst");for(var j=0;j<b.length;j++){b[j].className=b[j].textContent==="1 Box"?"pst on":"pst";}
+    }else{chips[i].classList.remove("sel");}
+  }
+  uB();
+}
+function tSec(hdr){var g=hdr.nextElementSibling;g.style.display=(g.style.display==="none")?"flex":"none";}
+function fC(cat,el){
+  var tabs=document.querySelectorAll(".tab");for(var i=0;i<tabs.length;i++){tabs[i].classList.remove("active");}
+  el.classList.add("active");try{el.scrollIntoView(false);}catch(e){}
+  document.getElementById("si").value="";
+  var n=0,secs=document.querySelectorAll(".cs");
+  for(var i=0;i<secs.length;i++){
+    var v=secs[i].getAttribute("data-cat"),show=(cat==="all"||v===cat);
+    secs[i].classList.toggle("hidden",!show);
+    if(show){var chips=secs[i].querySelectorAll(".chip");for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");n++;}
+      var g=secs[i].querySelector(".cgrid");if(g)g.style.display="flex";}
+  }
+  document.getElementById("nores").style.display="none";
+  document.getElementById("sinf").innerHTML="Showing <b>"+n+"</b> of "+TOT+" products";
+}
+function doSearch(){
+  var q=document.getElementById("si").value.toLowerCase().trim();
+  var tabs=document.querySelectorAll(".tab");for(var i=0;i<tabs.length;i++)tabs[i].classList.remove("active");
+  var first=document.querySelector(".tab");if(first)first.classList.add("active");
+  var secs=document.querySelectorAll(".cs");
+  if(!q){
+    for(var i=0;i<secs.length;i++){secs[i].classList.remove("hidden");
+      var chips=secs[i].querySelectorAll(".chip");for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");}
+      var g=secs[i].querySelector(".cgrid");if(g)g.style.display="flex";}
+    document.getElementById("sinf").innerHTML="Showing <b>"+TOT+"</b> of "+TOT+" products";
+    document.getElementById("nores").style.display="none";return;
+  }
+  var found=0;
+  for(var i=0;i<secs.length;i++){
+    var sf=0,chips=secs[i].querySelectorAll(".chip");
+    for(var j=0;j<chips.length;j++){
+      var nm=(chips[j].getAttribute("data-name")||"").toLowerCase();
+      var m=nm.indexOf(q)!==-1;chips[j].style.display=m?"":"none";
+      chips[j].classList.toggle("match",m);if(m){found++;sf++;}
+    }
+    secs[i].classList.toggle("hidden",sf===0);
+    var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"flex":"none";
+  }
+  document.getElementById("sinf").innerHTML="Showing <b>"+found+"</b> of "+TOT+" products";
+  document.getElementById("nores").style.display=found===0?"block":"none";
+}
+
+/* ---------- BASKET ---------- */
+function uB(){
+  var sel=document.querySelectorAll(".chip.sel"),n=sel.length;
+  document.getElementById("bbar").classList.toggle("show",n>0);
+  document.getElementById("bct").textContent=n;
+  document.getElementById("blistsub").textContent=n+" item"+(n!==1?"s":"")+" selected";
+  var list=document.getElementById("blist");list.innerHTML="";
+  for(var i=0;i<sel.length;i++){
+    var chip=sel[i],bx=chip.getAttribute("data-bx"),oq=chip.dataset.oq||"1",nm=chip.getAttribute("data-name")||"";
+    var bxStr=bx?", Bx:"+bx+"/box":"";
+    var row=document.createElement("div");row.className="bitm";
+    row.innerHTML="<div><div class='bnm'>"+esc(nm)+"</div><div class='bqt'>"+ql(oq)+bxStr+"</div></div><button class='brm' data-n='"+esc(nm)+"' onclick='rI(this)'>&#10005;</button>";
+    list.appendChild(row);
+  }
+}
+function rI(btn){
+  var n=btn.getAttribute("data-n"),chips=document.querySelectorAll(".chip");
+  for(var i=0;i<chips.length;i++){if(chips[i].getAttribute("data-name")===n){chips[i].classList.remove("sel");chips[i].dataset.oq="1";
+    var b=chips[i].querySelectorAll(".pst");for(var j=0;j<b.length;j++){b[j].className=b[j].textContent==="1 Box"?"pst on":"pst";}}}
+  uB();
+}
+function toggleBasket(){
+  bOpen=!bOpen;
+  document.getElementById("bpnl").classList.toggle("open",bOpen);
+  document.getElementById("blist").style.display="block";
+  document.getElementById("barr").classList.toggle("up",bOpen);
+  // move blist into panel for scroll
+  var pnl=document.getElementById("bpnl"),list=document.getElementById("blist");
+  if(bOpen&&list.parentElement!==pnl){pnl.appendChild(list);}
+}
+function clearAll(){
+  var chips=document.querySelectorAll(".chip.sel");
+  for(var i=0;i<chips.length;i++){chips[i].classList.remove("sel");chips[i].dataset.oq="1";
+    var b=chips[i].querySelectorAll(".pst");for(var j=0;j<b.length;j++){b[j].className=b[j].textContent==="1 Box"?"pst on":"pst";}}
+  uB();bOpen=false;
+  document.getElementById("bpnl").classList.remove("open");
+  document.getElementById("barr").classList.remove("up");
+}
+
+/* ---------- ORDER ---------- */
+function placeOrder(){
+  var sel=document.querySelectorAll(".chip.sel");if(!sel.length)return;
+  var cust=getCust();
+  var d=new Date();var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var ds=d.getDate()+" "+mo[d.getMonth()]+" "+d.getFullYear();
+  var items=[];
+  var msg="*Robotek Order Request*\n";
+  if(cust.name)msg+="From: "+cust.name+"\n";
+  if(cust.phone)msg+="Phone: "+cust.phone+"\n";
+  msg+="Date: "+ds+"\n\nProducts Required:\n";
+  for(var i=0;i<sel.length;i++){
+    var oq=sel[i].dataset.oq||"1",bx=sel[i].getAttribute("data-bx"),nm=sel[i].getAttribute("data-name");
+    var bxStr=bx?" (Bx:"+bx+"/box)":"";
+    msg+=(i+1)+". "+nm+" - "+ql(oq)+bxStr+"\n";
+    items.push({name:nm,qty:ql(oq),boxSize:bx||""});
+  }
+  msg+="\nKindly confirm pricing and dispatch.\n\nThank you.";
+  logOrder({customer:cust.name,phone:cust.phone,date:ds,items:items});
+  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");
+}
+function logOrder(payload){
+  if(!CONFIG.ORDER_LOG_URL)return;
+  try{
+    fetch(CONFIG.ORDER_LOG_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
+  }catch(e){}
+}
+
+/* ---------- CUSTOMER NAME ---------- */
+function getCust(){try{return JSON.parse(localStorage.getItem("rb_cust")||"{}");}catch(e){return {};}}
+function refreshWho(){var c=getCust();document.getElementById("whoLbl").textContent=c.name?c.name:"Set name";}
+function openName(){var c=getCust();document.getElementById("inName").value=c.name||"";document.getElementById("inPhone").value=c.phone||"";document.getElementById("nameOvl").classList.add("show");}
+function saveName(){
+  var name=document.getElementById("inName").value.trim();
+  var phone=document.getElementById("inPhone").value.trim();
+  if(!name){document.getElementById("inName").focus();return;}
+  localStorage.setItem("rb_cust",JSON.stringify({name:name,phone:phone}));
+  document.getElementById("nameOvl").classList.remove("show");
+  refreshWho();toast("Welcome, "+name+"!");
+}
+function toast(t){var el=document.getElementById("toast");el.textContent=t;el.classList.add("show");setTimeout(function(){el.classList.remove("show");},2200);}
+
+/* ---------- PWA INSTALL ---------- */
+var deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferredPrompt=e;document.getElementById("installBtn").style.display="block";});
+function doInstall(){if(!deferredPrompt){toast("Use browser menu → Add to Home Screen");return;}deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;document.getElementById("installBtn").style.display="none";});}
+window.addEventListener("appinstalled",function(){document.getElementById("installBtn").style.display="none";});
+
+/* ---------- BOOT ---------- */
+function boot(){
+  refreshWho();
+  if(!getCust().name)openName();
+  loadStock();
+  if("serviceWorker" in navigator){navigator.serviceWorker.register("/stock/sw.js",{scope:"/stock/"}).catch(function(){});}
+}
+boot();
+</script>
+</body>
+</html>
