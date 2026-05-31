@@ -173,12 +173,23 @@ function json(obj) {
 }
 
 function doGet(e) {
-  // ?setup=1 → instantly create/refresh the SC Directory tab
+  // ?setup=1 → instantly create ALL tabs (no need to wait for first order)
   if (e && e.parameter && e.parameter.setup === "1") {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     setupDirectory(ss);
+    getSheet(ss, "Orders");
+    getSheet(ss, "Store Orders");
+    getSheet(ss, "Dealer Demand");
     setupAnalytics(ss);
-    return ContentService.createTextOutput("SC Directory and Analytics tabs created ✅");
+    return ContentService.createTextOutput(
+      "✅ All tabs created:\n" +
+      "• SC Directory\n" +
+      "• Orders (HO team)\n" +
+      "• Store Orders (Experience Store)\n" +
+      "• Dealer Demand (Gorakhpur SS)\n" +
+      "• Demand Analytics\n\n" +
+      "Open your Google Sheet to see them."
+    );
   }
   return ContentService.createTextOutput("Robotek order logger v3 is running.");
 }
