@@ -16,9 +16,11 @@ OUT_DIR  = os.path.join(os.path.dirname(__file__), "..", "public", "stock", "sc-
 
 # ── ADD YOUR SCS HERE ────────────────────────────────────────────────────────
 SCS = [
-    ("Uzeffa",       "918920239953"),
-    ("Payal",        "7217613621"),
-    ("Charanpreet",  "7678596456"),
+    # (label, number, tagline, extra_params)
+    ("Robotek Orders HO1",       "918920239953", "Order in Seconds!", ""),
+    ("Robotek Orders HO2",       "7217613621",   "Order in Seconds!", ""),
+    ("Robotek Experience Store", "7678596456",   "Scan & Order Now!", ""),
+    ("Robotek Gorakhpur",        "9839454510",   "Order in Seconds!", "tag=Dealer+Demand"),
 ]
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -29,9 +31,9 @@ def norm(num):
 
 os.makedirs(OUT_DIR, exist_ok=True)
 
-for name, raw in SCS:
+for name, raw, tagline, extra in SCS:
     num  = norm(raw)
-    url  = f"{BASE_URL}?sc={num}"
+    url  = f"{BASE_URL}?sc={num}" + (f"&{extra}" if extra else "")
     slug = re.sub(r"\s+", "_", name.strip().lower())
 
     qr = qrcode.QRCode(version=2, box_size=18, border=3,
@@ -40,24 +42,27 @@ for name, raw in SCS:
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="#1F1B20", back_color="white").convert("RGB")
 
-    # add label strip at bottom
+    # label strip: tagline + name + url (3 lines)
     W, H = qr_img.size
-    strip = 64
+    strip = 90
     canvas = Image.new("RGB", (W, H + strip), "white")
     canvas.paste(qr_img, (0, 0))
     draw = ImageDraw.Draw(canvas)
     try:
-        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 26)
-        small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 20)
+        big   = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 28)
+        med   = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 24)
+        small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 18)
     except Exception:
-        font = small = ImageFont.load_default()
+        big = med = small = ImageFont.load_default()
 
-    draw.text((W//2, H + 12), name, fill="#E52D31", font=font, anchor="mt")
-    draw.text((W//2, H + 40), "robotekstock.vercel.app", fill="#6E6A6B", font=small, anchor="mt")
+    draw.text((W//2, H + 8),  tagline, fill="#1F1B20", font=big,   anchor="mt")
+    draw.text((W//2, H + 42), name,    fill="#E52D31", font=med,   anchor="mt")
+    draw.text((W//2, H + 70), "robotekstock.vercel.app", fill="#6E6A6B", font=small, anchor="mt")
 
     out = os.path.join(OUT_DIR, f"sc-qr-{slug}.png")
     canvas.save(out)
-    print(f"✅  {name:15s}  {url}")
+    print(f"✅  {name:25s}  {tagline}")
+    print(f"    {url}")
     print(f"    saved → {out}")
 
 if not SCS:

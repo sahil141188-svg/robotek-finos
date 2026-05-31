@@ -245,12 +245,13 @@ var lang = localStorage.getItem("rb_lang") || "en";
 function initSC(){
   var params=new URLSearchParams(window.location.search);
   var sc=params.get("sc");
+  var tag=params.get("tag");
   if(sc){
-    // strip non-digits, ensure country code
     sc=sc.replace(/\D/g,"");
     if(sc.length===10) sc="91"+sc;
     localStorage.setItem("rb_sc",sc);
   }
+  if(tag) localStorage.setItem("rb_tag",tag);
   var saved=localStorage.getItem("rb_sc");
   if(saved) WA=saved;
 }
@@ -633,6 +634,8 @@ function placeOrder(){
 }
 function logOrder(payload){
   if(!CONFIG.ORDER_LOG_URL)return;
+  var tag=localStorage.getItem("rb_tag")||"";
+  if(tag) payload.tag=tag;
   try{
     fetch(CONFIG.ORDER_LOG_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)});
   }catch(e){}
