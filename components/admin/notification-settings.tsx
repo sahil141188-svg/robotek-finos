@@ -616,7 +616,7 @@ Top overdue:
 • 7d — TDS Q1 deposit
 • …
 
-🔗 finos.robotek.in/dashboard
+🔗 robotek-project.vercel.app/dashboard
 — Robotek FinOS`}</pre>
           </div>
         </div>

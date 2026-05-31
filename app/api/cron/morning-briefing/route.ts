@@ -276,7 +276,7 @@ function buildWhatsAppBrief(name: string, d: BriefData): string {
   }
 
   // Footer
-  lines.push(`🔗 ${process.env.NEXT_PUBLIC_APP_URL ?? "https://finos.robotek.in"}/dashboard`);
+  lines.push(`🔗 ${process.env.NEXT_PUBLIC_APP_URL ?? "https://robotek-project.vercel.app"}/dashboard`);
   lines.push(`— Robotek FinOS`);
 
   return lines.join("\n");
@@ -314,7 +314,7 @@ async function sendEmail(brief: string, today: string): Promise<{ sent: boolean;
 ${html}
   </div>
   <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #F5F4F4;">
-    <p style="font-size: 11px; color: #9A9596; margin: 0;">Auto-generated · <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://finos.robotek.in"}/dashboard" style="color: #E52D31;">Open Dashboard →</a></p>
+    <p style="font-size: 11px; color: #9A9596; margin: 0;">Auto-generated · <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://robotek-project.vercel.app"}/dashboard" style="color: #E52D31;">Open Dashboard →</a></p>
   </div>
 </div>`;
 
