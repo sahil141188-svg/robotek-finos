@@ -1,45 +1,67 @@
 /**
- * ROBOTEK — Order Logger (Google Apps Script web app)
- * Logs every order placed in the app into an "Orders" tab of your spreadsheet.
+ * ROBOTEK — Order Logger (Google Apps Script web app)  — v2
+ * Logs every order into an "Orders" tab, ONE ROW PER ITEM, with separate
+ * Boxes / Box Size / Total Qty columns so it's easy to copy into Busy.
  *
- * SETUP (one time, ~2 min):
- * 1. Open your stock Google Sheet → Extensions → Apps Script.
- * 2. Delete anything there, paste THIS whole file, click Save.
- * 3. Click Deploy → New deployment → type "Web app".
- *      - Description: Robotek order logger
- *      - Execute as: Me
- *      - Who has access: Anyone
- *    Click Deploy, authorize when asked, then COPY the Web app URL.
- * 4. Paste that URL into index.html CONFIG.ORDER_LOG_URL.
- * Re-deploy (Deploy → Manage deployments → Edit → New version) whenever you change this file.
+ * TO UPDATE (you already deployed v1):
+ * 1. Sheet → Extensions → Apps Script. Select all, delete, paste THIS, Save.
+ * 2. Deploy → Manage deployments → ✎ (edit) → Version: "New version" → Deploy.
+ *    (The web-app URL stays the same — no need to re-send it.)
+ *
+ * Columns: Timestamp | Order ID | Customer | Phone | Order Date | Product | Boxes | Box Size | Total Qty (pcs)
  */
+
+var HEADER = ["Timestamp", "Order ID", "Customer", "Phone", "Order Date",
+              "Product", "Boxes", "Box Size", "Total Qty (pcs)"];
 
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName("Orders");
-    if (!sheet) {
-      sheet = ss.insertSheet("Orders");
-      sheet.appendRow(["Timestamp", "Customer", "Phone", "Order Date", "Items", "Item Count"]);
+    if (!sheet) sheet = ss.insertSheet("Orders");
+
+    // Ensure the header matches v2; if it's empty or the old layout, reset it.
+    var needHeader = sheet.getLastRow() === 0;
+    if (!needHeader) {
+      var first = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      if (first.length !== HEADER.length || first[1] !== "Order ID") {
+        sheet.clear();        // clears the old v1 test data + header
+        needHeader = true;
+      }
     }
-    var items = (data.items || []).map(function (it) {
-      return it.name + " — " + it.qty + (it.boxSize ? " (Bx:" + it.boxSize + "/box)" : "");
+    if (needHeader) {
+      sheet.appendRow(HEADER);
+      sheet.setFrozenRows(1);
+    }
+
+    var ts = new Date();
+    var orderId = "ORD-" + ts.getTime().toString(36).toUpperCase();
+    var items = data.items || [];
+    if (!items.length) {
+      return json({ ok: false, error: "no items" });
+    }
+
+    var rows = items.map(function (it) {
+      var boxes = Number(it.boxes) || 0;
+      var boxSize = (it.boxSize === "" || it.boxSize == null) ? "" : Number(it.boxSize);
+      var total = (boxSize && boxes) ? boxes * boxSize : (it.totalQty || "");
+      return [ts, orderId, data.customer || "", "'" + (data.phone || ""), data.date || "",
+              it.name || "", boxes, boxSize, total];
     });
-    sheet.appendRow([
-      new Date(),
-      data.customer || "",
-      data.phone || "",
-      data.date || "",
-      items.join("\n"),
-      items.length
-    ]);
-    return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
+
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, HEADER.length).setValues(rows);
+    return json({ ok: true, orderId: orderId, lines: rows.length });
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: String(err) })).setMimeType(ContentService.MimeType.JSON);
+    return json({ ok: false, error: String(err) });
   }
 }
 
+function json(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function doGet() {
-  return ContentService.createTextOutput("Robotek order logger is running.");
+  return ContentService.createTextOutput("Robotek order logger v2 is running.");
 }

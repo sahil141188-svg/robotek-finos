@@ -417,9 +417,13 @@ function placeOrder(){
   msg+="Date: "+ds+"\n\nProducts Required:\n";
   for(var i=0;i<sel.length;i++){
     var oq=sel[i].dataset.oq||"1",bx=sel[i].getAttribute("data-bx"),nm=sel[i].getAttribute("data-name");
+    var boxes=parseFloat(oq)||0;
+    var bxNum=bx?parseFloat(bx):0;
+    var totalQty=(bxNum&&boxes)?Math.round(boxes*bxNum):"";
     var bxStr=bx?" (Bx:"+bx+"/box)":"";
-    msg+=(i+1)+". "+nm+" - "+ql(oq)+bxStr+"\n";
-    items.push({name:nm,qty:ql(oq),boxSize:bx||""});
+    var totStr=totalQty!==""?" = "+totalQty+" pcs":"";
+    msg+=(i+1)+". "+nm+" - "+ql(oq)+bxStr+totStr+"\n";
+    items.push({name:nm,qty:ql(oq),boxes:boxes,boxSize:bxNum||"",totalQty:totalQty});
   }
   msg+="\nKindly confirm pricing and dispatch.\n\nThank you.";
   logOrder({customer:cust.name,phone:cust.phone,date:ds,items:items});
