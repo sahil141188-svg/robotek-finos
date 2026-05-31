@@ -26,6 +26,7 @@ import {
 import {
   Mail, MessageSquare, Bell, FileText, History,
   CheckCircle2, AlertCircle, Eye, EyeOff, Send, Loader2,
+  Sunrise, Trash2, Plus,
 } from "lucide-react";
 import { cn }     from "@/lib/utils";
 import { toast }  from "sonner";
@@ -42,6 +43,7 @@ import {
 
 const TABS = [
   { id: "whatsapp",  label: "WhatsApp",          icon: MessageSquare },
+  { id: "brief",     label: "Daily Brief",       icon: Sunrise },
   { id: "email",     label: "Email / SMTP",       icon: Mail },
   { id: "reminders", label: "Reminder Rules",     icon: Bell },
   { id: "templates", label: "Message Templates",  icon: FileText },
@@ -144,6 +146,36 @@ export function NotificationSettings() {
   function updateTemplates(patch: Partial<AllNotificationSettings["templates"]>) {
     setSettings((s) => s ? { ...s, templates: { ...s.templates, ...patch } } : s);
   }
+  function updateBriefing(patch: Partial<AllNotificationSettings["briefing"]>) {
+    setSettings((s) => s ? { ...s, briefing: { ...s.briefing, ...patch } } : s);
+  }
+
+  // ── Send Test Brief Now ─────────────────────────────────────────────────────
+  const [briefTesting, setBriefTesting] = useState(false);
+  async function handleSendBriefNow() {
+    setBriefTesting(true);
+    try {
+      const res = await fetch("/api/cron/morning-briefing", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error ?? "Brief send failed");
+        return;
+      }
+      const sent = (data.recipients ?? []).filter((r: { sent: boolean }) => r.sent).length;
+      const total = (data.recipients ?? []).length;
+      if (sent === total && total > 0) {
+        toast.success(`Brief sent to ${sent} recipient${sent === 1 ? "" : "s"}.`);
+      } else if (total === 0) {
+        toast.info("No recipients configured.");
+      } else {
+        toast.warning(`${sent}/${total} delivered — check log for failures.`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Network error");
+    } finally {
+      setBriefTesting(false);
+    }
+  }
 
   function handleSave() {
     if (!settings) return;
@@ -190,7 +222,7 @@ export function NotificationSettings() {
 
   if (!settings) return null;
 
-  const { whatsapp, email, reminders, templates } = settings;
+  const { whatsapp, email, reminders, templates, briefing } = settings;
 
   return (
     <div className="space-y-5">
@@ -416,6 +448,176 @@ export function NotificationSettings() {
                 }
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Daily Brief ──────────────────────────────────────────────────── */}
+      {activeTab === "brief" && (
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl border border-border p-5 space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-brand-black flex items-center gap-2">
+                <Sunrise className="w-4 h-4 text-brand-yellow" /> Morning Executive Brief
+              </h2>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={briefing.enabled}
+                  onCheckedChange={(v) => updateBriefing({ enabled: v })}
+                />
+                <span className="text-xs font-medium">{briefing.enabled ? "Active" : "Paused"}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-brand-gray-mid">
+              An executive-style WhatsApp brief auto-sent every morning to the people below.
+              Pulls live cash position, AR/AP, yesterday&apos;s sales, top overdue customers,
+              and upcoming compliance — across all 7 group companies.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Send Time (IST)</Label>
+                <Input
+                  value={briefing.send_time_ist}
+                  onChange={(e) => updateBriefing({ send_time_ist: e.target.value })}
+                  placeholder="08:00"
+                />
+                <p className="text-[11px] text-brand-gray-mid">
+                  Cron schedule lives in <code className="bg-brand-gray-light px-1 rounded">vercel.json</code> —
+                  currently fires daily at 08:00 IST. Update both to change.
+                </p>
+              </div>
+            </div>
+
+            {/* Recipients */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Recipients</Label>
+                <Button
+                  type="button" size="sm" variant="outline"
+                  onClick={() => updateBriefing({
+                    recipients: [...briefing.recipients, { name: "", phone: "+91" }],
+                  })}
+                  className="!h-7 !px-2 !text-xs"
+                >
+                  <Plus className="w-3 h-3 mr-1" /> Add recipient
+                </Button>
+              </div>
+
+              {briefing.recipients.length === 0 && (
+                <p className="text-xs text-brand-gray-mid italic">
+                  No recipients yet — add at least one to start receiving the brief.
+                </p>
+              )}
+
+              <div className="space-y-2">
+                {briefing.recipients.map((r, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <Input
+                      placeholder="Name (e.g. Aman)"
+                      value={r.name}
+                      onChange={(e) => {
+                        const next = [...briefing.recipients];
+                        next[idx] = { ...next[idx], name: e.target.value };
+                        updateBriefing({ recipients: next });
+                      }}
+                      className="flex-1"
+                    />
+                    <Input
+                      placeholder="+919876543210"
+                      value={r.phone}
+                      onChange={(e) => {
+                        const next = [...briefing.recipients];
+                        next[idx] = { ...next[idx], phone: e.target.value };
+                        updateBriefing({ recipients: next });
+                      }}
+                      className="flex-1 font-mono text-sm"
+                    />
+                    <Button
+                      type="button" size="sm" variant="ghost"
+                      onClick={() => {
+                        const next = briefing.recipients.filter((_, i) => i !== idx);
+                        updateBriefing({ recipients: next });
+                      }}
+                      className="!h-9 !w-9 !p-0 text-red-500 hover:!bg-red-50"
+                      aria-label="Remove recipient"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Status banner */}
+            {!whatsapp.enabled && (
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-xs text-yellow-800 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <p>
+                  <strong>WhatsApp is disabled</strong> in the WhatsApp tab — the brief will be
+                  generated but not actually sent. Enable WhatsApp first.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Test Now */}
+          <div className="bg-white rounded-xl border border-border p-5 space-y-3">
+            <h2 className="text-sm font-semibold text-brand-black flex items-center gap-2">
+              <Send className="w-4 h-4 text-green-600" /> Send Test Brief Now
+            </h2>
+            <p className="text-xs text-brand-gray-mid">
+              Generates today&apos;s brief from live data and sends it to every recipient above.
+              Use this to verify the message looks right before tomorrow morning&apos;s auto-send.
+            </p>
+            <Button
+              type="button"
+              onClick={handleSendBriefNow}
+              disabled={briefTesting || briefing.recipients.length === 0}
+              className="!bg-green-600 hover:!bg-green-700 !text-white"
+            >
+              {briefTesting
+                ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Sending brief…</>
+                : <><Send className="w-3.5 h-3.5 mr-1.5" />Send Now to {briefing.recipients.length} recipient{briefing.recipients.length === 1 ? "" : "s"}</>
+              }
+            </Button>
+          </div>
+
+          {/* Sample preview */}
+          <div className="bg-brand-gray-light/60 rounded-xl border border-border p-5 space-y-2">
+            <p className="text-xs font-semibold text-brand-black flex items-center gap-2">
+              <Eye className="w-3.5 h-3.5" /> Sample message structure
+            </p>
+            <pre className="text-[11px] text-brand-black whitespace-pre-wrap font-mono leading-relaxed">{`☀️ *Good morning, Aman*
+*Robotek Group — Morning Brief*
+_Mon, 31 May_
+
+💰 *Cash position (live)*
+Group: *₹X.XX Cr*
+• Robotek: ₹X.XX Cr
+• Muskan: ₹X.XX Cr ⚠️
+• Aggarwal: ₹X.XX L
+
+📈 *Yesterday's pulse*
+Sales: ₹X.XX L (N vouchers)
+Receipts in: ₹X.XX L
+Payments out: ₹X.XX L
+
+🧾 *Receivables*
+Total: ₹X.XX Cr | 31+ days: *₹X.XX Cr*
+Top overdue:
+• ABC Industries — ₹X.X L (45d, Robotek)
+• …
+
+💼 *Payables*: ₹X.XX Cr
+
+📅 *Compliance — next 7 days*
+• 7d — TDS Q1 deposit
+• …
+
+🔗 finos.robotek.in/dashboard
+— Robotek FinOS`}</pre>
           </div>
         </div>
       )}

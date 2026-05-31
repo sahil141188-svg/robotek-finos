@@ -50,11 +50,20 @@ export type TemplateSettings = {
   task_reminder:        string;
 };
 
+/** Recipients + schedule for the daily morning executive WhatsApp brief. */
+export type BriefingSettings = {
+  enabled:       boolean;
+  /** "HH:MM" 24-hr in IST. Informational only — actual schedule lives in vercel.json. */
+  send_time_ist: string;
+  recipients:    Array<{ name: string; phone: string }>;
+};
+
 export type AllNotificationSettings = {
   whatsapp:  WhatsAppConfig;
   email:     EmailSettings;
   reminders: ReminderSettings;
   templates: TemplateSettings;
+  briefing:  BriefingSettings;
 };
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
@@ -99,6 +108,14 @@ const DEFAULTS: AllNotificationSettings = {
     task_reminder:
       "Hi {user_name},\n\nReminder: Task \"{task_title}\" assigned to you is due on {due_date}.\n\nPlease update the status on Robotek FinOS.\n\nPriority: {priority}",
   },
+  briefing: {
+    enabled:       true,
+    send_time_ist: "08:00",
+    recipients: [
+      { name: "Aman",   phone: "+919810504008" },
+      { name: "Sahil",  phone: "+919899444530" },
+    ],
+  },
 };
 
 // ── Load ─────────────────────────────────────────────────────────────────────
@@ -138,6 +155,7 @@ export async function getNotificationSettings(): Promise<AllNotificationSettings
       email:     { ...DEFAULTS.email,     ...(map.get("email")     as Partial<EmailSettings>    ?? {}) },
       reminders: { ...DEFAULTS.reminders, ...(map.get("reminders") as Partial<ReminderSettings> ?? {}) },
       templates: { ...DEFAULTS.templates, ...(map.get("templates") as Partial<TemplateSettings> ?? {}) },
+      briefing:  { ...DEFAULTS.briefing,  ...(map.get("briefing")  as Partial<BriefingSettings>  ?? {}) },
     };
   } catch {
     return DEFAULTS;
@@ -279,4 +297,9 @@ export async function getReminderSettings(): Promise<ReminderSettings> {
 export async function getTemplateSettings(): Promise<TemplateSettings> {
   const settings = await getNotificationSettings();
   return settings.templates;
+}
+
+export async function getBriefingSettings(): Promise<BriefingSettings> {
+  const settings = await getNotificationSettings();
+  return settings.briefing;
 }
