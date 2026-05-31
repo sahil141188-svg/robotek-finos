@@ -67,11 +67,17 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .oosl{font-size:9px;font-weight:700;color:#b00;background:rgba(176,0,0,.1);border-radius:4px;padding:1px 5px}
 .cq{font-size:10px;font-weight:700;color:var(--muted);background:rgba(0,0,0,.07);border-radius:4px;padding:1px 6px;flex-shrink:0}
 .chip.sel .cq{color:rgba(255,255,255,.8);background:rgba(255,255,255,.18)}
-.presets{display:none;gap:5px;margin-top:7px;flex-wrap:wrap}
-.chip.sel .presets{display:flex}
-.pst{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);color:rgba(255,255,255,.9);border-radius:5px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:inherit}
-.pst.on{background:#fff;color:var(--red);border-color:#fff}
-.pst:active{opacity:.8}
+.qctrl{display:none;flex-direction:column;gap:8px;margin-top:8px}
+.chip.sel .qctrl{display:flex}
+.qtog{display:flex;gap:4px}
+.qm{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);color:rgba(255,255,255,.85);border-radius:6px;padding:5px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.qm.on{background:#fff;color:var(--red);border-color:#fff}
+.qstep{display:flex;align-items:center;gap:7px}
+.qs{background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:7px;width:36px;height:36px;font-size:22px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0}
+.qs:active{background:rgba(255,255,255,.4)}
+.qnum{width:58px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:7px;padding:6px 4px;font-size:18px;font-weight:700;text-align:center;font-family:inherit;-moz-appearance:textfield;outline:none}
+.qnum::-webkit-outer-spin-button,.qnum::-webkit-inner-spin-button{-webkit-appearance:none}
+.qlbl{font-size:10px;color:rgba(255,255,255,.65);align-self:center}
 .nores{display:none;text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
 .loadbox{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
 .spin{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;margin:0 auto 14px;animation:sp .8s linear infinite}
@@ -233,21 +239,26 @@ function loadStock(){
 }
 
 /* ---------- RENDER ---------- */
-function presetsHtml(){
-  return '<span class="presets">'+
-    '<button class="pst" onclick="sP(event,this,\'0.5\')">1/2 Box</button>'+
-    '<button class="pst on" onclick="sP(event,this,\'1\')">1 Box</button>'+
-    '<button class="pst" onclick="sP(event,this,\'2\')">2 Box</button>'+
-    '<button class="pst" onclick="sP(event,this,\'3\')">3 Box</button>'+
-    '<button class="pst" onclick="sP(event,this,\'5\')">5 Box</button>'+
-    '<button class="pst" onclick="sP(event,this,\'10\')">10 Box</button></span>';
+function qctrlHtml(){
+  return '<div class="qctrl" onclick="event.stopPropagation()">'+
+    '<div class="qtog">'+
+      '<button class="qm on" onclick="setMode(event,this,\'box\')">Box</button>'+
+      '<button class="qm" onclick="setMode(event,this,\'pcs\')">Pcs</button>'+
+    '</div>'+
+    '<div class="qstep">'+
+      '<button class="qs" onclick="stepQ(event,this,-1)">−</button>'+
+      '<input class="qnum" type="number" inputmode="numeric" min="1" value="1" oninput="syncQ(event,this)" onclick="event.stopPropagation()">'+
+      '<button class="qs" onclick="stepQ(event,this,1)">+</button>'+
+      '<span class="qlbl"></span>'+
+    '</div>'+
+  '</div>';
 }
 function chipHtml(p){
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
   if(!p.stock){
     return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'<span class="oosl">Out</span></span></span>';
   }
-  return '<span class="chip" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-oq="1" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'</span>'+presetsHtml()+'</span>';
+  return '<span class="chip" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'</span>'+qctrlHtml()+'</span>';
 }
 function sectionHtml(key,title,cls,icon,chips){
   return '<div class="cs" data-cat="'+key+'"><div class="ch '+cls+'" onclick="tSec(this)"><span class="cico">'+icon+'</span><span class="cn">'+esc(title)+'</span><span class="cbdg">'+chips.length+' items</span><button class="sabt" onclick="sA(event,this.parentElement.parentElement)">Select All</button></div><div class="cgrid">'+chips.join("")+'</div></div>';
@@ -298,28 +309,63 @@ function render(rows, isSample){
 }
 
 /* ---------- INTERACTIONS ---------- */
-function ql(q){return q==="0.5"?"1/2 Box":q+(q==="1"?" Box":" Boxes");}
+function qLabel(chip){
+  var oq=parseInt(chip.dataset.oq,10)||1;
+  var mode=chip.dataset.mode||"box";
+  if(mode==="pcs") return oq+" pcs";
+  return oq===1?"1 Box":oq+" Boxes";
+}
+function resetChip(el){
+  el.dataset.oq="1"; el.dataset.mode="box";
+  var inp=el.querySelector(".qnum"); if(inp)inp.value=1;
+  var ms=el.querySelectorAll(".qm");
+  for(var i=0;i<ms.length;i++){ms[i].classList.toggle("on",ms[i].textContent==="Box");}
+}
 function tC(el){
-  if(el.classList.contains("sel")){
-    el.classList.remove("sel");el.dataset.oq="1";
-    var b=el.querySelectorAll(".pst");for(var i=0;i<b.length;i++){b[i].className=b[i].textContent==="1 Box"?"pst on":"pst";}
-  }else{el.classList.add("sel");el.dataset.oq="1";}
+  if(el.classList.contains("sel")){el.classList.remove("sel");resetChip(el);}
+  else{el.classList.add("sel");resetChip(el);}
   uB();
 }
-function sP(ev,btn,qty){
+function setMode(ev,btn,mode){
   if(ev&&ev.stopPropagation)ev.stopPropagation();
-  var chip=btn.parentElement.parentElement;chip.dataset.oq=qty;
-  var b=chip.querySelectorAll(".pst");for(var i=0;i<b.length;i++){b[i].className="pst";}
-  btn.className="pst on";uB();
+  var chip=btn.closest(".chip");
+  chip.dataset.mode=mode; chip.dataset.oq="1";
+  var ms=btn.parentElement.querySelectorAll(".qm");
+  for(var i=0;i<ms.length;i++)ms[i].classList.remove("on");
+  btn.classList.add("on");
+  var inp=chip.querySelector(".qnum"); if(inp)inp.value=1;
+  updateQlbl(chip); uB();
+}
+function stepQ(ev,btn,dir){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
+  var chip=btn.closest(".chip");
+  var inp=chip.querySelector(".qnum");
+  var next=Math.max(1,(parseInt(inp.value,10)||1)+dir);
+  inp.value=next; chip.dataset.oq=String(next);
+  updateQlbl(chip); uB();
+}
+function syncQ(ev,inp){
+  if(ev&&ev.stopPropagation)ev.stopPropagation();
+  var chip=inp.closest(".chip");
+  var val=Math.max(1,parseInt(inp.value,10)||1);
+  chip.dataset.oq=String(val);
+  updateQlbl(chip); uB();
+}
+function updateQlbl(chip){
+  var lbl=chip.querySelector(".qlbl"); if(!lbl)return;
+  var mode=chip.dataset.mode||"box";
+  var oq=parseInt(chip.dataset.oq,10)||1;
+  var bx=parseFloat(chip.getAttribute("data-bx"))||0;
+  if(mode==="box"&&bx) lbl.textContent="= "+(oq*bx)+" pcs";
+  else lbl.textContent="";
 }
 function sA(ev,sec){
   if(ev&&ev.stopPropagation)ev.stopPropagation();
   var chips=sec.querySelectorAll(".chip:not(.oos)");var allSel=true;
   for(var i=0;i<chips.length;i++){if(!chips[i].classList.contains("sel"))allSel=false;}
   for(var i=0;i<chips.length;i++){
-    if(!allSel){chips[i].classList.add("sel");chips[i].dataset.oq="1";
-      var b=chips[i].querySelectorAll(".pst");for(var j=0;j<b.length;j++){b[j].className=b[j].textContent==="1 Box"?"pst on":"pst";}
-    }else{chips[i].classList.remove("sel");}
+    if(!allSel){chips[i].classList.add("sel");resetChip(chips[i]);}
+    else{chips[i].classList.remove("sel");}
   }
   uB();
 }
@@ -373,17 +419,21 @@ function uB(){
   document.getElementById("blistsub").textContent=n+" item"+(n!==1?"s":"")+" selected";
   var list=document.getElementById("blist");list.innerHTML="";
   for(var i=0;i<sel.length;i++){
-    var chip=sel[i],bx=chip.getAttribute("data-bx"),oq=chip.dataset.oq||"1",nm=chip.getAttribute("data-name")||"";
-    var bxStr=bx?", Bx:"+bx+"/box":"";
+    var chip=sel[i],bx=chip.getAttribute("data-bx"),nm=chip.getAttribute("data-name")||"";
+    var mode=chip.dataset.mode||"box";
+    var oq=parseInt(chip.dataset.oq,10)||1;
+    var lbl=qLabel(chip);
+    var sub="";
+    if(mode==="box"&&bx){var tot=oq*parseFloat(bx);sub="Bx:"+bx+" · "+tot+" pcs total";}
+    else if(mode==="pcs"){sub="loose pieces";}
     var row=document.createElement("div");row.className="bitm";
-    row.innerHTML="<div><div class='bnm'>"+esc(nm)+"</div><div class='bqt'>"+ql(oq)+bxStr+"</div></div><button class='brm' data-n='"+esc(nm)+"' onclick='rI(this)'>&#10005;</button>";
+    row.innerHTML="<div><div class='bnm'>"+esc(nm)+"</div><div class='bqt'>"+lbl+(sub?" · "+sub:"")+"</div></div><button class='brm' data-n='"+esc(nm)+"' onclick='rI(this)'>&#10005;</button>";
     list.appendChild(row);
   }
 }
 function rI(btn){
   var n=btn.getAttribute("data-n"),chips=document.querySelectorAll(".chip");
-  for(var i=0;i<chips.length;i++){if(chips[i].getAttribute("data-name")===n){chips[i].classList.remove("sel");chips[i].dataset.oq="1";
-    var b=chips[i].querySelectorAll(".pst");for(var j=0;j<b.length;j++){b[j].className=b[j].textContent==="1 Box"?"pst on":"pst";}}}
+  for(var i=0;i<chips.length;i++){if(chips[i].getAttribute("data-name")===n){chips[i].classList.remove("sel");resetChip(chips[i]);}}
   uB();
 }
 function toggleBasket(){
@@ -397,8 +447,7 @@ function toggleBasket(){
 }
 function clearAll(){
   var chips=document.querySelectorAll(".chip.sel");
-  for(var i=0;i<chips.length;i++){chips[i].classList.remove("sel");chips[i].dataset.oq="1";
-    var b=chips[i].querySelectorAll(".pst");for(var j=0;j<b.length;j++){b[j].className=b[j].textContent==="1 Box"?"pst on":"pst";}}
+  for(var i=0;i<chips.length;i++){chips[i].classList.remove("sel");resetChip(chips[i]);}
   uB();bOpen=false;
   document.getElementById("bpnl").classList.remove("open");
   document.getElementById("barr").classList.remove("up");
@@ -416,14 +465,20 @@ function placeOrder(){
   if(cust.phone)msg+="Phone: "+cust.phone+"\n";
   msg+="Date: "+ds+"\n\nProducts Required:\n";
   for(var i=0;i<sel.length;i++){
-    var oq=sel[i].dataset.oq||"1",bx=sel[i].getAttribute("data-bx"),nm=sel[i].getAttribute("data-name");
-    var boxes=parseFloat(oq)||0;
+    var mode=sel[i].dataset.mode||"box";
+    var oq=parseInt(sel[i].dataset.oq,10)||1;
+    var bx=sel[i].getAttribute("data-bx"),nm=sel[i].getAttribute("data-name");
     var bxNum=bx?parseFloat(bx):0;
-    var totalQty=(bxNum&&boxes)?Math.round(boxes*bxNum):"";
-    var bxStr=bx?" (Bx:"+bx+"/box)":"";
-    var totStr=totalQty!==""?" = "+totalQty+" pcs":"";
-    msg+=(i+1)+". "+nm+" - "+ql(oq)+bxStr+totStr+"\n";
-    items.push({name:nm,qty:ql(oq),boxes:boxes,boxSize:bxNum||"",totalQty:totalQty});
+    if(mode==="pcs"){
+      msg+=(i+1)+". "+nm+" — "+oq+" pcs (loose)\n";
+      items.push({name:nm,qty:oq+" pcs",boxes:0,boxSize:bxNum||"",totalQty:oq,mode:"pcs"});
+    }else{
+      var totalQty=bxNum?Math.round(oq*bxNum):"";
+      var bxStr=bx?" (Bx:"+bx+"/box)":"";
+      var totStr=totalQty!==""?" = "+totalQty+" pcs":"";
+      msg+=(i+1)+". "+nm+" — "+qLabel(sel[i])+bxStr+totStr+"\n";
+      items.push({name:nm,qty:qLabel(sel[i]),boxes:oq,boxSize:bxNum||"",totalQty:totalQty,mode:"box"});
+    }
   }
   msg+="\nKindly confirm pricing and dispatch.\n\nThank you.";
   logOrder({customer:cust.name,phone:cust.phone,date:ds,items:items});
