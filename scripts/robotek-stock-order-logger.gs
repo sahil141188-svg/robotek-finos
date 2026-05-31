@@ -17,6 +17,54 @@
 var HEADER = ["Timestamp", "Order ID", "Customer", "Phone", "Order Date",
               "Product", "Boxes", "Box Size", "Total Qty (pcs)"];
 
+// ── SC Directory ────────────────────────────────────────────────────────────
+var SC_DIR = [
+  { ref:"HO1",   name:"Robotek Orders HO1",       wa:"918920239953", tag:"Orders"        },
+  { ref:"HO2",   name:"Robotek Orders HO2",        wa:"917217613621", tag:"Orders"        },
+  { ref:"Store", name:"Robotek Experience Store",  wa:"917678596456", tag:"Store Orders"  },
+  { ref:"GKP",   name:"Robotek Gorakhpur",         wa:"919839454510", tag:"Dealer Demand" },
+];
+var BASE_URL = "https://robotekstock.vercel.app/stock";
+
+function setupDirectory(ss) {
+  var tabName = "SC Directory";
+  var sheet   = ss.getSheetByName(tabName);
+  if (sheet) sheet.clear(); else sheet = ss.insertSheet(tabName, 0); // first tab
+
+  // Header
+  var hdr = ["Ref Code", "Name", "Link", "WhatsApp", "Orders Tab"];
+  sheet.appendRow(hdr);
+  var hRange = sheet.getRange(1, 1, 1, hdr.length);
+  hRange.setBackground("#1F1B20").setFontColor("#F7DA11").setFontWeight("bold").setFontSize(11);
+
+  // Data rows
+  SC_DIR.forEach(function(sc, i) {
+    var link = BASE_URL + "?ref=" + sc.ref;
+    var row  = [sc.ref, sc.name, link, "+" + sc.wa, sc.tag];
+    sheet.appendRow(row);
+    var bg = (i % 2 === 0) ? "#F7F5F6" : "#FFFFFF";
+    sheet.getRange(i + 2, 1, 1, hdr.length).setBackground(bg);
+    // make link clickable
+    sheet.getRange(i + 2, 3).setFontColor("#1155CC").setFontLine("underline");
+  });
+
+  // Column widths
+  sheet.setColumnWidth(1, 90);
+  sheet.setColumnWidth(2, 240);
+  sheet.setColumnWidth(3, 340);
+  sheet.setColumnWidth(4, 140);
+  sheet.setColumnWidth(5, 130);
+  sheet.setFrozenRows(1);
+
+  // Title above header
+  sheet.insertRowBefore(1);
+  sheet.getRange("A1:E1").merge()
+    .setValue("🔴 ROBOTEK — Sales Contact Directory")
+    .setBackground("#E52D31").setFontColor("#FFFFFF")
+    .setFontWeight("bold").setFontSize(13)
+    .setHorizontalAlignment("center");
+}
+
 function getSheet(ss, tabName) {
   var sheet = ss.getSheetByName(tabName);
   if (!sheet) {
@@ -94,7 +142,8 @@ function doPost(e) {
     var tabName = (data.tag && data.tag.trim()) ? data.tag.trim() : "Orders";
     var sheet   = getSheet(ss, tabName);
 
-    // Ensure Demand Analytics tab exists
+    // Ensure SC Directory + Demand Analytics tabs exist
+    setupDirectory(ss);
     setupAnalytics(ss);
 
     var ts      = new Date();
@@ -123,6 +172,13 @@ function json(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
-function doGet() {
+function doGet(e) {
+  // ?setup=1 → instantly create/refresh the SC Directory tab
+  if (e && e.parameter && e.parameter.setup === "1") {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    setupDirectory(ss);
+    setupAnalytics(ss);
+    return ContentService.createTextOutput("SC Directory and Analytics tabs created ✅");
+  }
   return ContentService.createTextOutput("Robotek order logger v3 is running.");
 }
