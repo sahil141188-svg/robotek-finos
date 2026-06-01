@@ -19,8 +19,7 @@ var HEADER = ["Timestamp", "Order ID", "Customer", "Phone", "Order Date",
 
 // ── SC Directory ────────────────────────────────────────────────────────────
 var SC_DIR = [
-  { ref:"HO1",   name:"Robotek Orders HO1",       wa:"918920239953", tag:"Orders"        },
-  { ref:"HO2",   name:"Robotek Orders HO2",        wa:"917217613621", tag:"Orders"        },
+  { ref:"HO",    name:"Robotek Head Office",        wa:"918851403037", tag:"Orders"        },
   { ref:"Store", name:"Robotek Experience Store",  wa:"917678596456", tag:"Store Orders"  },
   { ref:"GKP",   name:"Robotek Gorakhpur",         wa:"919839454510", tag:"Dealer Demand" },
 ];

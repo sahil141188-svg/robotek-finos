@@ -17,9 +17,9 @@ OUT_DIR  = os.path.join(os.path.dirname(__file__), "..", "public", "stock", "sc-
 # ── ADD YOUR SCS HERE ────────────────────────────────────────────────────────
 SCS = [
     # (label, ref_code, tagline)
-    ("Robotek Orders HO1",       "HO1",   "Order in Seconds!"),
-    ("Robotek Orders HO2",       "HO2",   "Order in Seconds!"),
+    ("Robotek Head Office",       "HO",    "Order in Seconds!"),
     ("Robotek Experience Store", "Store", "Scan & Order Now!"),
+    ("Robotek Gorakhpur",        "GKP",   "Order in Seconds!"),
     ("Robotek Gorakhpur",        "GKP",   "Order in Seconds!"),
 ]
 # ────────────────────────────────────────────────────────────────────────────
