@@ -18,7 +18,7 @@ import { formatQty } from "@/lib/format";
 import { SeasonalChart } from "@/components/sales/seasonal-chart";
 import { WhatsAppButton } from "@/components/sales/whatsapp-button";
 import { churnNudge, waLink } from "@/lib/sales/whatsapp-templates";
-import { Users, Target, TrendingUp, AlertTriangle, ChevronRight, Info } from "lucide-react";
+import { Users, Target, TrendingUp, AlertTriangle, ChevronRight, Info, Star } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -135,7 +135,7 @@ export default async function SalesPage() {
           <div className="px-5 py-4 border-b border-border">
             <h3 className="text-sm font-semibold text-brand-black">Breakeven Targets — top items</h3>
             <p className="text-xs text-brand-gray-mid mt-0.5">
-              Monthly baseline (history +10%) and this month&apos;s seasonal goal. Combined monthly baseline: <strong>{formatQty(kpis.monthlyTargetBaseline)} units</strong>.
+              Monthly baseline (history +10%) and this month&apos;s seasonal goal, ordered by value. <Star className="inline w-3 h-3 text-brand-yellow fill-brand-yellow" /> = high-value, push first.
             </p>
           </div>
           <div className="overflow-x-auto">
@@ -150,7 +150,10 @@ export default async function SalesPage() {
               <tbody>
                 {breakevenItems.map((it) => (
                   <tr key={it.id} className="border-t border-border hover:bg-brand-gray-light/40 transition-colors">
-                    <td className="px-5 py-2.5 font-medium text-brand-black">{it.name}</td>
+                    <td className="px-5 py-2.5 font-medium text-brand-black">
+                      {it.highValue && <Star className="inline w-3.5 h-3.5 mr-1.5 text-brand-yellow fill-brand-yellow align-text-bottom" />}
+                      {it.name}
+                    </td>
                     <td className="px-3 py-2.5 text-right text-brand-gray-mid">{formatQty(it.monthlyTarget)}</td>
                     <td className="px-5 py-2.5 text-right font-semibold text-brand-black">{formatQty(it.thisMonthTarget)}</td>
                   </tr>

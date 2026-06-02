@@ -13,7 +13,7 @@ import {
   TrendingDown, TrendingUp, FileText, Bell, LogOut,
   Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen, Brain,
   Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
-  Briefcase, GitBranch, UserPlus, ListChecks,
+  Briefcase, GitBranch, UserPlus, ListChecks, Sparkles,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -48,6 +48,7 @@ const NAV_ITEMS: {
   { href: "/dashboard/sales-os/pipeline",   label: "Pipeline",         icon: GitBranch,    permKey: "view_crm" },
   { href: "/dashboard/sales-os/accounts",   label: "Accounts",         icon: Building2,    permKey: "view_crm" },
   { href: "/dashboard/sales-os/activities", label: "Follow-ups",       icon: ListChecks,   permKey: "view_crm" },
+  { href: "/dashboard/sales-os/ai",         label: "AI Sales Coach",   icon: Sparkles,     permKey: "view_crm" },
   { href: "/dashboard/intel",        label: "Intelligence Hub",      icon: Brain,           permKey: null },
 ];
 

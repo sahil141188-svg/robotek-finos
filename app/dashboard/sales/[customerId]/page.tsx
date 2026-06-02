@@ -108,7 +108,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
               <Star className="w-4 h-4 text-brand-yellow fill-brand-yellow" />
               <div>
                 <h3 className="text-sm font-semibold text-brand-black">Focus items — push these</h3>
-                <p className="text-xs text-brand-gray-mid mt-0.5">Their regulars (bought 3+ months). Combined {MONTHS[currentMonth]} goal scales by season.</p>
+                <p className="text-xs text-brand-gray-mid mt-0.5">Their regulars (bought 3+ months), ordered by value. <Star className="inline w-3 h-3 text-brand-yellow fill-brand-yellow" /> = high-value, push first.</p>
               </div>
             </div>
             <span className="text-xs text-brand-gray-mid">Baseline <strong className="text-brand-black">{formatQty(focusMonthlyTotal)}</strong>/mo</span>
@@ -130,7 +130,10 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
                 )}
                 {focus.map((r) => (
                   <tr key={r.productId} className="border-t border-border hover:bg-brand-gray-light/40 transition-colors">
-                    <td className="px-5 py-2.5 font-medium text-brand-black">{r.productName}</td>
+                    <td className="px-5 py-2.5 font-medium text-brand-black">
+                      {r.highValue && <Star className="inline w-3.5 h-3.5 mr-1.5 text-brand-yellow fill-brand-yellow align-text-bottom" />}
+                      {r.productName}
+                    </td>
                     <td className="px-3 py-2.5 text-right text-brand-gray-mid">{formatQty(r.monthlyTarget)}</td>
                     <td className="px-3 py-2.5 text-right font-semibold text-brand-black">{formatQty(r.thisMonthTarget)}</td>
                     <td className="px-3 py-2.5 text-right text-brand-gray-mid">{r.monthsActive}/8 mo</td>

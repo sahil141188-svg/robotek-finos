@@ -42,7 +42,16 @@ export type BreakevenItem = {
   monthlyTarget: number;       // baseline monthly target (history +10%)
   thisMonthTarget: number;     // baseline * seasonal factor for current month
   totalSold: number;
+  highValue: boolean;          // ⭐ rough value signal — push first (no ₹ shown)
 };
+
+// sales_products + the new unit_value column (rough Rs/unit, reference only)
+type ProductRowV = ProductRow & { unit_value: number | null };
+/** A product is "high value" if its rough Rs/unit is at/above this. Internal only. */
+const HIGH_VALUE_PER_UNIT = 20;
+const isHighValue = (uv: number | null | undefined) => (uv ?? 0) >= HIGH_VALUE_PER_UNIT;
+/** Rough value-weight for ranking which items to push first (never displayed). */
+const valueWeight = (qty: number, uv: number | null | undefined) => qty * (uv ?? 0);
 
 export type OverviewKpis = {
   asOf: string | null;
@@ -103,7 +112,7 @@ export async function getSalesOverview(db: DB) {
     .from("sales_customer_item_targets").select("*", { count: "exact", head: true }).eq("is_focus", true);
 
   const custList = (customers ?? []) as CustomerRow[];
-  const prodList = (products ?? []) as ProductRow[];
+  const prodList = (products ?? []) as ProductRowV[];
 
   // reference "today" = latest order date in the data (historical dataset)
   const asOfStr = custList.reduce<string | null>(
@@ -115,16 +124,22 @@ export async function getSalesOverview(db: DB) {
   const churn = buildChurn(custList, asOf);
   const overdueCount = churn.filter((r) => r.overdueRatio >= 1.5).length;
 
-  const breakevenItems: BreakevenItem[] = prodList.map((p) => {
-    const monthlyTarget = p.monthly_target_qty ?? 0;
-    return {
-      id: p.id,
-      name: p.name,
-      monthlyTarget,
-      thisMonthTarget: Math.round(monthlyTarget * factor),
-      totalSold: p.total_qty_sold,
-    };
-  });
+  const breakevenItems: BreakevenItem[] = prodList
+    .map((p) => {
+      const monthlyTarget = p.monthly_target_qty ?? 0;
+      return {
+        id: p.id,
+        name: p.name,
+        monthlyTarget,
+        thisMonthTarget: Math.round(monthlyTarget * factor),
+        totalSold: p.total_qty_sold,
+        highValue: isHighValue(p.unit_value),
+        _w: valueWeight(p.total_qty_sold, p.unit_value),
+      };
+    })
+    // push the highest-value items first (rough signal, never shown)
+    .sort((a, b) => b._w - a._w)
+    .map(({ _w, ...rest }) => rest); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   const monthlyTargetBaseline = breakevenItems.reduce((a, b) => a + b.monthlyTarget, 0);
 
@@ -153,6 +168,7 @@ export type CustomerTargetRow = {
   lastQty: number | null;
   lastOrderedAt: string | null;
   isFocus: boolean;
+  highValue: boolean;          // ⭐ push first (rough value signal, no ₹ shown)
 };
 
 /** Per-customer detail: their focus + occasional item targets, and churn status. */
@@ -172,25 +188,33 @@ export async function getCustomerDetail(db: DB, customerId: string) {
   const targets = (targetsData ?? []) as TargetRow[];
   const latest = latestData as { last_order_at: string | null } | null;
 
-  // map product ids → names
+  // map product ids → name + rough unit value
   const ids = targets.map((t) => t.product_id);
   const nameMap = new Map<string, string>();
+  const valueMap = new Map<string, number | null>();
   if (ids.length) {
-    const { data: prods } = await sb.from("sales_products").select("id,name").in("id", ids);
-    for (const p of (prods ?? []) as Pick<ProductRow, "id" | "name">[]) nameMap.set(p.id, p.name);
+    const { data: prods } = await sb.from("sales_products").select("id,name,unit_value").in("id", ids);
+    for (const p of (prods ?? []) as Pick<ProductRowV, "id" | "name" | "unit_value">[]) {
+      nameMap.set(p.id, p.name);
+      valueMap.set(p.id, p.unit_value);
+    }
   }
 
-  const rows: CustomerTargetRow[] = targets.map((t) => ({
-    productId: t.product_id,
-    productName: nameMap.get(t.product_id) ?? "—",
-    monthlyTarget: t.monthly_target_qty,
-    thisMonthTarget: Math.round(t.monthly_target_qty * factor),
-    monthsActive: t.months_active,
-    totalQty: t.total_qty,
-    lastQty: t.last_qty,
-    lastOrderedAt: t.last_ordered_at,
-    isFocus: t.is_focus,
-  }));
+  const rows: CustomerTargetRow[] = targets
+    .map((t) => ({
+      productId: t.product_id,
+      productName: nameMap.get(t.product_id) ?? "—",
+      monthlyTarget: t.monthly_target_qty,
+      thisMonthTarget: Math.round(t.monthly_target_qty * factor),
+      monthsActive: t.months_active,
+      totalQty: t.total_qty,
+      lastQty: t.last_qty,
+      lastOrderedAt: t.last_ordered_at,
+      isFocus: t.is_focus,
+      highValue: isHighValue(valueMap.get(t.product_id)),
+    }))
+    // push high-value items first within each list (rough signal, never shown)
+    .sort((a, b) => valueWeight(b.monthlyTarget, valueMap.get(b.productId)) - valueWeight(a.monthlyTarget, valueMap.get(a.productId)));
 
   // churn status for this customer (as of latest order date in data)
   const asOf = latest?.last_order_at ? new Date(latest.last_order_at) : new Date();
