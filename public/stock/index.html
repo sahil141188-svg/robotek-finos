@@ -62,9 +62,11 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .chip.sel{background:var(--red);border-color:var(--red);color:#fff}
 .chip.sel .cdot{background:rgba(255,255,255,.6)}
 .chip.match{background:#fff8e1;border-color:#e8c800}
-.chip.oos{opacity:.5;cursor:not-allowed}
+.chip.oos{opacity:.75;cursor:pointer}
 .chip.oos .cdot{background:#bbb}
 .oosl{font-size:9px;font-weight:700;color:#b00;background:rgba(176,0,0,.1);border-radius:4px;padding:1px 5px}
+.enqbtn{display:block;margin-top:6px;background:none;border:1.5px dashed #ccc;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;width:100%;text-align:left}
+.enqbtn:active{background:#f5f4f4}
 .cq{font-size:10px;font-weight:700;color:var(--muted);background:rgba(0,0,0,.07);border-radius:4px;padding:1px 6px;flex-shrink:0}
 .chip.sel .cq{color:rgba(255,255,255,.8);background:rgba(255,255,255,.18)}
 .qctrl{display:none;flex-direction:column;gap:8px;margin-top:8px}
@@ -273,7 +275,8 @@ var T = {
     products:"Products", categories:"Categories",
     noResults:"No products found.", loading:"Loading live stock…",
     all:"All", fast:"Fast Selling", newl:"New Launch",
-    selectAll:"Select All", out:"Out",
+    selectAll:"Select All", out:"Out of Stock", enq:"📩 Enquire / Need This",
+    enqMsg:"Hi, I need *{name}* which shows Out of Stock.\nCan you check availability or suggest an alternative?\n\nThank you.",
     box:"Box", pcs:"Pcs", boxes:"Boxes",
     pcsTotal:"pcs total", loose:"loose pieces",
     yourOrder:"Your Order", tapReview:"Tap to review",
@@ -298,7 +301,8 @@ var T = {
     products:"उत्पाद", categories:"श्रेणियाँ",
     noResults:"कोई उत्पाद नहीं मिला।", loading:"स्टॉक लोड हो रहा है…",
     all:"सभी", fast:"तेज बिकने वाले", newl:"नई लॉन्च",
-    selectAll:"सब चुनें", out:"आउट",
+    selectAll:"सब चुनें", out:"स्टॉक में नहीं", enq:"📩 पूछताछ / चाहिए यह",
+    enqMsg:"नमस्ते, मुझे *{name}* चाहिए जो अभी Out of Stock दिख रहा है।\nकृपया उपलब्धता बताएं या कोई विकल्प सुझाएं।\n\nधन्यवाद।",
     box:"बॉक्स", pcs:"पीस", boxes:"बॉक्स",
     pcsTotal:"पीस कुल", loose:"खुले पीस",
     yourOrder:"आपका ऑर्डर", tapReview:"देखने के लिए टैप करें",
@@ -352,6 +356,7 @@ function applyLang(){
   // update dynamic chips if rendered
   document.querySelectorAll(".sabt").forEach(function(b){b.textContent=t.selectAll;});
   document.querySelectorAll(".oosl").forEach(function(b){b.textContent=t.out;});
+  document.querySelectorAll(".enqbtn").forEach(function(b){b.textContent=t.enq;});
   document.querySelectorAll(".qm[data-role='box']").forEach(function(b){b.textContent=t.box;});
   document.querySelectorAll(".qm[data-role='pcs']").forEach(function(b){b.textContent=t.pcs;});
   if(document.querySelectorAll(".chip").length>0) uB();
@@ -408,7 +413,10 @@ function chipHtml(p){
   var t=T[lang];
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
   if(!p.stock){
-    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'<span class="oosl">'+t.out+'</span></span></span>';
+    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'">'+
+      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'<span class="oosl">'+t.out+'</span></span>'+
+      '<button class="enqbtn" onclick="enquireItem(event,\''+esc(p.name)+'\')">'+t.enq+'</button>'+
+    '</span>';
   }
   return '<span class="chip" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'</span>'+qctrlHtml()+'</span>';
 }
@@ -669,6 +677,16 @@ var deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferredPrompt=e;document.getElementById("installBtn").style.display="block";});
 function doInstall(){if(!deferredPrompt){toast("Use browser menu → Add to Home Screen");return;}deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;document.getElementById("installBtn").style.display="none";});}
 window.addEventListener("appinstalled",function(){document.getElementById("installBtn").style.display="none";});
+
+/* ---------- ENQUIRE OUT OF STOCK ---------- */
+function enquireItem(ev, name){
+  if(ev) ev.stopPropagation();
+  var t=T[lang];
+  var cust=getCust();
+  var msg=t.enqMsg.replace("{name}",name);
+  if(cust.name) msg="*"+cust.name+"*\n"+msg;
+  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");
+}
 
 /* ---------- QR SHARE ---------- */
 function openQR(){document.getElementById("qrOvl").classList.add("show");}
