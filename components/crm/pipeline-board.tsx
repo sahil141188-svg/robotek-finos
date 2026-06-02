@@ -3,12 +3,16 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createDeal, moveDealStage } from "@/app/actions/crm";
+import { createDeal, moveDealStage, scheduleFollowup } from "@/app/actions/crm";
 import { DEAL_STAGES, DEAL_STAGE_LABELS, DEPARTMENT_SHORT, CRM_SOURCES } from "@/lib/crm/types";
 import { formatIndian } from "@/lib/format";
 import type { CrmDealStage } from "@/types/database";
 import type { DealWithNames } from "@/lib/crm/queries";
-import { Plus, X, Building2 } from "lucide-react";
+import { Plus, X, Building2, Clock, CalendarPlus } from "lucide-react";
+
+function fmtShort(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+}
 
 type AccountLite = { id: string; name: string };
 type SalesMember = { id: string; full_name: string };
@@ -16,12 +20,31 @@ type SalesMember = { id: string; full_name: string };
 const ALL_STAGES: CrmDealStage[] = DEAL_STAGES.map((s) => s.key);
 
 export function PipelineBoard({
-  deals, accounts, sales,
-}: { deals: DealWithNames[]; accounts: AccountLite[]; sales: SalesMember[] }) {
+  deals, accounts, sales, nextFollowups,
+}: {
+  deals: DealWithNames[]; accounts: AccountLite[]; sales: SalesMember[];
+  nextFollowups: Record<string, string>;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // inline follow-up scheduling, keyed by deal id
+  const [fuDeal, setFuDeal] = useState<string | null>(null);
+  const [fuDate, setFuDate] = useState("");
+  const [fuSubject, setFuSubject] = useState("");
+
+  function saveFollowup(dealId: string) {
+    start(async () => {
+      const r = await scheduleFollowup({ dealId, dueAt: fuDate, subject: fuSubject || "Follow-up" });
+      if (r.error) { setErr(r.error); return; }
+      setErr(null);
+      setFuDeal(null);
+      setFuDate("");
+      setFuSubject("");
+      router.refresh();
+    });
+  }
 
   function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -143,6 +166,44 @@ export function PipelineBoard({
                     >
                       {ALL_STAGES.map((s) => <option key={s} value={s}>{DEAL_STAGE_LABELS[s]}</option>)}
                     </select>
+
+                    {/* Next follow-up + inline scheduler */}
+                    <div className="mt-1.5 flex items-center justify-between">
+                      {nextFollowups[d.id] ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-700">
+                          <Clock className="w-3 h-3" />{fmtShort(nextFollowups[d.id])}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-brand-gray-mid">No follow-up</span>
+                      )}
+                      <button
+                        onClick={() => { setFuDeal(fuDeal === d.id ? null : d.id); setFuDate(""); setFuSubject(""); }}
+                        disabled={pending}
+                        className="inline-flex items-center gap-0.5 text-[10px] text-brand-red hover:underline disabled:opacity-60"
+                      >
+                        <CalendarPlus className="w-3 h-3" />{fuDeal === d.id ? "Cancel" : "Follow-up"}
+                      </button>
+                    </div>
+
+                    {fuDeal === d.id && (
+                      <div className="mt-1.5 space-y-1.5 rounded bg-brand-gray-light/60 p-1.5">
+                        <input
+                          type="datetime-local" value={fuDate} onChange={(e) => setFuDate(e.target.value)}
+                          className="w-full text-[11px] rounded border border-border px-1.5 py-1 bg-white"
+                        />
+                        <input
+                          value={fuSubject} onChange={(e) => setFuSubject(e.target.value)} placeholder="e.g. Call buyer"
+                          className="w-full text-[11px] rounded border border-border px-1.5 py-1 bg-white"
+                        />
+                        <button
+                          onClick={() => saveFollowup(d.id)}
+                          disabled={pending || !fuDate}
+                          className="w-full text-[11px] rounded bg-brand-red text-white py-1 font-medium hover:bg-brand-maroon disabled:opacity-50"
+                        >
+                          {pending ? "Saving…" : "Schedule"}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
                 {colDeals.length === 0 && <div className="text-[11px] text-brand-gray-mid text-center py-4">—</div>}

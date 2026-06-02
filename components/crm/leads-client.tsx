@@ -1,23 +1,45 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { createLead, updateLeadStatus, convertLead } from "@/app/actions/crm";
+import { createLead, updateLeadStatus, convertLead, scheduleFollowup } from "@/app/actions/crm";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, CRM_SOURCES } from "@/lib/crm/types";
 import { formatIndian } from "@/lib/format";
 import type { CrmLeadStatus } from "@/types/database";
 import type { LeadWithNames } from "@/lib/crm/queries";
-import { Plus, ArrowRight, Phone, Mail, X } from "lucide-react";
+import { Plus, ArrowRight, Phone, Mail, X, Clock, CalendarPlus } from "lucide-react";
 
 type SalesMember = { id: string; full_name: string };
 
 const STATUS_OPTIONS: CrmLeadStatus[] = ["new", "contacted", "qualified", "unqualified", "converted"];
 
-export function LeadsClient({ leads, sales }: { leads: LeadWithNames[]; sales: SalesMember[] }) {
+function fmtShort(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+}
+
+export function LeadsClient({
+  leads, sales, nextFollowups,
+}: { leads: LeadWithNames[]; sales: SalesMember[]; nextFollowups: Record<string, string> }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // inline follow-up scheduling, keyed by lead id
+  const [fuLead, setFuLead] = useState<string | null>(null);
+  const [fuDate, setFuDate] = useState("");
+  const [fuSubject, setFuSubject] = useState("");
+
+  function saveFollowup(leadId: string) {
+    start(async () => {
+      const r = await scheduleFollowup({ leadId, dueAt: fuDate, subject: fuSubject || "Follow-up lead" });
+      if (r.error) { setErr(r.error); return; }
+      setErr(null);
+      setFuLead(null);
+      setFuDate("");
+      setFuSubject("");
+      router.refresh();
+    });
+  }
 
   function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -116,10 +138,16 @@ export function LeadsClient({ leads, sales }: { leads: LeadWithNames[]; sales: S
               <tr><td colSpan={7} className="px-4 py-10 text-center text-brand-gray-mid">No leads yet. Click “New Lead” to add one.</td></tr>
             )}
             {leads.map((l) => (
-              <tr key={l.id} className="border-b border-border last:border-0 hover:bg-brand-gray-light/30">
+              <Fragment key={l.id}>
+              <tr className="border-b border-border last:border-0 hover:bg-brand-gray-light/30">
                 <td className="px-4 py-3">
                   <div className="font-medium text-brand-black">{l.name}</div>
                   {l.company && <div className="text-xs text-brand-gray-mid">{l.company}</div>}
+                  {nextFollowups[l.id] && (
+                    <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-amber-700">
+                      <Clock className="w-3 h-3" />Next: {fmtShort(nextFollowups[l.id])}
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-xs text-brand-gray-mid">
                   {l.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" />{l.phone}</div>}
@@ -139,7 +167,14 @@ export function LeadsClient({ leads, sales }: { leads: LeadWithNames[]; sales: S
                     {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>)}
                   </select>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <button
+                    onClick={() => { setFuLead(fuLead === l.id ? null : l.id); setFuDate(""); setFuSubject(""); }}
+                    disabled={pending}
+                    className="inline-flex items-center gap-1 text-xs text-brand-gray-mid hover:text-brand-black disabled:opacity-60 mr-3"
+                  >
+                    <CalendarPlus className="w-3 h-3" />{fuLead === l.id ? "Cancel" : "Follow-up"}
+                  </button>
                   {l.status === "converted" ? (
                     <span className="text-xs text-purple-600">Converted</span>
                   ) : (
@@ -153,6 +188,30 @@ export function LeadsClient({ leads, sales }: { leads: LeadWithNames[]; sales: S
                   )}
                 </td>
               </tr>
+              {fuLead === l.id && (
+                <tr className="bg-brand-gray-light/40 border-b border-border">
+                  <td colSpan={7} className="px-4 py-3">
+                    <div className="flex items-end gap-2 flex-wrap">
+                      <label className="block">
+                        <span className="text-[11px] font-medium text-brand-gray-mid mb-1 block">Follow-up date</span>
+                        <input type="datetime-local" value={fuDate} onChange={(e) => setFuDate(e.target.value)} className={inputCls} />
+                      </label>
+                      <label className="block flex-1 min-w-[200px]">
+                        <span className="text-[11px] font-medium text-brand-gray-mid mb-1 block">What to do</span>
+                        <input value={fuSubject} onChange={(e) => setFuSubject(e.target.value)} placeholder="e.g. Call to qualify / arrange meeting" className={inputCls} />
+                      </label>
+                      <button
+                        onClick={() => saveFollowup(l.id)}
+                        disabled={pending || !fuDate}
+                        className="px-3 py-2 bg-brand-red text-white rounded-lg text-xs font-medium hover:bg-brand-maroon disabled:opacity-50 transition-colors"
+                      >
+                        {pending ? "Saving…" : "Schedule"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+              </Fragment>
             ))}
           </tbody>
         </table>

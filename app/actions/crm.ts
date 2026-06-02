@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { CrmDealStage, CrmLeadStatus } from "@/types/database";
+import type { CrmDealStage, CrmLeadStatus, CrmActivityType } from "@/types/database";
 
 type Result = { error: string | null };
 
@@ -271,6 +271,43 @@ export async function toggleActivityDone(id: string, done: boolean): Promise<Res
     .update({ done, done_at: done ? new Date().toISOString() : null })
     .eq("id", id);
   if (error) return { error: error.message };
+  revalidatePath("/dashboard/sales-os/activities");
+  revalidatePath("/dashboard/sales-os");
+  return { error: null };
+}
+
+/**
+ * Quick-schedule a follow-up linked to a deal / lead / account, from inline
+ * shortcuts on the pipeline cards and lead rows. Owner = current user.
+ */
+export async function scheduleFollowup(input: {
+  subject: string;
+  dueAt: string;
+  type?: CrmActivityType;
+  dealId?: string | null;
+  leadId?: string | null;
+  accountId?: string | null;
+}): Promise<Result> {
+  const uid = await currentUserId();
+  if (!uid) return { error: "Not authenticated" };
+  if (!input.subject?.trim()) return { error: "Subject is required" };
+  if (!input.dueAt) return { error: "Pick a date" };
+
+  const supabase = (await createClient()) as any;
+  const { error } = await supabase.from("crm_activities").insert({
+    type: input.type ?? "call",
+    subject: input.subject.trim(),
+    due_at: input.dueAt,
+    owner_id: uid,
+    deal_id: input.dealId ?? null,
+    lead_id: input.leadId ?? null,
+    account_id: input.accountId ?? null,
+    created_by: uid,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/sales-os/pipeline");
+  revalidatePath("/dashboard/sales-os/leads");
   revalidatePath("/dashboard/sales-os/activities");
   revalidatePath("/dashboard/sales-os");
   return { error: null };

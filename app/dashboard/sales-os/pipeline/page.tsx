@@ -5,16 +5,17 @@
  * to the CRR team (handled by the DB trigger).
  */
 import { Header } from "@/components/layout/header";
-import { getDeals, getAccounts, getSalesTeam } from "@/lib/crm/queries";
+import { getDeals, getAccounts, getSalesTeam, getNextFollowupDates } from "@/lib/crm/queries";
 import { PipelineBoard } from "@/components/crm/pipeline-board";
 
 export const dynamic = "force-dynamic";
 
 export default async function PipelinePage() {
-  const [deals, accounts, sales] = await Promise.all([
+  const [deals, accounts, sales, followups] = await Promise.all([
     getDeals(),
     getAccounts(),
     getSalesTeam(),
+    getNextFollowupDates(),
   ]);
 
   return (
@@ -33,6 +34,7 @@ export default async function PipelinePage() {
           deals={deals}
           accounts={accounts.map((a) => ({ id: a.id, name: a.name }))}
           sales={sales}
+          nextFollowups={followups.byDeal}
         />
       </main>
     </>

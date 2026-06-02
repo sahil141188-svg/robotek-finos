@@ -328,3 +328,39 @@ export async function getFollowups(): Promise<FollowupItem[]> {
     };
   });
 }
+
+/**
+ * Earliest pending follow-up date per deal / lead / account. Used to show a
+ * "next follow-up" badge inline on the pipeline cards and lead rows.
+ */
+export async function getNextFollowupDates(): Promise<{
+  byDeal: Record<string, string>;
+  byLead: Record<string, string>;
+  byAccount: Record<string, string>;
+}> {
+  const sb = await db();
+  const { data } = await sb
+    .from("crm_activities")
+    .select("due_at, deal_id, lead_id, account_id")
+    .eq("done", false)
+    .not("due_at", "is", null)
+    .order("due_at", { ascending: true });
+
+  const rows = (data ?? []) as {
+    due_at: string;
+    deal_id: string | null;
+    lead_id: string | null;
+    account_id: string | null;
+  }[];
+
+  const byDeal: Record<string, string> = {};
+  const byLead: Record<string, string> = {};
+  const byAccount: Record<string, string> = {};
+  // rows are sorted ascending, so the first hit per id is the earliest.
+  for (const r of rows) {
+    if (r.deal_id && !byDeal[r.deal_id]) byDeal[r.deal_id] = r.due_at;
+    if (r.lead_id && !byLead[r.lead_id]) byLead[r.lead_id] = r.due_at;
+    if (r.account_id && !byAccount[r.account_id]) byAccount[r.account_id] = r.due_at;
+  }
+  return { byDeal, byLead, byAccount };
+}
