@@ -16,6 +16,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getSalesOverview } from "@/lib/supabase/sales-queries";
 import { formatQty } from "@/lib/format";
 import { SeasonalChart } from "@/components/sales/seasonal-chart";
+import { WhatsAppButton } from "@/components/sales/whatsapp-button";
+import { churnNudge, waLink } from "@/lib/sales/whatsapp-templates";
 import { Users, Target, TrendingUp, AlertTriangle, ChevronRight, Info } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -105,9 +107,12 @@ export default async function SalesPage() {
                       </span>
                     </td>
                     <td className="px-3 py-3 text-right">
-                      <Link href={`/dashboard/sales/${r.id}`} className="text-brand-gray-mid hover:text-brand-red inline-flex">
-                        <ChevronRight className="w-4 h-4" />
-                      </Link>
+                      <div className="inline-flex items-center gap-2 justify-end">
+                        <WhatsAppButton href={waLink(churnNudge(r.name), r.phone)} iconOnly size="sm" label={`WhatsApp ${r.name}`} />
+                        <Link href={`/dashboard/sales/${r.id}`} className="text-brand-gray-mid hover:text-brand-red inline-flex" aria-label="Open customer">
+                          <ChevronRight className="w-4 h-4" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

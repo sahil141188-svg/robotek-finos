@@ -11,6 +11,9 @@ import { Header } from "@/components/layout/header";
 import { createClient } from "@/lib/supabase/server";
 import { getCustomerDetail } from "@/lib/supabase/sales-queries";
 import { formatQty } from "@/lib/format";
+import { WhatsAppButton } from "@/components/sales/whatsapp-button";
+import { CustomerPhone } from "@/components/sales/customer-phone";
+import { churnNudgeWithItems, waLink } from "@/lib/sales/whatsapp-templates";
 import { ArrowLeft, Star, Clock, Package, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +67,21 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
           <Stat label="Total orders" value={`${customer.total_orders}`} />
           <Stat label="Last order" value={fmtDate(customer.last_order_at)} />
           <Stat label="Segment" value={customer.segment ? customer.segment.toUpperCase() : "—"} />
-          {customer.phone && <Stat label="Phone" value={customer.phone} />}
+        </div>
+
+        {/* ── WhatsApp action bar ── */}
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-white p-4">
+          <WhatsAppButton
+            href={waLink(churnNudgeWithItems(customer.name, focus.map((f) => ({ name: f.productName }))), customer.phone)}
+            label="Send WhatsApp nudge"
+          />
+          <span className="text-xs text-brand-gray-mid max-w-xs">
+            Opens WhatsApp with a ready message listing their regular items.
+            {customer.phone ? "" : " Add a number to send directly."}
+          </span>
+          <div className="ml-auto">
+            <CustomerPhone id={customer.id} phone={customer.phone} />
+          </div>
         </div>
 
         {/* ── Focus items ── */}

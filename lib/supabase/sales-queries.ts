@@ -27,6 +27,7 @@ type TargetRow = Database["public"]["Tables"]["sales_customer_item_targets"]["Ro
 export type ChurnRow = {
   id: string;
   name: string;
+  phone: string | null;
   segment: string | null;
   totalOrders: number;
   lastOrderAt: string | null;
@@ -76,6 +77,7 @@ function buildChurn(
     rows.push({
       id: c.id,
       name: c.name,
+      phone: c.phone,
       segment: c.segment,
       totalOrders: c.total_orders,
       lastOrderAt: c.last_order_at,
