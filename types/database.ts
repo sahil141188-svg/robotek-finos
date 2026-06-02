@@ -18,6 +18,9 @@ export type CrmAccountStatus = "prospect" | "active" | "dormant" | "lost";
 export type CrmLeadStatus    = "new" | "contacted" | "qualified" | "unqualified" | "converted";
 export type CrmDealStage     = "new" | "qualified" | "quoted" | "negotiation" | "won" | "lost";
 export type CrmActivityType  = "call" | "whatsapp" | "meeting" | "visit" | "email" | "task" | "note";
+export type CrmLeadType      = "corporate" | "channel_partner";
+export type CrmDripStatus    = "none" | "active" | "done" | "stopped";
+export type CrmDripMsgStatus = "pending" | "sent" | "skipped" | "failed" | "cancelled";
 
 /** All granular module permissions — stored as JSONB on each user row */
 export type UserPermissions = {
@@ -693,6 +696,9 @@ export type Database = {
           name: string;
           company: string | null;
           status: CrmLeadStatus;
+          lead_type: CrmLeadType;
+          drip_status: CrmDripStatus;
+          drip_started_at: string | null;
           source: string | null;
           phone: string | null;
           email: string | null;
@@ -712,6 +718,9 @@ export type Database = {
           name: string;
           company?: string | null;
           status?: CrmLeadStatus;
+          lead_type?: CrmLeadType;
+          drip_status?: CrmDripStatus;
+          drip_started_at?: string | null;
           source?: string | null;
           phone?: string | null;
           email?: string | null;
@@ -728,6 +737,9 @@ export type Database = {
           name?: string;
           company?: string | null;
           status?: CrmLeadStatus;
+          lead_type?: CrmLeadType;
+          drip_status?: CrmDripStatus;
+          drip_started_at?: string | null;
           source?: string | null;
           phone?: string | null;
           email?: string | null;
@@ -739,6 +751,42 @@ export type Database = {
           converted_account_id?: string | null;
           converted_at?: string | null;
           updated_at?: string;
+        };
+      };
+      crm_drip_messages: {
+        Row: {
+          id: string;
+          lead_id: string;
+          sequence: CrmLeadType;
+          step_no: number;
+          channel: string;
+          scheduled_for: string;
+          body: string;
+          status: CrmDripMsgStatus;
+          sent_at: string | null;
+          error: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          sequence: CrmLeadType;
+          step_no: number;
+          channel?: string;
+          scheduled_for: string;
+          body: string;
+          status?: CrmDripMsgStatus;
+          sent_at?: string | null;
+          error?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          status?: CrmDripMsgStatus;
+          scheduled_for?: string;
+          body?: string;
+          sent_at?: string | null;
+          error?: string | null;
         };
       };
       crm_deals: {

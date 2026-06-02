@@ -2,9 +2,47 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { CrmDealStage, CrmLeadStatus, CrmActivityType } from "@/types/database";
+import type { CrmDealStage, CrmLeadStatus, CrmActivityType, CrmLeadType } from "@/types/database";
+import { DRIP_SEQUENCES, renderDrip } from "@/lib/crm/drip";
 
 type Result = { error: string | null };
+
+/**
+ * Schedule a lead's drip sequence as dated WhatsApp messages and mark the
+ * lead's drip active. Bodies are rendered now so the cron just sends them.
+ * Assumes the caller already checked the lead isn't mid-drip.
+ */
+async function enrollDrip(
+  supabase: any,
+  lead: { id: string; name: string; company: string | null; lead_type: CrmLeadType | null },
+  uid: string | null
+): Promise<void> {
+  const type: CrmLeadType = lead.lead_type ?? "channel_partner";
+  const seq = DRIP_SEQUENCES[type] ?? [];
+  if (seq.length === 0) return;
+
+  const base = new Date();
+  const rows = seq.map((s) => {
+    const d = new Date(base);
+    d.setDate(d.getDate() + s.day);
+    return {
+      lead_id: lead.id,
+      sequence: type,
+      step_no: s.step,
+      channel: "whatsapp",
+      scheduled_for: d.toISOString().slice(0, 10), // YYYY-MM-DD
+      body: renderDrip(s.body, { name: lead.name, company: lead.company }),
+      status: "pending",
+      created_by: uid,
+    };
+  });
+
+  await supabase.from("crm_drip_messages").insert(rows);
+  await supabase
+    .from("crm_leads")
+    .update({ drip_status: "active", drip_started_at: new Date().toISOString() })
+    .eq("id", lead.id);
+}
 
 /** Returns the current auth user id, or null if not signed in. */
 async function currentUserId(): Promise<string | null> {
@@ -40,6 +78,7 @@ export async function createLead(formData: FormData): Promise<Result> {
   const supabase = (await createClient()) as any;
   const { error } = await supabase.from("crm_leads").insert({
     name,
+    lead_type: (str(formData, "lead_type") as never) ?? "channel_partner",
     company: str(formData, "company"),
     source: str(formData, "source"),
     phone: str(formData, "phone"),
@@ -62,6 +101,52 @@ export async function updateLeadStatus(id: string, status: CrmLeadStatus): Promi
   const supabase = (await createClient()) as any;
   const { error } = await supabase.from("crm_leads").update({ status }).eq("id", id);
   if (error) return { error: error.message };
+
+  // Auto-enroll into the drip sequence when a lead is qualified (once).
+  if (status === "qualified") {
+    const { data: lead } = await supabase
+      .from("crm_leads")
+      .select("id, name, company, lead_type, drip_status")
+      .eq("id", id)
+      .single();
+    if (lead && lead.drip_status === "none") {
+      const uid = await currentUserId();
+      await enrollDrip(supabase, lead, uid);
+    }
+  }
+
+  revalidatePath("/dashboard/sales-os/leads");
+  revalidatePath("/dashboard/sales-os");
+  return { error: null };
+}
+
+/** Manually start a lead's drip sequence (if not already active). */
+export async function startDrip(leadId: string): Promise<Result> {
+  const uid = await currentUserId();
+  const supabase = (await createClient()) as any;
+  const { data: lead } = await supabase
+    .from("crm_leads")
+    .select("id, name, company, lead_type, drip_status")
+    .eq("id", leadId)
+    .single();
+  if (!lead) return { error: "Lead not found" };
+  if (lead.drip_status === "active") return { error: "Drip is already running for this lead" };
+
+  await enrollDrip(supabase, lead, uid);
+  revalidatePath("/dashboard/sales-os/leads");
+  revalidatePath("/dashboard/sales-os");
+  return { error: null };
+}
+
+/** Stop a lead's drip: cancel all still-pending messages. */
+export async function stopDrip(leadId: string): Promise<Result> {
+  const supabase = (await createClient()) as any;
+  await supabase
+    .from("crm_drip_messages")
+    .update({ status: "cancelled" })
+    .eq("lead_id", leadId)
+    .eq("status", "pending");
+  await supabase.from("crm_leads").update({ drip_status: "stopped" }).eq("id", leadId);
   revalidatePath("/dashboard/sales-os/leads");
   return { error: null };
 }

@@ -2,8 +2,9 @@
 
 import { useState, useTransition, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { createLead, updateLeadStatus, convertLead, scheduleFollowup } from "@/app/actions/crm";
+import { createLead, updateLeadStatus, convertLead, scheduleFollowup, startDrip, stopDrip } from "@/app/actions/crm";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, CRM_SOURCES } from "@/lib/crm/types";
+import { LEAD_TYPE_LABELS, DRIP_STATUS_LABELS, DRIP_STATUS_COLORS } from "@/lib/crm/drip";
 import { formatIndian } from "@/lib/format";
 import type { CrmLeadStatus } from "@/types/database";
 import type { LeadWithNames } from "@/lib/crm/queries";
@@ -71,6 +72,15 @@ export function LeadsClient({
     });
   }
 
+  function handleDrip(id: string, action: "start" | "stop") {
+    start(async () => {
+      const r = action === "start" ? await startDrip(id) : await stopDrip(id);
+      if (r.error) { setErr(r.error); return; }
+      setErr(null);
+      router.refresh();
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -91,6 +101,12 @@ export function LeadsClient({
       {open && (
         <form onSubmit={handleCreate} className="rounded-xl border border-border bg-white p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="Name *"><input name="name" required className={inputCls} placeholder="Person or business" /></Field>
+          <Field label="Lead type">
+            <select name="lead_type" className={inputCls} defaultValue="channel_partner">
+              <option value="channel_partner">Channel Partner (SS / distributor / dealer)</option>
+              <option value="corporate">Corporate (brand / OEM / bulk buyer)</option>
+            </select>
+          </Field>
           <Field label="Company"><input name="company" className={inputCls} /></Field>
           <Field label="Source">
             <select name="source" className={inputCls} defaultValue="">
@@ -130,19 +146,20 @@ export function LeadsClient({
               <th className="px-4 py-3 font-medium text-right">Est. Value</th>
               <th className="px-4 py-3 font-medium">Owner</th>
               <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Drip</th>
               <th className="px-4 py-3 font-medium text-right">Action</th>
             </tr>
           </thead>
           <tbody>
             {leads.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-brand-gray-mid">No leads yet. Click “New Lead” to add one.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-brand-gray-mid">No leads yet. Click “New Lead” to add one.</td></tr>
             )}
             {leads.map((l) => (
               <Fragment key={l.id}>
               <tr className="border-b border-border last:border-0 hover:bg-brand-gray-light/30">
                 <td className="px-4 py-3">
                   <div className="font-medium text-brand-black">{l.name}</div>
-                  {l.company && <div className="text-xs text-brand-gray-mid">{l.company}</div>}
+                  <div className="text-[10px] text-brand-gray-mid">{LEAD_TYPE_LABELS[l.lead_type]}{l.company ? ` · ${l.company}` : ""}</div>
                   {nextFollowups[l.id] && (
                     <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-amber-700">
                       <Clock className="w-3 h-3" />Next: {fmtShort(nextFollowups[l.id])}
@@ -167,6 +184,20 @@ export function LeadsClient({
                     {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{LEAD_STATUS_LABELS[s]}</option>)}
                   </select>
                 </td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-col items-start gap-1">
+                    <span className={`text-[11px] rounded-full px-2 py-0.5 font-medium ${DRIP_STATUS_COLORS[l.drip_status]}`}>
+                      {DRIP_STATUS_LABELS[l.drip_status]}
+                    </span>
+                    {l.drip_status === "active" ? (
+                      <button onClick={() => handleDrip(l.id, "stop")} disabled={pending} className="text-[11px] text-amber-700 hover:underline disabled:opacity-60">Stop</button>
+                    ) : (
+                      <button onClick={() => handleDrip(l.id, "start")} disabled={pending} className="text-[11px] text-emerald-700 hover:underline disabled:opacity-60">
+                        {l.drip_status === "none" ? "Start drip" : "Restart"}
+                      </button>
+                    )}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
                   <button
                     onClick={() => { setFuLead(fuLead === l.id ? null : l.id); setFuDate(""); setFuSubject(""); }}
@@ -190,7 +221,7 @@ export function LeadsClient({
               </tr>
               {fuLead === l.id && (
                 <tr className="bg-brand-gray-light/40 border-b border-border">
-                  <td colSpan={7} className="px-4 py-3">
+                  <td colSpan={8} className="px-4 py-3">
                     <div className="flex items-end gap-2 flex-wrap">
                       <label className="block">
                         <span className="text-[11px] font-medium text-brand-gray-mid mb-1 block">Follow-up date</span>
