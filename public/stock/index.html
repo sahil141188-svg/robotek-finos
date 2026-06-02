@@ -733,6 +733,9 @@ function toggleBasket(){
 function clearAll(){
   var chips=document.querySelectorAll(".chip.sel");
   for(var i=0;i<chips.length;i++){chips[i].classList.remove("sel");resetChip(chips[i]);}
+  var enqs=document.querySelectorAll(".chip.oos.enq-sel");
+  var t=T[lang];
+  for(var i=0;i<enqs.length;i++){enqs[i].classList.remove("enq-sel");var eb=enqs[i].querySelector(".enqbtn");if(eb)eb.textContent=t.enq;}
   uB();bOpen=false;
   document.getElementById("bpnl").classList.remove("open");
   document.getElementById("barr").classList.remove("up");
@@ -740,7 +743,9 @@ function clearAll(){
 
 /* ---------- ORDER ---------- */
 function placeOrder(){
-  var sel=document.querySelectorAll(".chip.sel");if(!sel.length)return;
+  var sel=document.querySelectorAll(".chip.sel");
+  var enq=document.querySelectorAll(".chip.oos.enq-sel");
+  if(!sel.length&&!enq.length)return;
   var cust=getCust();
   var d=new Date();var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var ds=d.getDate()+" "+mo[d.getMonth()]+" "+d.getFullYear();
@@ -767,6 +772,13 @@ function placeOrder(){
       var totStr=totalQty!==""?" = "+totalQty+" pcs":"";
       msg+=(i+1)+". "+nm+" — "+qLabel(sel[i])+bxStr+totStr+"\n";
       items.push({name:nm,qty:qLabel(sel[i]),boxes:oq,boxSize:bxNum||"",totalQty:totalQty,mode:"box"});
+    }
+  }
+  // Add enquiry section if any OOS items selected
+  if(enq.length>0){
+    msg+="\n"+t.enqSection+"\n";
+    for(var k=0;k<enq.length;k++){
+      msg+=(sel.length+k+1)+". "+enq[k].getAttribute("data-name")+" (Out of Stock)\n";
     }
   }
   msg+="\n"+t.confirmTxt+"\n\n"+t.thanks;
