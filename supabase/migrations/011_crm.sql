@@ -17,7 +17,7 @@ create type crm_department as enum ('crr', 'nbd');
 -- A finance-only user simply has crm_team_role = null.
 create type crm_team_role as enum (
   'lead_gen',          -- NBD: sources & qualifies new leads
-  'sales_coordinator', -- SC: takes orders only (both depts)
+  'sales_coordinator', -- SC: CRR = takes orders only; NBD = owns lead journey (meeting→negotiation→conversion, follow-ups)
   'sales_expert',      -- closes the deal (both depts)
   'crm',               -- Account Manager (job title "CRM"): docs, updates, reporting, payment reminders — "manages everything"
   'fsr',               -- NBD: field sales rep (on-ground visits)

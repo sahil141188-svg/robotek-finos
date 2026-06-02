@@ -62,11 +62,14 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .chip.sel{background:var(--red);border-color:var(--red);color:#fff}
 .chip.sel .cdot{background:rgba(255,255,255,.6)}
 .chip.match{background:#fff8e1;border-color:#e8c800}
-.chip.oos{opacity:.75;cursor:pointer}
+.chip.oos{opacity:.7;cursor:pointer}
 .chip.oos .cdot{background:#bbb}
+.chip.oos.enq-sel{opacity:1;background:#fffbeb;border-color:#f59e0b}
+.chip.oos.enq-sel .cdot{background:#f59e0b}
 .oosl{font-size:9px;font-weight:700;color:#b00;background:rgba(176,0,0,.1);border-radius:4px;padding:1px 5px}
-.enqbtn{display:block;margin-top:6px;background:none;border:1.5px dashed #ccc;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;width:100%;text-align:left}
-.enqbtn:active{background:#f5f4f4}
+.enqbtn{display:block;margin-top:6px;background:none;border:1.5px dashed #ccc;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;width:100%;text-align:center;transition:all .15s}
+.chip.oos.enq-sel .enqbtn{background:#fef3c7;border-color:#f59e0b;border-style:solid;color:#92400e}
+.enqbtn:active{opacity:.7}
 .cq{font-size:10px;font-weight:700;color:var(--muted);background:rgba(0,0,0,.07);border-radius:4px;padding:1px 6px;flex-shrink:0}
 .chip.sel .cq{color:rgba(255,255,255,.8);background:rgba(255,255,255,.18)}
 .qctrl{display:none;flex-direction:column;gap:8px;margin-top:8px}
@@ -322,8 +325,8 @@ var T = {
     products:"Products", categories:"Categories",
     noResults:"No products found.", loading:"Loading live stock…",
     all:"All", fast:"Fast Selling", newl:"New Launch",
-    selectAll:"Select All", out:"Out of Stock", enq:"📩 Enquire / Need This",
-    enqMsg:"Hi, I need *{name}* which shows Out of Stock.\nCan you check availability or suggest an alternative?\n\nThank you.",
+    selectAll:"Select All", out:"Out of Stock", enq:"📩 Add to Enquiry", enqSel:"✓ Enquiry Added",
+    enqSection:"Also Enquiring (Out of Stock):",
     box:"Box", pcs:"Inner Box", boxes:"Boxes",
     pcsTotal:"pcs total", inrTotal:"pcs",
     yourOrder:"Your Order", tapReview:"Tap to review",
@@ -366,8 +369,8 @@ var T = {
     products:"उत्पाद", categories:"श्रेणियाँ",
     noResults:"कोई उत्पाद नहीं मिला।", loading:"स्टॉक लोड हो रहा है…",
     all:"सभी", fast:"तेज बिकने वाले", newl:"नई लॉन्च",
-    selectAll:"सब चुनें", out:"स्टॉक में नहीं", enq:"📩 पूछताछ / चाहिए यह",
-    enqMsg:"नमस्ते, मुझे *{name}* चाहिए जो अभी Out of Stock दिख रहा है।\nकृपया उपलब्धता बताएं या कोई विकल्प सुझाएं।\n\nधन्यवाद।",
+    selectAll:"सब चुनें", out:"स्टॉक में नहीं", enq:"📩 पूछताछ में जोड़ें", enqSel:"✓ जोड़ा गया",
+    enqSection:"पूछताछ (स्टॉक में नहीं):",
     box:"बॉक्स", pcs:"इनर बॉक्स", boxes:"बॉक्स",
     pcsTotal:"पीस कुल", inrTotal:"पीस",
     yourOrder:"आपका ऑर्डर", tapReview:"देखने के लिए टैप करें",
@@ -439,7 +442,8 @@ function applyLang(){
   // update dynamic chips if rendered
   document.querySelectorAll(".sabt").forEach(function(b){b.textContent=t.selectAll;});
   document.querySelectorAll(".oosl").forEach(function(b){b.textContent=t.out;});
-  document.querySelectorAll(".enqbtn").forEach(function(b){b.textContent=t.enq;});
+  document.querySelectorAll(".chip.oos:not(.enq-sel) .enqbtn").forEach(function(b){b.textContent=t.enq;});
+  document.querySelectorAll(".chip.oos.enq-sel .enqbtn").forEach(function(b){b.textContent=t.enqSel;});
   document.querySelectorAll(".qm[data-role='box']").forEach(function(b){b.textContent=t.box;});
   document.querySelectorAll(".qm[data-role='pcs']").forEach(function(b){b.textContent=t.pcs;});
   if(document.querySelectorAll(".chip").length>0) uB();
@@ -497,9 +501,9 @@ function chipHtml(p){
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
   var inr=p.inner?'<span class="cq" style="color:#1a56db;background:rgba(26,86,219,.08)">In:'+esc(p.inner)+'</span>':'';
   if(!p.stock){
-    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'">'+
+    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" onclick="tEnq(this)">'+
       '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+inr+'<span class="oosl">'+t.out+'</span></span>'+
-      '<button class="enqbtn" onclick="enquireItem(event,\''+esc(p.name)+'\')">'+t.enq+'</button>'+
+      '<button class="enqbtn">'+t.enq+'</button>'+
     '</span>';
   }
   return '<span class="chip" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+inr+'</span>'+qctrlHtml()+'</span>';
@@ -664,30 +668,57 @@ function doSearch(){
 
 /* ---------- BASKET ---------- */
 function uB(){
-  var sel=document.querySelectorAll(".chip.sel"),n=sel.length;
-  document.getElementById("bbar").classList.toggle("show",n>0);
-  document.getElementById("bct").textContent=n;
-  document.getElementById("blistsub").textContent=n+" item"+(n!==1?"s":"")+" selected";
+  var sel=document.querySelectorAll(".chip.sel");
+  var enq=document.querySelectorAll(".chip.oos.enq-sel");
+  var total=sel.length+enq.length;
+  document.getElementById("bbar").classList.toggle("show",total>0);
+  document.getElementById("bct").textContent=total;
+  var t=T[lang];
+  var orderTxt=sel.length+" item"+(sel.length!==1?"s":"");
+  var enqTxt=enq.length>0?" + "+enq.length+" enquiry":"";
+  document.getElementById("blistsub").textContent=orderTxt+enqTxt;
   var list=document.getElementById("blist");list.innerHTML="";
+  // Order items
   for(var i=0;i<sel.length;i++){
     var chip=sel[i],bx=chip.getAttribute("data-bx"),nm=chip.getAttribute("data-name")||"";
-    var mode=chip.dataset.mode||"box";
-    var oq=parseInt(chip.dataset.oq,10)||1;
-    var lbl=qLabel(chip);
-    var sub="";
-    var t=T[lang];
+    var mode=chip.dataset.mode||"box",oq=parseInt(chip.dataset.oq,10)||1;
+    var lbl=qLabel(chip),sub="";
     var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
     if(mode==="box"&&bx){var tot=oq*parseFloat(bx);sub="Bx:"+bx+" · "+tot+" pcs";}
     else if(mode==="pcs"&&inrNum){sub="In:"+inrNum+" · "+(oq*inrNum)+" pcs total";}
-    else if(mode==="pcs"){sub=t.pcs;}
     var row=document.createElement("div");row.className="bitm";
     row.innerHTML="<div><div class='bnm'>"+esc(nm)+"</div><div class='bqt'>"+lbl+(sub?" · "+sub:"")+"</div></div><button class='brm' data-n='"+esc(nm)+"' onclick='rI(this)'>&#10005;</button>";
     list.appendChild(row);
+  }
+  // Enquiry divider + items
+  if(enq.length>0){
+    var div=document.createElement("div");
+    div.style.cssText="padding:7px 16px 4px;font-size:10px;font-weight:700;color:#92400e;background:#fffbeb;border-top:1px solid #fde68a;letter-spacing:.5px;text-transform:uppercase";
+    div.textContent="📩 "+t.enqSection.replace(":","");
+    list.appendChild(div);
+    for(var j=0;j<enq.length;j++){
+      var enm=enq[j].getAttribute("data-name")||"";
+      var er=document.createElement("div");er.className="bitm";
+      er.style.background="#fffbeb";
+      er.innerHTML="<div><div class='bnm'>"+esc(enm)+"</div><div class='bqt' style='color:#92400e'>Out of Stock — Enquiry</div></div><button class='brm' data-n='"+esc(enm)+"' data-enq='1' onclick='rEnq(this)'>&#10005;</button>";
+      list.appendChild(er);
+    }
   }
 }
 function rI(btn){
   var n=btn.getAttribute("data-n"),chips=document.querySelectorAll(".chip");
   for(var i=0;i<chips.length;i++){if(chips[i].getAttribute("data-name")===n){chips[i].classList.remove("sel");resetChip(chips[i]);}}
+  uB();
+}
+function rEnq(btn){
+  var n=btn.getAttribute("data-n"),chips=document.querySelectorAll(".chip.oos");
+  var t=T[lang];
+  for(var i=0;i<chips.length;i++){
+    if(chips[i].getAttribute("data-name")===n){
+      chips[i].classList.remove("enq-sel");
+      var eb=chips[i].querySelector(".enqbtn");if(eb)eb.textContent=t.enq;
+    }
+  }
   uB();
 }
 function toggleBasket(){
@@ -868,14 +899,13 @@ function maybeShowInstallSheet(){
   setTimeout(showInstallSheet, 4000);
 }
 
-/* ---------- ENQUIRE OUT OF STOCK ---------- */
-function enquireItem(ev, name){
-  if(ev) ev.stopPropagation();
+/* ---------- ENQUIRY TOGGLE (OUT OF STOCK) ---------- */
+function tEnq(el){
+  el.classList.toggle("enq-sel");
   var t=T[lang];
-  var cust=getCust();
-  var msg=t.enqMsg.replace("{name}",name);
-  if(cust.name) msg="*"+cust.name+"*\n"+msg;
-  window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");
+  var btn=el.querySelector(".enqbtn");
+  if(btn) btn.textContent=el.classList.contains("enq-sel")?t.enqSel:t.enq;
+  uB();
 }
 
 /* ---------- QR SHARE ---------- */

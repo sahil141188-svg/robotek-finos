@@ -99,7 +99,7 @@ export default async function CrmOverviewPage() {
             icon={<Sparkles className="w-5 h-5 text-blue-600" />}
             tag="NBD"
             title={DEPARTMENT_LABELS.nbd}
-            line="Lead Gen → SC (orders) → Sales Expert → FSR"
+            line="Lead Gen → SC owns journey (meet → negotiate → convert) → Sales Expert → FSR"
             count={o.nbdAccounts}
             countLabel="prospect/new accounts"
             href="/dashboard/sales-os/leads"
