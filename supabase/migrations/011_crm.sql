@@ -18,14 +18,15 @@ create type crm_department as enum ('crr', 'nbd');
 create type crm_team_role as enum (
   'lead_gen',          -- NBD: sources & qualifies new leads
   'sales_coordinator', -- SC: CRR = takes orders only; NBD = owns lead journey (meeting→negotiation→conversion, follow-ups)
-  'sales_expert',      -- closes the deal (both depts)
+  'sales_expert',      -- senior OSR: escalation backup for SC + field marketing for Super Stockists (new dealers/distributors, new territories)
   'crm',               -- Account Manager (job title "CRM"): docs, updates, reporting, payment reminders — "manages everything"
   'fsr',               -- NBD: field sales rep (on-ground visits)
   'sales_head'         -- department head / sales admin
 );
 
+-- Distribution hierarchy: Super Stockist → Distributor → Dealer → Retailer
 create type crm_account_type as enum (
-  'dealer', 'distributor', 'retailer', 'oem', 'other'
+  'super_stockist', 'distributor', 'dealer', 'retailer', 'oem', 'other'
 );
 
 create type crm_account_status as enum (

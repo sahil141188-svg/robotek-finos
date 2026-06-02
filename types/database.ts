@@ -13,7 +13,7 @@ export type CrmTeamRole =
   | "fsr"
   | "sales_head";
 
-export type CrmAccountType   = "dealer" | "distributor" | "retailer" | "oem" | "other";
+export type CrmAccountType   = "super_stockist" | "distributor" | "dealer" | "retailer" | "oem" | "other";
 export type CrmAccountStatus = "prospect" | "active" | "dormant" | "lost";
 export type CrmLeadStatus    = "new" | "contacted" | "qualified" | "unqualified" | "converted";
 export type CrmDealStage     = "new" | "qualified" | "quoted" | "negotiation" | "won" | "lost";

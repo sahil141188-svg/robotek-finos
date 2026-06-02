@@ -25,7 +25,7 @@ export const DEPARTMENT_SHORT: Record<CrmDepartment, string> = {
 export const TEAM_ROLE_LABELS: Record<CrmTeamRole, string> = {
   lead_gen:          "Lead Generation",
   sales_coordinator: "Sales Coordinator (Orders)",
-  sales_expert:      "Sales Expert",
+  sales_expert:      "Sales Expert (Senior OSR)",
   crm:               "CRM (Account Manager)",
   fsr:               "Field Sales Rep",
   sales_head:        "Sales Head",
@@ -35,7 +35,7 @@ export const TEAM_ROLE_LABELS: Record<CrmTeamRole, string> = {
 export const TEAM_ROLE_DESC: Record<CrmTeamRole, string> = {
   lead_gen:          "Sources & qualifies new leads",
   sales_coordinator: "Role depends on department — see CRR vs NBD below",
-  sales_expert:      "Closes the deal",
+  sales_expert:      "Senior OSR — backs up SC on stuck orders & major issues; does field marketing for Super Stockists: visits new dealers/distributors, opens new territories",
   crm:               "Manages everything: documents, updates, reporting, payment reminders",
   fsr:               "Field visits & on-ground sales",
   sales_head:        "Department head / sales admin",
@@ -58,11 +58,12 @@ export function roleDescription(role: CrmTeamRole | null, dept: CrmDepartment | 
 }
 
 export const ACCOUNT_TYPE_LABELS: Record<CrmAccountType, string> = {
-  dealer:      "Dealer",
-  distributor: "Distributor",
-  retailer:    "Retailer",
-  oem:         "OEM",
-  other:       "Other",
+  super_stockist: "Super Stockist (SS)",
+  distributor:    "Distributor",
+  dealer:         "Dealer",
+  retailer:       "Retailer",
+  oem:            "OEM",
+  other:          "Other",
 };
 
 export const ACCOUNT_STATUS_LABELS: Record<CrmAccountStatus, string> = {
