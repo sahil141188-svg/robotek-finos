@@ -47,7 +47,7 @@ const NAV_ITEMS: {
   { href: "/dashboard/sales-os/leads",      label: "Leads",            icon: UserPlus,     permKey: "view_crm" },
   { href: "/dashboard/sales-os/pipeline",   label: "Pipeline",         icon: GitBranch,    permKey: "view_crm" },
   { href: "/dashboard/sales-os/accounts",   label: "Accounts",         icon: Building2,    permKey: "view_crm" },
-  { href: "/dashboard/sales-os/activities", label: "Activities",       icon: ListChecks,   permKey: "view_crm" },
+  { href: "/dashboard/sales-os/activities", label: "Follow-ups",       icon: ListChecks,   permKey: "view_crm" },
   { href: "/dashboard/intel",        label: "Intelligence Hub",      icon: Brain,           permKey: null },
 ];
 

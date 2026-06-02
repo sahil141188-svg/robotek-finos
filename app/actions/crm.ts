@@ -272,5 +272,57 @@ export async function toggleActivityDone(id: string, done: boolean): Promise<Res
     .eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/dashboard/sales-os/activities");
+  revalidatePath("/dashboard/sales-os");
+  return { error: null };
+}
+
+/** Reschedule (snooze) a follow-up to a new due date. */
+export async function rescheduleActivity(id: string, dueAt: string): Promise<Result> {
+  if (!dueAt) return { error: "Pick a new date" };
+  const supabase = (await createClient()) as any;
+  const { error } = await supabase
+    .from("crm_activities")
+    .update({ due_at: dueAt, done: false, done_at: null })
+    .eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/sales-os/activities");
+  return { error: null };
+}
+
+/**
+ * Complete a follow-up AND immediately schedule the next one against the same
+ * lead/deal/account — keeps the NBD journey's follow-up chain unbroken.
+ */
+export async function completeAndScheduleNext(
+  id: string,
+  nextDueAt: string,
+  nextSubject?: string
+): Promise<Result> {
+  if (!nextDueAt) return { error: "Pick a date for the next follow-up" };
+  const uid = await currentUserId();
+  const supabase = (await createClient()) as any;
+
+  const { data: act } = await supabase.from("crm_activities").select("*").eq("id", id).single();
+  if (!act) return { error: "Follow-up not found" };
+
+  await supabase
+    .from("crm_activities")
+    .update({ done: true, done_at: new Date().toISOString() })
+    .eq("id", id);
+
+  const { error } = await supabase.from("crm_activities").insert({
+    type: act.type,
+    subject: nextSubject?.trim() || `Follow-up: ${act.subject}`,
+    due_at: nextDueAt,
+    owner_id: act.owner_id ?? uid,
+    account_id: act.account_id,
+    deal_id: act.deal_id,
+    lead_id: act.lead_id,
+    created_by: uid,
+  });
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/sales-os/activities");
+  revalidatePath("/dashboard/sales-os");
   return { error: null };
 }

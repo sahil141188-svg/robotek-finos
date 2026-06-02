@@ -122,7 +122,7 @@ export default async function CrmOverviewPage() {
           <QuickLink href="/dashboard/sales-os/leads" icon={<UserPlus className="w-4 h-4" />} label="Leads" />
           <QuickLink href="/dashboard/sales-os/pipeline" icon={<GitBranch className="w-4 h-4" />} label="Pipeline" />
           <QuickLink href="/dashboard/sales-os/accounts" icon={<Building2 className="w-4 h-4" />} label="Accounts" />
-          <QuickLink href="/dashboard/sales-os/activities" icon={<ListChecks className="w-4 h-4" />} label="Activities" />
+          <QuickLink href="/dashboard/sales-os/activities" icon={<ListChecks className="w-4 h-4" />} label="Follow-ups" />
         </div>
       </main>
     </>

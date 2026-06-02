@@ -11,7 +11,7 @@
  * casting the client to `any` and casting results back to typed Rows.
  */
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/types/database";
+import type { Database, CrmDepartment } from "@/types/database";
 
 type Account  = Database["public"]["Tables"]["crm_accounts"]["Row"];
 type Contact  = Database["public"]["Tables"]["crm_contacts"]["Row"];
@@ -244,4 +244,87 @@ export async function getActivities(): Promise<ActivityWithNames[]> {
     owner_name: a.owner_id ? names.get(a.owner_id) ?? null : null,
     account_name: a.account_id ? accMap.get(a.account_id) ?? null : null,
   }));
+}
+
+// ── FOLLOW-UPS COCKPIT ──────────────────────────────────────
+// Activities enriched with their lead/deal/account context, the owning
+// department, and a due-date bucket — so the NBD SC can work the journey.
+
+export type FollowupBucket = "overdue" | "today" | "upcoming" | "someday" | "done";
+
+export type FollowupItem = ActivityWithNames & {
+  context_label: string | null;
+  context_href: string | null;
+  department: CrmDepartment | null;
+  bucket: FollowupBucket;
+};
+
+/** Classify a follow-up by its due date (local day boundaries). */
+function bucketFor(due: string | null, done: boolean): FollowupBucket {
+  if (done) return "done";
+  if (!due) return "someday";
+  const d = new Date(due);
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startTomorrow = new Date(startToday);
+  startTomorrow.setDate(startTomorrow.getDate() + 1);
+  if (d < startToday) return "overdue";
+  if (d < startTomorrow) return "today";
+  return "upcoming";
+}
+
+export async function getFollowups(): Promise<FollowupItem[]> {
+  const sb = await db();
+  const [{ data: acts }, names, { data: accs }, { data: deals }, { data: leads }] =
+    await Promise.all([
+      sb.from("crm_activities").select("*").order("due_at", { ascending: true, nullsFirst: false }),
+      userNameMap(sb),
+      sb.from("crm_accounts").select("id, name, department"),
+      sb.from("crm_deals").select("id, title, department, account_id"),
+      sb.from("crm_leads").select("id, name"),
+    ]);
+
+  const accMap = new Map<string, { name: string; department: CrmDepartment }>();
+  ((accs ?? []) as { id: string; name: string; department: CrmDepartment }[])
+    .forEach((a) => accMap.set(a.id, { name: a.name, department: a.department }));
+
+  const dealMap = new Map<string, { title: string; department: CrmDepartment; account_id: string | null }>();
+  ((deals ?? []) as { id: string; title: string; department: CrmDepartment; account_id: string | null }[])
+    .forEach((d) => dealMap.set(d.id, { title: d.title, department: d.department, account_id: d.account_id }));
+
+  const leadMap = new Map<string, string>();
+  ((leads ?? []) as { id: string; name: string }[]).forEach((l) => leadMap.set(l.id, l.name));
+
+  const rows = (acts ?? []) as Activity[];
+  return rows.map((a) => {
+    let context_label: string | null = null;
+    let context_href: string | null = null;
+    let department: CrmDepartment | null = null;
+
+    if (a.deal_id && dealMap.has(a.deal_id)) {
+      const d = dealMap.get(a.deal_id)!;
+      context_label = d.title;
+      department = d.department;
+      context_href = d.account_id ? `/dashboard/sales-os/accounts/${d.account_id}` : "/dashboard/sales-os/pipeline";
+    } else if (a.lead_id && leadMap.has(a.lead_id)) {
+      context_label = leadMap.get(a.lead_id)!;
+      department = "nbd";
+      context_href = "/dashboard/sales-os/leads";
+    } else if (a.account_id && accMap.has(a.account_id)) {
+      const ac = accMap.get(a.account_id)!;
+      context_label = ac.name;
+      department = ac.department;
+      context_href = `/dashboard/sales-os/accounts/${a.account_id}`;
+    }
+
+    return {
+      ...a,
+      owner_name: a.owner_id ? names.get(a.owner_id) ?? null : null,
+      account_name: a.account_id ? accMap.get(a.account_id)?.name ?? null : null,
+      context_label,
+      context_href,
+      department,
+      bucket: bucketFor(a.due_at, a.done),
+    };
+  });
 }
