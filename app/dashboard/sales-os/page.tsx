@@ -99,7 +99,7 @@ export default async function CrmOverviewPage() {
             icon={<Sparkles className="w-5 h-5 text-blue-600" />}
             tag="NBD"
             title={DEPARTMENT_LABELS.nbd}
-            line="Lead Gen → Sales Coordinator → Sales Expert → FSR"
+            line="Lead Gen → SC (orders) → Sales Expert → FSR"
             count={o.nbdAccounts}
             countLabel="prospect/new accounts"
             href="/dashboard/sales-os/leads"
@@ -109,7 +109,7 @@ export default async function CrmOverviewPage() {
             icon={<Repeat className="w-5 h-5 text-emerald-600" />}
             tag="CRR"
             title={DEPARTMENT_LABELS.crr}
-            line="Sales Coordinator → CRM Manager → Sales Expert"
+            line="SC (orders) · CRM (docs, updates, payment reminders) · Sales Expert"
             count={o.crrAccounts}
             countLabel="retained accounts"
             href="/dashboard/sales-os/accounts"

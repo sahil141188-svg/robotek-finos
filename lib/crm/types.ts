@@ -24,11 +24,21 @@ export const DEPARTMENT_SHORT: Record<CrmDepartment, string> = {
 
 export const TEAM_ROLE_LABELS: Record<CrmTeamRole, string> = {
   lead_gen:          "Lead Generation",
-  sales_coordinator: "Sales Coordinator",
+  sales_coordinator: "Sales Coordinator (Orders)",
   sales_expert:      "Sales Expert",
-  crm:               "CRM (Customer Sales Rep Exec)",
+  crm:               "CRM (Account Manager)",
   fsr:               "Field Sales Rep",
   sales_head:        "Sales Head",
+};
+
+/** What each role is responsible for — shown as helper text in the UI */
+export const TEAM_ROLE_DESC: Record<CrmTeamRole, string> = {
+  lead_gen:          "Sources & qualifies new leads",
+  sales_coordinator: "Takes orders only",
+  sales_expert:      "Closes the deal",
+  crm:               "Manages everything: documents, updates, reporting, payment reminders",
+  fsr:               "Field visits & on-ground sales",
+  sales_head:        "Department head / sales admin",
 };
 
 export const ACCOUNT_TYPE_LABELS: Record<CrmAccountType, string> = {
