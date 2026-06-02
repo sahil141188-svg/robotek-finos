@@ -17,6 +17,8 @@
 var HEADER = ["Timestamp", "Order ID", "Customer", "Phone", "Order Date",
               "Product", "Boxes", "Box Size", "Total Qty (pcs)"];
 
+var ENQ_HEADER = ["Timestamp", "Order ID", "Customer", "Phone", "Date", "Product Enquired"];
+
 // ── SC Directory ────────────────────────────────────────────────────────────
 var SC_DIR = [
   { ref:"HO",    name:"Robotek Head Office",        wa:"918851403037", tag:"Orders"        },
@@ -134,6 +136,25 @@ function setupAnalytics(ss) {
   a.setFrozenRows(2);
 }
 
+function logEnquiries(ss, data, orderId, ts) {
+  var enqs = data.enquiries || [];
+  if (!enqs.length) return;
+
+  var sheet = ss.getSheetByName("Enquiries");
+  if (!sheet) {
+    sheet = ss.insertSheet("Enquiries");
+    sheet.appendRow(ENQ_HEADER);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, ENQ_HEADER.length)
+      .setBackground("#1a237e").setFontColor("#F7DA11").setFontWeight("bold");
+  }
+
+  var rows = enqs.map(function(product) {
+    return [ts, orderId, data.customer || "", "'" + (data.phone || ""), data.date || "", product];
+  });
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, ENQ_HEADER.length).setValues(rows);
+}
+
 function doPost(e) {
   try {
     var data    = JSON.parse(e.postData.contents);
@@ -148,7 +169,11 @@ function doPost(e) {
     var ts      = new Date();
     var orderId = "ORD-" + ts.getTime().toString(36).toUpperCase();
     var items   = data.items || [];
-    if (!items.length) return json({ ok: false, error: "no items" });
+    var hasEnq  = (data.enquiries || []).length > 0;
+    if (!items.length && !hasEnq) return json({ ok: false, error: "no items" });
+
+    // Log enquiries to separate tab
+    logEnquiries(ss, data, orderId, ts);
 
     var rows = items.map(function(it) {
       var boxes   = Number(it.boxes) || 0;
@@ -158,8 +183,10 @@ function doPost(e) {
               it.name || "", boxes, boxSize, total];
     });
 
-    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, HEADER.length).setValues(rows);
-    return json({ ok: true, orderId: orderId, lines: rows.length, tab: tabName });
+    if (rows.length > 0) {
+      sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, HEADER.length).setValues(rows);
+    }
+    return json({ ok: true, orderId: orderId, lines: rows.length, enquiries: (data.enquiries||[]).length, tab: tabName });
   } catch(err) {
     return json({ ok: false, error: String(err) });
   }
@@ -179,13 +206,18 @@ function doGet(e) {
     getSheet(ss, "Orders");
     getSheet(ss, "Store Orders");
     getSheet(ss, "Dealer Demand");
+    logEnquiries(ss, {enquiries:["_setup_check_"], customer:"Setup", phone:"", date:""}, "SETUP", new Date());
     setupAnalytics(ss);
+    // clean up the dummy setup row
+    var eq = ss.getSheetByName("Enquiries");
+    if (eq && eq.getLastRow() > 1) eq.deleteRow(eq.getLastRow());
     return ContentService.createTextOutput(
       "✅ All tabs created:\n" +
       "• SC Directory\n" +
       "• Orders (HO team)\n" +
       "• Store Orders (Experience Store)\n" +
       "• Dealer Demand (Gorakhpur SS)\n" +
+      "• Enquiries\n" +
       "• Demand Analytics\n\n" +
       "Open your Google Sheet to see them."
     );

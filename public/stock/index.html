@@ -782,7 +782,9 @@ function placeOrder(){
     }
   }
   msg+="\n"+t.confirmTxt+"\n\n"+t.thanks;
-  logOrder({customer:cust.name,phone:cust.phone,date:ds,items:items});
+  var enqNames=[];
+  for(var e=0;e<enq.length;e++) enqNames.push(enq[e].getAttribute("data-name")||"");
+  logOrder({customer:cust.name,phone:cust.phone,date:ds,items:items,enquiries:enqNames});
   window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");
 }
 function logOrder(payload){
