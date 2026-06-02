@@ -112,6 +112,26 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .mbtn{width:100%;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer;margin-top:6px}
 .toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--black);color:#fff;font-size:13px;font-weight:500;padding:12px 20px;border-radius:10px;z-index:600;opacity:0;transition:.3s;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.3)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ── Install bottom sheet ── */
+#installSheet{position:fixed;inset:0;z-index:700;display:none;flex-direction:column;justify-content:flex-end}
+#installSheet.show{display:flex}
+.isOverlay{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.isCard{position:relative;background:#fff;border-radius:22px 22px 0 0;padding:20px 20px 32px;max-width:560px;width:100%;margin:0 auto;box-shadow:0 -8px 40px rgba(0,0,0,.18);transform:translateY(100%);transition:transform .35s cubic-bezier(.32,1.25,.52,1)}
+#installSheet.show .isCard{transform:translateY(0)}
+.isPill{width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 16px}
+.isHead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.isIcon{width:52px;height:52px;border-radius:13px;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+.isTitle{font-size:17px;font-weight:700;color:var(--black);line-height:1.2}
+.isSub{font-size:12px;color:var(--muted);margin-top:2px}
+.isSteps{background:#f7f5f6;border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.isStep{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--text);padding:5px 0}
+.isStep+.isStep{border-top:1px solid #ece9ea}
+.isStepNum{background:var(--red);color:#fff;font-size:11px;font-weight:700;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.isStepTxt{flex:1;line-height:1.4}
+.isStepTxt b{color:var(--black)}
+.isInstallBtn{width:100%;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;margin-bottom:10px}
+.isLater{width:100%;background:none;border:none;font-family:inherit;font-size:13px;color:var(--muted);padding:8px;cursor:pointer}
+.isLater span{text-decoration:underline;text-underline-offset:2px}
 #installBtn{display:none;background:var(--yellow);color:var(--black);border:none;font-family:inherit;font-size:11px;font-weight:700;padding:6px 11px;border-radius:8px;cursor:pointer}
 .ltog{display:flex;background:#F0EEEF;border-radius:20px;padding:3px;gap:2px}
 .lbtn{background:transparent;border:none;font-family:inherit;font-size:11px;font-weight:600;padding:5px 11px;border-radius:16px;cursor:pointer;color:#aaa;line-height:1;transition:all .18s}
@@ -206,6 +226,26 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 
 <div class="toast" id="toast"></div>
 
+<!-- Install / Add to Home Screen bottom sheet -->
+<div id="installSheet">
+  <div class="isOverlay" onclick="dismissInstall('later')"></div>
+  <div class="isCard">
+    <div class="isPill"></div>
+    <div class="isHead">
+      <div class="isIcon">📦</div>
+      <div>
+        <div class="isTitle" id="is-title">Add Robotek Stock to Home Screen</div>
+        <div class="isSub" id="is-sub">Open in one tap — like a real app</div>
+      </div>
+    </div>
+    <div class="isSteps" id="is-steps"></div>
+    <button class="isInstallBtn" id="is-btn" onclick="doInstallSheet()">⤓ Add to Home Screen</button>
+    <button class="isLater" onclick="dismissInstall('later')">
+      <span id="is-later">Maybe Later</span>
+    </button>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    ROBOTEK LIVE STOCK  —  CONFIG
@@ -289,6 +329,24 @@ var T = {
     shareTitle:"Share Robotek Stock",
     shareDesc:"Scan to open on phone. Save & print to share with customers.",
     dlQR:"⬇ Save QR Image", clQR:"Close",
+    isTitle:"Add Robotek Stock to Home Screen",
+    isSub:"Open in one tap — like a real app, always ready",
+    isBtn:"⤓ Add to Home Screen", isLater:"Maybe Later",
+    isAndroid:[
+      {n:1,t:'Tap <b>Install</b> below — takes 2 seconds'},
+      {n:2,t:'Tap <b>Add</b> when prompted'},
+      {n:3,t:'Open the <b>Robotek Stock</b> icon from your home screen'},
+    ],
+    isIOS:[
+      {n:1,t:'Tap the <b>Share</b> button <b>⬆</b> at the bottom of Safari'},
+      {n:2,t:'Scroll and tap <b>"Add to Home Screen"</b>'},
+      {n:3,t:'Tap <b>"Add"</b> in the top right corner'},
+    ],
+    isOther:[
+      {n:1,t:'Tap the <b>browser menu</b> (⋮ or ☰)'},
+      {n:2,t:'Tap <b>"Add to Home Screen"</b> or <b>"Install App"</b>'},
+      {n:3,t:'Open <b>Robotek Stock</b> from your home screen'},
+    ],
     orderTitle:"*Robotek Order Request*",
     fromLbl:"From", phoneLbl2:"Phone", dateLbl:"Date",
     productsReq:"Products Required:", confirmTxt:"Kindly confirm pricing and dispatch.",
@@ -315,6 +373,24 @@ var T = {
     shareTitle:"Robotek Stock शेयर करें",
     shareDesc:"फोन पर खोलने के लिए स्कैन करें। प्रिंट करके ग्राहकों को दें।",
     dlQR:"⬇ QR इमेज सेव करें", clQR:"बंद करें",
+    isTitle:"Robotek Stock होम स्क्रीन पर लगाएं",
+    isSub:"एक टैप में खुलेगा — बिल्कुल ऐप की तरह",
+    isBtn:"⤓ होम स्क्रीन पर लगाएं", isLater:"बाद में",
+    isAndroid:[
+      {n:1,t:'नीचे <b>Install</b> दबाएं — 2 सेकंड लगेंगे'},
+      {n:2,t:'<b>Add</b> पर टैप करें'},
+      {n:3,t:'होम स्क्रीन से <b>Robotek Stock</b> खोलें'},
+    ],
+    isIOS:[
+      {n:1,t:'Safari में नीचे <b>Share ⬆</b> बटन दबाएं'},
+      {n:2,t:'<b>"Add to Home Screen"</b> पर टैप करें'},
+      {n:3,t:'ऊपर दाईं तरफ <b>"Add"</b> दबाएं'},
+    ],
+    isOther:[
+      {n:1,t:'ब्राउज़र मेनू <b>(⋮ या ☰)</b> खोलें'},
+      {n:2,t:'<b>"Add to Home Screen"</b> पर टैप करें'},
+      {n:3,t:'होम स्क्रीन से <b>Robotek Stock</b> खोलें'},
+    ],
     orderTitle:"*Robotek ऑर्डर अनुरोध*",
     fromLbl:"नाम", phoneLbl2:"फ़ोन", dateLbl:"तारीख",
     productsReq:"आवश्यक उत्पाद:", confirmTxt:"कृपया कीमत और डिस्पैच की पुष्टि करें।",
@@ -679,14 +755,88 @@ function saveName(){
   localStorage.setItem("rb_cust",JSON.stringify({name:name,phone:phone}));
   document.getElementById("nameOvl").classList.remove("show");
   refreshWho();toast("Welcome, "+name+"!");
+  setTimeout(maybeShowInstallSheet,2000);
 }
 function toast(t){var el=document.getElementById("toast");el.textContent=t;el.classList.add("show");setTimeout(function(){el.classList.remove("show");},2200);}
 
 /* ---------- PWA INSTALL ---------- */
 var deferredPrompt=null;
-window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();deferredPrompt=e;document.getElementById("installBtn").style.display="block";});
-function doInstall(){if(!deferredPrompt){toast("Use browser menu → Add to Home Screen");return;}deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;document.getElementById("installBtn").style.display="none";});}
-window.addEventListener("appinstalled",function(){document.getElementById("installBtn").style.display="none";});
+window.addEventListener("beforeinstallprompt",function(e){
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById("installBtn").style.display="block";
+});
+function doInstall(){
+  if(!deferredPrompt){toast("Use browser menu → Add to Home Screen");return;}
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(function(){deferredPrompt=null;document.getElementById("installBtn").style.display="none";});
+}
+window.addEventListener("appinstalled",function(){
+  document.getElementById("installBtn").style.display="none";
+  hideInstallSheet();
+  toast("✅ App installed! Open from your home screen.");
+});
+
+/* ---------- INSTALL BOTTOM SHEET ---------- */
+function isStandalone(){
+  return window.matchMedia("(display-mode: standalone)").matches||window.navigator.standalone===true;
+}
+function getPlatform(){
+  var ua=navigator.userAgent;
+  if(/iPad|iPhone|iPod/.test(ua)&&!window.MSStream) return "ios";
+  if(/android/i.test(ua)) return "android";
+  return "other";
+}
+function buildSteps(steps){
+  return steps.map(function(s){
+    return '<div class="isStep"><div class="isStepNum">'+s.n+'</div><div class="isStepTxt">'+s.t+'</div></div>';
+  }).join("");
+}
+function showInstallSheet(){
+  var t=T[lang];
+  var plat=getPlatform();
+  var steps=plat==="ios"?t.isIOS:(plat==="android"?t.isAndroid:t.isOther);
+  document.getElementById("is-title").textContent=t.isTitle;
+  document.getElementById("is-sub").textContent=t.isSub;
+  document.getElementById("is-steps").innerHTML=buildSteps(steps);
+  document.getElementById("is-btn").textContent=t.isBtn;
+  document.getElementById("is-later").textContent=t.isLater;
+  // Android with native prompt: show install button; iOS: rename to "Got it, show me how"
+  if(plat==="ios"||(!deferredPrompt&&plat!=="android")){
+    document.getElementById("is-btn").textContent=(lang==="hi")?"समझ गया, दिखाएं ✓":"Got it — I'll follow the steps ✓";
+  }
+  document.getElementById("installSheet").classList.add("show");
+}
+function hideInstallSheet(){
+  document.getElementById("installSheet").classList.remove("show");
+}
+function dismissInstall(type){
+  hideInstallSheet();
+  var now=Date.now();
+  if(type==="later"){localStorage.setItem("rb_install_dismissed",now);}
+  else{localStorage.setItem("rb_install_never","1");}
+}
+function doInstallSheet(){
+  var plat=getPlatform();
+  if(plat==="android"&&deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(r){
+      deferredPrompt=null;
+      if(r.outcome==="accepted"){hideInstallSheet();toast("✅ App installed!");}
+    });
+  }else{
+    // iOS or other — just close (steps are visible)
+    hideInstallSheet();
+    toast(lang==="hi"?"ऊपर दिए steps follow करें 👆":"Follow the steps above 👆");
+  }
+}
+function maybeShowInstallSheet(){
+  if(isStandalone()) return;                                  // already installed
+  if(localStorage.getItem("rb_install_never")) return;       // never show again
+  var dis=parseInt(localStorage.getItem("rb_install_dismissed")||"0",10);
+  if(dis&&Date.now()-dis<3*24*60*60*1000) return;            // dismissed < 3 days ago
+  // show after 4s (let user see the app first)
+  setTimeout(showInstallSheet, 4000);
+}
 
 /* ---------- ENQUIRE OUT OF STOCK ---------- */
 function enquireItem(ev, name){
@@ -709,6 +859,7 @@ function boot(){
   applyLang();
   refreshWho();
   if(!getCust().name)openName();
+  else maybeShowInstallSheet();   // only show if name modal won't appear
   loadStock();
   if("serviceWorker" in navigator){navigator.serviceWorker.register("/stock/sw.js",{scope:"/stock/"}).catch(function(){});}
 }

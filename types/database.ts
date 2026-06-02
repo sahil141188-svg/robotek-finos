@@ -1,6 +1,24 @@
 /** Roles available in the UI. Bug #6 fix: added "coo" which exists in DB enum. */
 export type UserRole = "ceo" | "cfo" | "coo" | "accounts" | "ca";
 
+/** CRM department — which sales team owns a record */
+export type CrmDepartment = "crr" | "nbd";
+
+/** Sales-team role, layered on top of the finance UserRole (nullable per user) */
+export type CrmTeamRole =
+  | "lead_gen"
+  | "sales_coordinator"
+  | "sales_expert"
+  | "crm"
+  | "fsr"
+  | "sales_head";
+
+export type CrmAccountType   = "dealer" | "distributor" | "retailer" | "oem" | "other";
+export type CrmAccountStatus = "prospect" | "active" | "dormant" | "lost";
+export type CrmLeadStatus    = "new" | "contacted" | "qualified" | "unqualified" | "converted";
+export type CrmDealStage     = "new" | "qualified" | "quoted" | "negotiation" | "won" | "lost";
+export type CrmActivityType  = "call" | "whatsapp" | "meeting" | "visit" | "email" | "task" | "note";
+
 /** All granular module permissions — stored as JSONB on each user row */
 export type UserPermissions = {
   view_dashboard:  boolean;
@@ -13,6 +31,8 @@ export type UserPermissions = {
   view_review:     boolean;
   view_alerts:     boolean;
   admin_users:     boolean;
+  view_crm:        boolean;  // CRM module — view leads, pipeline, accounts
+  manage_crm:      boolean;  // CRM module — create/edit leads, deals, accounts
 };
 
 export type Database = {
@@ -29,6 +49,8 @@ export type Database = {
           whatsapp_number: string | null;
           notify_whatsapp: boolean;
           notify_email: boolean;
+          crm_department: CrmDepartment | null;
+          crm_team_role: CrmTeamRole | null;
           created_at: string;
           updated_at: string;
         };
@@ -42,6 +64,8 @@ export type Database = {
           whatsapp_number?: string | null;
           notify_whatsapp?: boolean;
           notify_email?: boolean;
+          crm_department?: CrmDepartment | null;
+          crm_team_role?: CrmTeamRole | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -55,6 +79,8 @@ export type Database = {
           whatsapp_number?: string | null;
           notify_whatsapp?: boolean;
           notify_email?: boolean;
+          crm_department?: CrmDepartment | null;
+          crm_team_role?: CrmTeamRole | null;
           updated_at?: string;
         };
       };
@@ -570,6 +596,247 @@ export type Database = {
           last_qty?: number | null;
           last_ordered_at?: string | null;
           is_focus?: boolean;
+          updated_at?: string;
+        };
+      };
+      crm_accounts: {
+        Row: {
+          id: string;
+          name: string;
+          type: CrmAccountType;
+          department: CrmDepartment;
+          status: CrmAccountStatus;
+          owner_id: string | null;
+          gstin: string | null;
+          phone: string | null;
+          email: string | null;
+          city: string | null;
+          state: string | null;
+          address: string | null;
+          notes: string | null;
+          handed_off_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          type?: CrmAccountType;
+          department?: CrmDepartment;
+          status?: CrmAccountStatus;
+          owner_id?: string | null;
+          gstin?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          city?: string | null;
+          state?: string | null;
+          address?: string | null;
+          notes?: string | null;
+          handed_off_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          name?: string;
+          type?: CrmAccountType;
+          department?: CrmDepartment;
+          status?: CrmAccountStatus;
+          owner_id?: string | null;
+          gstin?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          city?: string | null;
+          state?: string | null;
+          address?: string | null;
+          notes?: string | null;
+          handed_off_at?: string | null;
+          updated_at?: string;
+        };
+      };
+      crm_contacts: {
+        Row: {
+          id: string;
+          account_id: string;
+          name: string;
+          designation: string | null;
+          phone: string | null;
+          email: string | null;
+          is_primary: boolean;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          account_id: string;
+          name: string;
+          designation?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          is_primary?: boolean;
+          notes?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          name?: string;
+          designation?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          is_primary?: boolean;
+          notes?: string | null;
+          updated_at?: string;
+        };
+      };
+      crm_leads: {
+        Row: {
+          id: string;
+          name: string;
+          company: string | null;
+          status: CrmLeadStatus;
+          source: string | null;
+          phone: string | null;
+          email: string | null;
+          city: string | null;
+          state: string | null;
+          est_value: number;
+          assigned_to: string | null;
+          notes: string | null;
+          converted_account_id: string | null;
+          converted_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          company?: string | null;
+          status?: CrmLeadStatus;
+          source?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          city?: string | null;
+          state?: string | null;
+          est_value?: number;
+          assigned_to?: string | null;
+          notes?: string | null;
+          converted_account_id?: string | null;
+          converted_at?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          name?: string;
+          company?: string | null;
+          status?: CrmLeadStatus;
+          source?: string | null;
+          phone?: string | null;
+          email?: string | null;
+          city?: string | null;
+          state?: string | null;
+          est_value?: number;
+          assigned_to?: string | null;
+          notes?: string | null;
+          converted_account_id?: string | null;
+          converted_at?: string | null;
+          updated_at?: string;
+        };
+      };
+      crm_deals: {
+        Row: {
+          id: string;
+          title: string;
+          account_id: string | null;
+          department: CrmDepartment;
+          stage: CrmDealStage;
+          value: number;
+          probability: number;
+          owner_id: string | null;
+          expected_close: string | null;
+          lost_reason: string | null;
+          won_at: string | null;
+          lost_at: string | null;
+          source: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          account_id?: string | null;
+          department?: CrmDepartment;
+          stage?: CrmDealStage;
+          value?: number;
+          probability?: number;
+          owner_id?: string | null;
+          expected_close?: string | null;
+          lost_reason?: string | null;
+          won_at?: string | null;
+          lost_at?: string | null;
+          source?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          title?: string;
+          account_id?: string | null;
+          department?: CrmDepartment;
+          stage?: CrmDealStage;
+          value?: number;
+          probability?: number;
+          owner_id?: string | null;
+          expected_close?: string | null;
+          lost_reason?: string | null;
+          won_at?: string | null;
+          lost_at?: string | null;
+          source?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
+      };
+      crm_activities: {
+        Row: {
+          id: string;
+          type: CrmActivityType;
+          subject: string;
+          body: string | null;
+          due_at: string | null;
+          done: boolean;
+          done_at: string | null;
+          owner_id: string | null;
+          account_id: string | null;
+          lead_id: string | null;
+          deal_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          type?: CrmActivityType;
+          subject: string;
+          body?: string | null;
+          due_at?: string | null;
+          done?: boolean;
+          done_at?: string | null;
+          owner_id?: string | null;
+          account_id?: string | null;
+          lead_id?: string | null;
+          deal_id?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          type?: CrmActivityType;
+          subject?: string;
+          body?: string | null;
+          due_at?: string | null;
+          done?: boolean;
+          done_at?: string | null;
+          owner_id?: string | null;
+          account_id?: string | null;
+          lead_id?: string | null;
+          deal_id?: string | null;
           updated_at?: string;
         };
       };

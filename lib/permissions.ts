@@ -60,6 +60,19 @@ export const PERMISSION_META: {
     description: "View bank account balances, cash flow, and transaction analysis",
     group: "Operations",
   },
+  // Sales OS
+  {
+    key: "view_crm",
+    label: "Sales OS (View)",
+    description: "View leads, sales pipeline, accounts, and activities",
+    group: "Sales OS",
+  },
+  {
+    key: "manage_crm",
+    label: "Sales OS (Manage)",
+    description: "Create and edit leads, deals, accounts, and log activities",
+    group: "Sales OS",
+  },
   // System
   {
     key: "view_alerts",
@@ -81,6 +94,7 @@ export const PERMISSION_GROUPS = [
   "Data",
   "Compliance",
   "Operations",
+  "Sales OS",
   "System",
 ];
 
@@ -97,6 +111,8 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
     view_review:      true,
     view_alerts:      true,
     admin_users:      true,
+    view_crm:         true,
+    manage_crm:       true,
   },
   cfo: {
     view_dashboard:   true,
@@ -109,6 +125,8 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
     view_review:      true,
     view_alerts:      true,
     admin_users:      false,
+    view_crm:         true,
+    manage_crm:       true,
   },
   accounts: {
     view_dashboard:   true,
@@ -121,6 +139,8 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
     view_review:      false,
     view_alerts:      true,
     admin_users:      false,
+    view_crm:         true,
+    manage_crm:       true,
   },
   // Bug #6 fix: COO role added — operational focus (AP, expenses, banking)
   coo: {
@@ -134,6 +154,8 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
     view_review:      false,
     view_alerts:      true,
     admin_users:      false,
+    view_crm:         true,
+    manage_crm:       true,
   },
   ca: {
     view_dashboard:   true,
@@ -146,6 +168,8 @@ export const DEFAULT_PERMISSIONS: Record<UserRole, UserPermissions> = {
     view_review:      false,
     view_alerts:      true,
     admin_users:      false,
+    view_crm:         false,
+    manage_crm:       false,
   },
 };
 

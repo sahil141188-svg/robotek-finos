@@ -13,6 +13,7 @@ import {
   TrendingDown, TrendingUp, FileText, Bell, LogOut,
   Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen, Brain,
   Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
+  Briefcase, GitBranch, UserPlus, ListChecks,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -42,6 +43,11 @@ const NAV_ITEMS: {
   { href: "/dashboard/review",       label: "Review Engine",         icon: FileText,        permKey: "view_review" },
   { href: "/dashboard/alerts",       label: "Alerts",                icon: Bell,            permKey: "view_alerts" },
   { href: "/dashboard/sales",        label: "Sales Coordinator",     icon: Target,          permKey: null },
+  { href: "/dashboard/sales-os",            label: "Sales OS",         icon: Briefcase,    permKey: "view_crm" },
+  { href: "/dashboard/sales-os/leads",      label: "Leads",            icon: UserPlus,     permKey: "view_crm" },
+  { href: "/dashboard/sales-os/pipeline",   label: "Pipeline",         icon: GitBranch,    permKey: "view_crm" },
+  { href: "/dashboard/sales-os/accounts",   label: "Accounts",         icon: Building2,    permKey: "view_crm" },
+  { href: "/dashboard/sales-os/activities", label: "Activities",       icon: ListChecks,   permKey: "view_crm" },
   { href: "/dashboard/intel",        label: "Intelligence Hub",      icon: Brain,           permKey: null },
 ];
 
@@ -56,8 +62,9 @@ export function Sidebar({ profile }: SidebarProps) {
   /** Filter nav items based on the user's actual permissions */
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (item.permKey === null) return true;
-    // view_banking: show if permission is true OR if permission key doesn't exist yet (CEO default)
-    if (item.permKey === "view_banking") {
+    // view_banking / view_crm: show if true OR if the key doesn't exist yet
+    // (these were added after some users were created — default-visible).
+    if (item.permKey === "view_banking" || item.permKey === "view_crm") {
       return profile.permissions?.[item.permKey] !== false;
     }
     return profile.permissions?.[item.permKey] === true;
