@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCustomerDetail } from "@/lib/supabase/sales-queries";
 import { formatQty } from "@/lib/format";
 import { WhatsAppButton } from "@/components/sales/whatsapp-button";
+import { WhatsAppSendButton } from "@/components/sales/whatsapp-send-button";
 import { CustomerPhone } from "@/components/sales/customer-phone";
 import { churnNudgeWithItems, waLink } from "@/lib/sales/whatsapp-templates";
 import { ArrowLeft, Star, Clock, Package, AlertTriangle, CheckCircle2 } from "lucide-react";
@@ -71,14 +72,30 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
 
         {/* ── WhatsApp action bar ── */}
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-white p-4">
-          <WhatsAppButton
-            href={waLink(churnNudgeWithItems(customer.name, focus.map((f) => ({ name: f.productName }))), customer.phone)}
-            label="Send WhatsApp nudge"
-          />
-          <span className="text-xs text-brand-gray-mid max-w-xs">
-            Opens WhatsApp with a ready message listing their regular items.
-            {customer.phone ? "" : " Add a number to send directly."}
-          </span>
+          {customer.phone ? (
+            <>
+              {/* Real send via FinOS's configured WhatsApp API (Maytapi) */}
+              <WhatsAppSendButton customerId={customer.id} customerName={customer.name} />
+              <span className="text-xs text-brand-gray-mid">
+                Sends their regular-items nudge straight from FinOS&apos;s WhatsApp.
+              </span>
+              <WhatsAppButton
+                href={waLink(churnNudgeWithItems(customer.name, focus.map((f) => ({ name: f.productName }))), customer.phone)}
+                label="Open in WhatsApp"
+                size="sm"
+              />
+            </>
+          ) : (
+            <>
+              <WhatsAppButton
+                href={waLink(churnNudgeWithItems(customer.name, focus.map((f) => ({ name: f.productName }))), null)}
+                label="Open in WhatsApp"
+              />
+              <span className="text-xs text-brand-gray-mid max-w-xs">
+                Add a number to send automatically from FinOS — otherwise this opens WhatsApp to pick the contact.
+              </span>
+            </>
+          )}
           <div className="ml-auto">
             <CustomerPhone id={customer.id} phone={customer.phone} />
           </div>
