@@ -217,7 +217,7 @@ var CONFIG = {
   WHATSAPP: "918851403037",                // CRM number — default HO fallback
   ORDER_LOG_URL: "https://script.google.com/macros/s/AKfycbwVp6SXct5WhWWA9FxJI-nsT_TDE0XQEINnwnL7joMgSzC5GPK_AhhxkSbS3PXpzm8r/exec",   // Apps Script web-app URL (auto-logs orders to Orders tab)
   // 0-based column positions in your sheet:
-  COL: { category:0, name:1, box:2, stock:3, fast:4, new:5 }
+  COL: { category:0, name:1, box:2, stock:3, fast:4, new:5, inner:6 }
 };
 
 /* Sample data so the app works before you connect your sheet */
@@ -277,8 +277,8 @@ var T = {
     all:"All", fast:"Fast Selling", newl:"New Launch",
     selectAll:"Select All", out:"Out of Stock", enq:"📩 Enquire / Need This",
     enqMsg:"Hi, I need *{name}* which shows Out of Stock.\nCan you check availability or suggest an alternative?\n\nThank you.",
-    box:"Box", pcs:"Pcs", boxes:"Boxes",
-    pcsTotal:"pcs total", loose:"loose pieces",
+    box:"Box", pcs:"Inner Box", boxes:"Boxes",
+    pcsTotal:"pcs total", inrTotal:"pcs",
     yourOrder:"Your Order", tapReview:"Tap to review",
     clear:"Clear", sendWA:"💬 Send Order on WhatsApp",
     welcomeTitle:"Welcome to Robotek",
@@ -303,8 +303,8 @@ var T = {
     all:"सभी", fast:"तेज बिकने वाले", newl:"नई लॉन्च",
     selectAll:"सब चुनें", out:"स्टॉक में नहीं", enq:"📩 पूछताछ / चाहिए यह",
     enqMsg:"नमस्ते, मुझे *{name}* चाहिए जो अभी Out of Stock दिख रहा है।\nकृपया उपलब्धता बताएं या कोई विकल्प सुझाएं।\n\nधन्यवाद।",
-    box:"बॉक्स", pcs:"पीस", boxes:"बॉक्स",
-    pcsTotal:"पीस कुल", loose:"खुले पीस",
+    box:"बॉक्स", pcs:"इनर बॉक्स", boxes:"बॉक्स",
+    pcsTotal:"पीस कुल", inrTotal:"पीस",
     yourOrder:"आपका ऑर्डर", tapReview:"देखने के लिए टैप करें",
     clear:"हटाएं", sendWA:"💬 WhatsApp पर ऑर्डर भेजें",
     welcomeTitle:"Robotek में आपका स्वागत है",
@@ -384,7 +384,7 @@ function loadStock(){
       var name=cell(CONFIG.COL.name);
       if(!String(name).trim())continue;
       if(/^\s*\[.*\]\s*$/.test(String(name)))continue;   // skip template placeholder rows like "[Add products here]"
-      data.push([cell(CONFIG.COL.category)||"Other",name,cell(CONFIG.COL.box),cell(CONFIG.COL.stock),cell(CONFIG.COL.fast),cell(CONFIG.COL.new)]);
+      data.push([cell(CONFIG.COL.category)||"Other",name,cell(CONFIG.COL.box),cell(CONFIG.COL.stock),cell(CONFIG.COL.fast),cell(CONFIG.COL.new),cell(CONFIG.COL.inner)]);
     }
     render(data, false);
   }).catch(function(e){
@@ -412,13 +412,14 @@ function qctrlHtml(){
 function chipHtml(p){
   var t=T[lang];
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
+  var inr=p.inner?'<span class="cq" style="color:#1a56db;background:rgba(26,86,219,.08)">In:'+esc(p.inner)+'</span>':'';
   if(!p.stock){
-    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'">'+
-      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'<span class="oosl">'+t.out+'</span></span>'+
+    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'">'+
+      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+inr+'<span class="oosl">'+t.out+'</span></span>'+
       '<button class="enqbtn" onclick="enquireItem(event,\''+esc(p.name)+'\')">'+t.enq+'</button>'+
     '</span>';
   }
-  return '<span class="chip" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+'</span>'+qctrlHtml()+'</span>';
+  return '<span class="chip" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+inr+'</span>'+qctrlHtml()+'</span>';
 }
 function sectionHtml(key,title,cls,icon,chips){
   var t=T[lang];
@@ -427,7 +428,7 @@ function sectionHtml(key,title,cls,icon,chips){
 
 function render(rows, isSample){
   var products=rows.map(function(r){
-    return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5])};
+    return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5]),inner:r[6]!==""&&r[6]!=null?r[6]:""};
   });
   products.forEach(function(p){p.catKey=slug(p.cat);});
 
@@ -475,7 +476,11 @@ function qLabel(chip){
   var oq=parseInt(chip.dataset.oq,10)||1;
   var mode=chip.dataset.mode||"box";
   var t=T[lang];
-  if(mode==="pcs") return oq+" "+t.pcs;
+  if(mode==="pcs"){
+    var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
+    var inrTotal=inrNum?oq*inrNum:0;
+    return oq+" "+t.pcs+(inrTotal?" ("+inrTotal+" pcs)":"");
+  }
   return oq===1?"1 "+t.box:oq+" "+t.boxes;
 }
 function resetChip(el){
@@ -588,8 +593,10 @@ function uB(){
     var lbl=qLabel(chip);
     var sub="";
     var t=T[lang];
-    if(mode==="box"&&bx){var tot=oq*parseFloat(bx);sub="Bx:"+bx+" · "+tot+" "+t.pcsTotal;}
-    else if(mode==="pcs"){sub=t.loose;}
+    var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
+    if(mode==="box"&&bx){var tot=oq*parseFloat(bx);sub="Bx:"+bx+" · "+tot+" pcs";}
+    else if(mode==="pcs"&&inrNum){sub="In:"+inrNum+" · "+(oq*inrNum)+" pcs total";}
+    else if(mode==="pcs"){sub=t.pcs;}
     var row=document.createElement("div");row.className="bitm";
     row.innerHTML="<div><div class='bnm'>"+esc(nm)+"</div><div class='bqt'>"+lbl+(sub?" · "+sub:"")+"</div></div><button class='brm' data-n='"+esc(nm)+"' onclick='rI(this)'>&#10005;</button>";
     list.appendChild(row);
@@ -635,8 +642,11 @@ function placeOrder(){
     var bx=sel[i].getAttribute("data-bx"),nm=sel[i].getAttribute("data-name");
     var bxNum=bx?parseFloat(bx):0;
     if(mode==="pcs"){
-      msg+=(i+1)+". "+nm+" — "+oq+" "+t.pcs+" ("+t.looseTxt+")\n";
-      items.push({name:nm,qty:oq+" "+t.pcs,boxes:0,boxSize:bxNum||"",totalQty:oq,mode:"pcs"});
+      var inrNum2=parseFloat(sel[i].getAttribute("data-in"))||0;
+      var inrTotal2=inrNum2?oq*inrNum2:0;
+      var inrStr=inrNum2?" ("+inrTotal2+" pcs)":"";
+      msg+=(i+1)+". "+nm+" — "+oq+" "+t.pcs+inrStr+"\n";
+      items.push({name:nm,qty:oq+" "+t.pcs,boxes:0,boxSize:inrNum2||"",totalQty:inrTotal2||oq,mode:"pcs"});
     }else{
       var totalQty=bxNum?Math.round(oq*bxNum):"";
       var bxStr=bx?" (Bx:"+bx+"/box)":"";
