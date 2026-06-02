@@ -24,6 +24,20 @@ export function formatIndian(value: number, decimals = 2): string {
 }
 
 /**
+ * Formats a plain quantity (units, not rupees) in the Indian system.
+ * e.g. 1380895 → "13.81 L", 122518 → "1.23 L", 4200 → "4,200".
+ * Used by the AI Sales Coordinator for unit targets/volumes.
+ */
+export function formatQty(value: number): string {
+  const v = Math.round(value);
+  const abs = Math.abs(v);
+  const sign = v < 0 ? "-" : "";
+  if (abs >= 10_000_000) return `${sign}${(abs / 10_000_000).toFixed(2)} Cr`;
+  if (abs >= 100_000) return `${sign}${(abs / 100_000).toFixed(2)} L`;
+  return new Intl.NumberFormat("en-IN").format(v);
+}
+
+/**
  * Returns the current Indian financial year string (e.g. "2024-25").
  * Financial year runs April to March.
  */

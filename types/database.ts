@@ -421,6 +421,158 @@ export type Database = {
         };
         Update: Record<string, never>;
       };
+      // ── AI Sales Coordinator (Module 9) — sales_* namespace ──
+      sales_customers: {
+        Row: {
+          id: string;
+          name: string;
+          phone: string | null;
+          segment: string | null;
+          first_order_at: string | null;
+          last_order_at: string | null;
+          total_orders: number;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          phone?: string | null;
+          segment?: string | null;
+          first_order_at?: string | null;
+          last_order_at?: string | null;
+          total_orders?: number;
+          notes?: string | null;
+        };
+        Update: {
+          name?: string;
+          phone?: string | null;
+          segment?: string | null;
+          first_order_at?: string | null;
+          last_order_at?: string | null;
+          total_orders?: number;
+          notes?: string | null;
+          updated_at?: string;
+        };
+      };
+      sales_products: {
+        Row: {
+          id: string;
+          name: string;
+          category: string | null;
+          is_breakeven: boolean;
+          monthly_target_qty: number | null;
+          total_qty_sold: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          category?: string | null;
+          is_breakeven?: boolean;
+          monthly_target_qty?: number | null;
+          total_qty_sold?: number;
+        };
+        Update: {
+          name?: string;
+          category?: string | null;
+          is_breakeven?: boolean;
+          monthly_target_qty?: number | null;
+          total_qty_sold?: number;
+          updated_at?: string;
+        };
+      };
+      sales_orders: {
+        Row: {
+          id: string;
+          order_no: string;
+          customer_id: string;
+          ordered_at: string;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_no: string;
+          customer_id: string;
+          ordered_at: string;
+          source?: string;
+        };
+        Update: {
+          order_no?: string;
+          customer_id?: string;
+          ordered_at?: string;
+          source?: string;
+        };
+      };
+      sales_order_items: {
+        Row: {
+          id: string;
+          order_id: string;
+          product_id: string;
+          qty: number;
+          stock_at_order: number | null;
+          remarks: string | null;
+          raw_item_name: string | null;
+          line_hash: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          product_id: string;
+          qty: number;
+          stock_at_order?: number | null;
+          remarks?: string | null;
+          raw_item_name?: string | null;
+          line_hash: string;
+        };
+        Update: {
+          qty?: number;
+          stock_at_order?: number | null;
+          remarks?: string | null;
+          raw_item_name?: string | null;
+        };
+      };
+      sales_customer_item_targets: {
+        Row: {
+          id: string;
+          customer_id: string;
+          product_id: string;
+          monthly_target_qty: number;
+          avg_monthly_qty: number | null;
+          months_active: number;
+          total_qty: number;
+          last_qty: number | null;
+          last_ordered_at: string | null;
+          is_focus: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          customer_id: string;
+          product_id: string;
+          monthly_target_qty: number;
+          avg_monthly_qty?: number | null;
+          months_active?: number;
+          total_qty?: number;
+          last_qty?: number | null;
+          last_ordered_at?: string | null;
+          is_focus?: boolean;
+        };
+        Update: {
+          monthly_target_qty?: number;
+          avg_monthly_qty?: number | null;
+          months_active?: number;
+          total_qty?: number;
+          last_qty?: number | null;
+          last_ordered_at?: string | null;
+          is_focus?: boolean;
+          updated_at?: string;
+        };
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };

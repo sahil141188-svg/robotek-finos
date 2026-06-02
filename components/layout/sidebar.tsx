@@ -12,7 +12,7 @@ import {
   LayoutDashboard, Upload, CalendarCheck, CheckSquare,
   TrendingDown, TrendingUp, FileText, Bell, LogOut,
   Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen, Brain,
-  Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship,
+  Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -41,6 +41,7 @@ const NAV_ITEMS: {
   { href: "/dashboard/reminders",    label: "Send Reminders",        icon: Send,            permKey: "view_receivables" },
   { href: "/dashboard/review",       label: "Review Engine",         icon: FileText,        permKey: "view_review" },
   { href: "/dashboard/alerts",       label: "Alerts",                icon: Bell,            permKey: "view_alerts" },
+  { href: "/dashboard/sales",        label: "Sales Coordinator",     icon: Target,          permKey: null },
   { href: "/dashboard/intel",        label: "Intelligence Hub",      icon: Brain,           permKey: null },
 ];
 
