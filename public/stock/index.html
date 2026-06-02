@@ -238,8 +238,15 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
         <div class="isSub" id="is-sub">Open in one tap — like a real app</div>
       </div>
     </div>
-    <div class="isSteps" id="is-steps"></div>
-    <button class="isInstallBtn" id="is-btn" onclick="doInstallSheet()">⤓ Add to Home Screen</button>
+    <!-- Android: direct install, no steps needed -->
+    <div id="is-android-view" style="display:none;text-align:center;padding:10px 0 6px">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6" id="is-android-desc">Tap below — Chrome will ask you to confirm. That's it!</div>
+    </div>
+    <!-- iOS / Other: show steps -->
+    <div id="is-steps-view">
+      <div class="isSteps" id="is-steps"></div>
+    </div>
+    <button class="isInstallBtn" id="is-btn" onclick="doInstallSheet()">📲 Install App Now</button>
     <button class="isLater" onclick="dismissInstall('later')">
       <span id="is-later">Maybe Later</span>
     </button>
@@ -794,15 +801,34 @@ function buildSteps(steps){
 function showInstallSheet(){
   var t=T[lang];
   var plat=getPlatform();
-  var steps=plat==="ios"?t.isIOS:(plat==="android"?t.isAndroid:t.isOther);
+  var hasNative=!!deferredPrompt;
   document.getElementById("is-title").textContent=t.isTitle;
   document.getElementById("is-sub").textContent=t.isSub;
-  document.getElementById("is-steps").innerHTML=buildSteps(steps);
-  document.getElementById("is-btn").textContent=t.isBtn;
   document.getElementById("is-later").textContent=t.isLater;
-  // Android with native prompt: show install button; iOS: rename to "Got it, show me how"
-  if(plat==="ios"||(!deferredPrompt&&plat!=="android")){
-    document.getElementById("is-btn").textContent=(lang==="hi")?"समझ गया, दिखाएं ✓":"Got it — I'll follow the steps ✓";
+
+  var androidView=document.getElementById("is-android-view");
+  var stepsView=document.getElementById("is-steps-view");
+  var btn=document.getElementById("is-btn");
+
+  if(plat==="android"&&hasNative){
+    // Android with native prompt — one-button, no steps
+    androidView.style.display="block";
+    stepsView.style.display="none";
+    document.getElementById("is-android-desc").textContent=
+      lang==="hi"?"नीचे टैप करें — Chrome पूछेगा, बस OK करें! ✅"
+                :"Tap below — Chrome will ask you to confirm. That's it! ✅";
+    btn.textContent=lang==="hi"?"📲 अभी इंस्टॉल करें":"📲 Install App Now";
+    btn.style.fontSize="17px";
+    btn.style.padding="16px";
+  } else {
+    // iOS or other — show steps
+    androidView.style.display="none";
+    stepsView.style.display="block";
+    var steps=plat==="ios"?t.isIOS:t.isOther;
+    document.getElementById("is-steps").innerHTML=buildSteps(steps);
+    btn.textContent=lang==="hi"?"समझ गया ✓":"Got it — I'll follow the steps ✓";
+    btn.style.fontSize="";
+    btn.style.padding="";
   }
   document.getElementById("installSheet").classList.add("show");
 }
@@ -816,17 +842,21 @@ function dismissInstall(type){
   else{localStorage.setItem("rb_install_never","1");}
 }
 function doInstallSheet(){
-  var plat=getPlatform();
-  if(plat==="android"&&deferredPrompt){
+  if(deferredPrompt){
+    // Android / Chrome — trigger native prompt directly
     deferredPrompt.prompt();
     deferredPrompt.userChoice.then(function(r){
       deferredPrompt=null;
-      if(r.outcome==="accepted"){hideInstallSheet();toast("✅ App installed!");}
+      hideInstallSheet();
+      if(r.outcome==="accepted"){
+        localStorage.setItem("rb_install_never","1");
+        toast(lang==="hi"?"✅ ऐप इंस्टॉल हो गया! होम स्क्रीन से खोलें।":"✅ App installed! Open from your home screen.");
+      }
     });
-  }else{
-    // iOS or other — just close (steps are visible)
+  } else {
+    // iOS / other — steps shown, just close
     hideInstallSheet();
-    toast(lang==="hi"?"ऊपर दिए steps follow करें 👆":"Follow the steps above 👆");
+    toast(lang==="hi"?"ऊपर दिए steps follow करें 👆":"Follow the steps shown 👆");
   }
 }
 function maybeShowInstallSheet(){
