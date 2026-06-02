@@ -52,3 +52,7 @@ supabase/APPLY_MIGRATION_005.md
 # Tesseract OCR language data — auto-downloaded at runtime
 eng.traineddata
 *.traineddata
+
+# AI SC — local PII exports, never commit
+sales_phone_review.csv
+*_phone_review.csv
