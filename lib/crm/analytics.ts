@@ -40,7 +40,17 @@ export type SalesAnalytics = {
   activityByType: { type: string; count: number }[];
   deptSplit: { dept: string; count: number; value: number }[];
   scoreBands: { band: ScoreBand; count: number }[];
+  forecast: {
+    weightedTotal: number;   // stage-weighted expected revenue (open deals)
+    grossOpen: number;       // best case (all open value)
+    byMonth: { month: string; weighted: number; gross: number }[];
+  };
   overdueFollowups: number;
+};
+
+/** Stage → close probability for forecasting (deals rarely edit probability). */
+const STAGE_PROBABILITY: Record<CrmDealStage, number> = {
+  new: 0.1, qualified: 0.3, quoted: 0.5, negotiation: 0.7, won: 1, lost: 0,
 };
 
 const OPEN_STAGES = new Set<CrmDealStage>(["new", "qualified", "quoted", "negotiation"]);
@@ -161,6 +171,28 @@ export async function getSalesAnalytics(): Promise<SalesAnalytics> {
   });
   const deptSplit = [...deptMap.entries()].map(([dept, e]) => ({ dept: dept.toUpperCase(), count: e.count, value: e.value }));
 
+  // ── Forecast (stage-weighted expected revenue by close month) ──
+  const fcMap = new Map<string, { weighted: number; gross: number }>();
+  let weightedTotal = 0, grossOpen = 0;
+  for (const d of openDeals) {
+    const val = Number(d.value) || 0;
+    const w = val * (STAGE_PROBABILITY[d.stage] ?? 0.1);
+    weightedTotal += w;
+    grossOpen += val;
+    const month = d.expected_close ? d.expected_close.slice(0, 7) : "Unscheduled";
+    if (!fcMap.has(month)) fcMap.set(month, { weighted: 0, gross: 0 });
+    const e = fcMap.get(month)!;
+    e.weighted += w;
+    e.gross += val;
+  }
+  const byMonth = [...fcMap.entries()]
+    .sort((a, b) => (a[0] === "Unscheduled" ? 1 : b[0] === "Unscheduled" ? -1 : a[0].localeCompare(b[0])))
+    .map(([month, e]) => ({
+      month: month === "Unscheduled" ? "Unscheduled" : new Date(month + "-01").toLocaleDateString("en-IN", { month: "short", year: "2-digit" }),
+      weighted: Math.round(e.weighted),
+      gross: Math.round(e.gross),
+    }));
+
   return {
     kpis: {
       totalLeads,
@@ -181,6 +213,7 @@ export async function getSalesAnalytics(): Promise<SalesAnalytics> {
     activityByType,
     deptSplit,
     scoreBands,
+    forecast: { weightedTotal: Math.round(weightedTotal), grossOpen: Math.round(grossOpen), byMonth },
     overdueFollowups,
   };
 }

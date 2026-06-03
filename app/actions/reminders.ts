@@ -171,10 +171,20 @@ export async function updateCustomerContact(input: {
   if (input.email !== undefined)         patch.email         = input.email || null;
   if (input.contactPerson !== undefined) patch.contact_person = input.contactPerson || null;
 
+  // Use .select() so we get the updated row back. Without this, Supabase silently
+  // returns 0 rows when RLS blocks the UPDATE — leaving the UI to wrongly think
+  // the save succeeded. With .select() we can detect 0 rows and surface a real error.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from("customers").update(patch).eq("id", input.customerId);
-  if (error) return { ok: false, error: error.message };
+  const { data, error } = await (supabase as any)
+    .from("customers").update(patch).eq("id", input.customerId).select("id");
+  if (error) {
+    console.error("[updateCustomerContact] DB error:", error);
+    return { ok: false, error: error.message };
+  }
+  if (!data || data.length === 0) {
+    console.error("[updateCustomerContact] 0 rows affected", { customerId: input.customerId, userId: user.id });
+    return { ok: false, error: "Permission denied or customer not found. Refresh the page and try again." };
+  }
   revalidatePath("/dashboard/reminders");
   revalidatePath("/dashboard/receivables");
   return { ok: true };
@@ -195,10 +205,19 @@ export async function updateVendorContact(input: {
   if (input.email !== undefined)         patch.email         = input.email || null;
   if (input.contactPerson !== undefined) patch.contact_person = input.contactPerson || null;
 
+  // .select() forces PostgREST to return the updated row, so we can detect
+  // silent 0-row RLS rejections (otherwise the UI would think the save succeeded).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
-    .from("vendors").update(patch).eq("id", input.vendorId);
-  if (error) return { ok: false, error: error.message };
+  const { data, error } = await (supabase as any)
+    .from("vendors").update(patch).eq("id", input.vendorId).select("id");
+  if (error) {
+    console.error("[updateVendorContact] DB error:", error);
+    return { ok: false, error: error.message };
+  }
+  if (!data || data.length === 0) {
+    console.error("[updateVendorContact] 0 rows affected", { vendorId: input.vendorId, userId: user.id });
+    return { ok: false, error: "Permission denied or vendor not found. Refresh the page and try again." };
+  }
   revalidatePath("/dashboard/payables");
   return { ok: true };
 }

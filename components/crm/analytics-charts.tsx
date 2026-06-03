@@ -14,7 +14,7 @@ import { ACTIVITY_TYPE_LABELS } from "@/lib/crm/types";
 import type { SalesAnalytics } from "@/lib/crm/analytics";
 import type { CrmLeadType, CrmActivityType } from "@/types/database";
 import {
-  TrendingUp, Trophy, GitBranch, Target, Percent, AlertTriangle,
+  TrendingUp, Trophy, GitBranch, Target, Percent, AlertTriangle, LineChart,
 } from "lucide-react";
 
 const RED = "#E52D31", MAROON = "#852321", YELLOW = "#F7DA11", BLACK = "#1F1B20", GRAY = "#9A9596";
