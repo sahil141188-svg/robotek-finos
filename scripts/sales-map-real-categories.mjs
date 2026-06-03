@@ -41,18 +41,19 @@ async function loadStockMap() {
 const RULES = [
   [/^(DC|OTG|PBC|RAPID|SW|FASTER|AC0)/, "Data Cable"],
   [/^(CC|GATI|BOOT|PD|SC|QC|UC|GALAXY)/, "Smart Charger"],
-  [/^PS\d/, "Power Series"],
-  [/^(NB|RBH)/, "Neck Band"],
-  [/^TWS/, "TWS"],
-  [/^(HF|WH|X300|X909|X505|X606|X888)/, "Hands Free"],
-  [/^(SPKR|SPK)/, "Speaker"],
+  [/^PS\s*\d/, "Power Series"],
+  [/^(NB|RBH|FIGHTER)/, "Neck Band"],
+  [/^(TWS|SOUNDPOD|YOYO|AIRMUTE|SUPERBUDDY|EASYBUDDY|EASY BUDDY)/, "TWS"],
+  [/^(HF|WH|EARPHONE|X300|X909|X505|X606|X888|X111|X1101)/, "Hands Free"],
+  [/^(SPKR|SPK|GOONZ|GLIDER|RETRO|JUKEBOX|MELODY|MONSTER|JALWA|TARANG|HUNGAMA|AVATAR|DHAMAKA|DHURANDHAR|DHUN|TRUMP|MEGAPHONE)/, "Speaker"],
   [/^(S\d|W\d)/, "Power Bank"],
   [/^RB/, "Batteries - Robotek"],
   [/^LB/, "ANS Longer"],
-  [/^(PB|BLP|BA|BM|BP|BZ|BN|BL|IP|BK|B[-A-Z]?\d)/, "Polymer Battery"],
+  [/^(PB|BLP|BA|BM|BP|BZ|BN|BK|BL|IP|B-|B[A-Z]?\d)/, "Polymer Battery"],
 ];
 function prefixCategory(name) {
-  const u = (name || "").toUpperCase().trim();
+  // strip a leading "ANS " brand prefix so the real type token is matched
+  const u = (name || "").toUpperCase().trim().replace(/^ANS\s+/, "");
   for (const [re, cat] of RULES) if (re.test(u)) return cat;
   return "Others";
 }
