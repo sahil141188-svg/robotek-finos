@@ -17,14 +17,19 @@ const TARGETS = argNames.length ? argNames : [
 ];
 
 const toks = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]+/g, " ").split(/\s+/).filter((t) => t.length >= 2);
+const norm = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]+/g, "");
 const custs = (await db.from("sales_customers").select("id,name,status")).data || [];
 
-const matched = [], notFound = [];
+const matched = [], notFound = [], ambiguous = [];
 for (const t of TARGETS) {
   const tt = toks(t);
-  const hit = custs.find((c) => { const cn = toks(c.name); return tt.every((x) => cn.includes(x)); });
-  if (hit) matched.push(hit); else notFound.push(t);
+  // every target token must appear as a substring of the customer's normalized name
+  const hits = custs.filter((c) => { const cn = norm(c.name); return tt.every((x) => cn.includes(x)); });
+  if (hits.length === 1) matched.push(hits[0]);
+  else if (hits.length === 0) notFound.push(t);
+  else { ambiguous.push({ t, names: hits.map((h) => h.name) }); }
 }
+for (const a of ambiguous) console.log(`  ⚠️  "${a.t}" matched ${a.names.length}: ${a.names.join(", ")} — skipped (be more specific)`);
 console.log("To discontinue:");
 for (const m of matched) console.log(`  ✓ ${m.name}`);
 if (notFound.length) console.log("Not found:", notFound.join(" | "));
