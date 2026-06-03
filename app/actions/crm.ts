@@ -100,6 +100,24 @@ async function pickNbdAssignee(supabase: any): Promise<string | null> {
   return best;
 }
 
+/**
+ * Returns a warning string if the phone already exists on a lead or account,
+ * else null. Matches on the last 10 digits.
+ */
+async function findPhoneDuplicate(supabase: any, phone: string | null): Promise<string | null> {
+  if (!phone) return null;
+  const last10 = phone.replace(/\D/g, "").slice(-10);
+  if (last10.length < 10) return null;
+
+  const { data: dupLead } = await supabase.from("crm_leads").select("name").ilike("phone", `%${last10}%`).limit(1);
+  if (dupLead && dupLead.length) return `A lead with this phone already exists (${dupLead[0].name}). Please check before adding a duplicate.`;
+
+  const { data: dupAcc } = await supabase.from("crm_accounts").select("name").ilike("phone", `%${last10}%`).limit(1);
+  if (dupAcc && dupAcc.length) return `This phone already belongs to an account (${dupAcc[0].name}).`;
+
+  return null;
+}
+
 // ── LEADS ───────────────────────────────────────────────────
 
 export async function createLead(formData: FormData): Promise<Result> {
@@ -110,6 +128,10 @@ export async function createLead(formData: FormData): Promise<Result> {
   if (!name) return { error: "Lead name is required" };
 
   const supabase = (await createClient()) as any;
+
+  // Duplicate detection by phone (across leads + accounts).
+  const dup = await findPhoneDuplicate(supabase, str(formData, "phone"));
+  if (dup) return { error: dup };
 
   // Round-robin / least-loaded auto-assignment when no owner is chosen.
   let assignedTo = str(formData, "assigned_to");
@@ -275,6 +297,17 @@ export async function createAccount(formData: FormData): Promise<Result> {
   if (!name) return { error: "Account name is required" };
 
   const supabase = (await createClient()) as any;
+
+  // Duplicate detection by phone.
+  const phone = str(formData, "phone");
+  if (phone) {
+    const last10 = phone.replace(/\D/g, "").slice(-10);
+    if (last10.length >= 10) {
+      const { data: dupAcc } = await supabase.from("crm_accounts").select("name").ilike("phone", `%${last10}%`).limit(1);
+      if (dupAcc && dupAcc.length) return { error: `An account with this phone already exists (${dupAcc[0].name}).` };
+    }
+  }
+
   const { error } = await supabase.from("crm_accounts").insert({
     name,
     type: (str(formData, "type") as never) ?? "dealer",
