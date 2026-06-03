@@ -688,6 +688,30 @@ Top overdue:
       {/* ── Reminder Rules ────────────────────────────────────────────────── */}
       {activeTab === "reminders" && (
         <div className="space-y-4">
+          {/* Bulk-send kill switch — top of tab */}
+          <div className={`rounded-xl border-2 p-5 ${reminders.bulk_send_paused ? "border-red-400 bg-red-50" : "border-green-300 bg-green-50"}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1">
+                <h2 className="text-sm font-bold flex items-center gap-2">
+                  <AlertCircle className={`w-4 h-4 ${reminders.bulk_send_paused ? "text-red-600" : "text-green-600"}`} />
+                  Bulk &quot;Send All&quot; Kill-Switch
+                </h2>
+                <p className="text-xs mt-1.5 leading-relaxed">
+                  {reminders.bulk_send_paused
+                    ? <><strong className="text-red-800">Bulk sends are currently PAUSED.</strong> The &quot;Send Today&apos;s Reminders&quot; button on the Reminders page is server-side disabled. Individual sends still work. Lift this pause only after auditing customer-to-phone mappings (e.g. the SRMC / Ashish Sachdev incident on 2026-06-03).</>
+                    : <><strong className="text-green-800">Bulk sends are ENABLED.</strong> The &quot;Send Today&apos;s Reminders&quot; button on the Reminders page will function normally.</>}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Switch
+                  checked={!reminders.bulk_send_paused}
+                  onCheckedChange={(v) => updateReminders({ bulk_send_paused: !v })}
+                />
+                <span className="text-xs font-medium">{reminders.bulk_send_paused ? "Paused" : "Enabled"}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-xl border border-border p-5 space-y-4">
             <h2 className="text-sm font-semibold text-brand-black flex items-center gap-2">
               <Bell className="w-4 h-4 text-brand-red" /> Compliance Reminders

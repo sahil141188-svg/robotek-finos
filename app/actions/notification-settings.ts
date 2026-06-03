@@ -42,6 +42,13 @@ export type ReminderSettings = {
   ar_min_days_between_reminders?: number;
   /** Delay (ms) between API calls when sending in bulk — avoids WhatsApp rate limits. */
   ar_inter_message_delay_ms?: number;
+  /**
+   * Emergency kill-switch. When TRUE, the bulk "Send All" button is disabled
+   * server-side regardless of UI state. Set to true after the 2026-06-03
+   * incident (wrong-amount messages); flip to false only after operators have
+   * audited customer-to-phone mappings.
+   */
+  bulk_send_paused?: boolean;
 };
 
 export type TemplateSettings = {

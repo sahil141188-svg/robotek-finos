@@ -320,6 +320,18 @@ export type BulkResult = {
 
 export async function sendBulkReminders(customerIds: string[]): Promise<BulkResult> {
   const settings = await getNotificationSettings();
+  // Emergency kill-switch — added 2026-06-03 after wrong-amount blunder.
+  // The bulk send is server-side disabled until the operator audits phones.
+  if (settings.reminders.bulk_send_paused) {
+    return {
+      total: customerIds.length, sent: 0, skipped: 0, failed: customerIds.length,
+      results: customerIds.map((id) => ({
+        customerId: id, customerName: "(blocked)",
+        status: "failed",
+        error: "Bulk send paused — verify phone numbers in Admin → Notification Settings before re-enabling",
+      })),
+    };
+  }
   const cooldown = settings.reminders.ar_min_days_between_reminders ?? COOLDOWN_DAYS_DEFAULT;
   const delay    = settings.reminders.ar_inter_message_delay_ms       ?? INTER_DELAY_MS_DEFAULT;
 

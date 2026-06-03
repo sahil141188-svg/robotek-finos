@@ -49,6 +49,23 @@ export default async function RemindersPage() {
       />
 
       <main className="flex-1 p-6 space-y-5 max-w-6xl">
+        {/* 🚨 Bulk-send paused — added after 2026-06-03 incident */}
+        {settings.reminders.bulk_send_paused && (
+          <div className="rounded-xl border-2 border-red-400 bg-red-50 px-4 py-3 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1 text-sm text-red-900">
+              <p className="font-bold">⚠️ Bulk WhatsApp sends are PAUSED.</p>
+              <p className="text-xs mt-1">
+                After the 2026-06-03 incident, the &quot;Send All&quot; button is disabled server-side until customer-to-phone mappings are audited.
+                You can still send to individual customers one at a time after verifying their phone number on the row.
+              </p>
+              <p className="text-xs mt-1">
+                When ready to re-enable: <Link href="/dashboard/admin/settings" className="underline font-semibold hover:text-red-700">Admin → Notification Settings → Reminder Rules → Unpause bulk send</Link>
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* WhatsApp status banner */}
         {!waEnabled && (
           <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
