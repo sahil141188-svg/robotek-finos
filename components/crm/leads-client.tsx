@@ -2,7 +2,7 @@
 
 import { useState, useTransition, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { createLead, updateLeadStatus, convertLead, scheduleFollowup, startDrip, stopDrip } from "@/app/actions/crm";
+import { createLead, updateLeadStatus, convertLead, scheduleFollowup, startDrip, stopDrip, setLeadTags } from "@/app/actions/crm";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, CRM_SOURCES } from "@/lib/crm/types";
 import { LEAD_TYPE_LABELS, DRIP_STATUS_LABELS, DRIP_STATUS_COLORS } from "@/lib/crm/drip";
 import { scoreLead, BAND_LABELS, BAND_COLORS } from "@/lib/crm/scoring";
@@ -30,6 +30,7 @@ export function LeadsClient({
   const [fuLead, setFuLead] = useState<string | null>(null);
   const [fuDate, setFuDate] = useState("");
   const [fuSubject, setFuSubject] = useState("");
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
 
   function saveFollowup(leadId: string) {
     start(async () => {
@@ -82,10 +83,24 @@ export function LeadsClient({
     });
   }
 
+  function saveTags(id: string, tags: string[]) {
+    start(async () => { await setLeadTags(id, tags); router.refresh(); });
+  }
+  function addTag(lead: LeadWithNames) {
+    const t = window.prompt("Add a tag (e.g. South India, High value)");
+    if (t && t.trim()) saveTags(lead.id, [...(lead.tags ?? []), t.trim()]);
+  }
+  function removeTag(lead: LeadWithNames, tag: string) {
+    saveTags(lead.id, (lead.tags ?? []).filter((x) => x !== tag));
+  }
+
+  const allTags = Array.from(new Set(leads.flatMap((l) => l.tags ?? []))).sort();
+  const shown = tagFilter ? leads.filter((l) => (l.tags ?? []).includes(tagFilter)) : leads;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <p className="text-sm text-brand-gray-mid">{leads.length} leads</p>
+        <p className="text-sm text-brand-gray-mid">{tagFilter ? `${shown.length} of ${leads.length}` : leads.length} leads</p>
         <div className="flex items-center gap-2">
           <a href="/intake" target="_blank" rel="noopener noreferrer" className="text-xs text-brand-gray-mid hover:text-brand-red underline">
             Public intake form ↗
@@ -102,6 +117,16 @@ export function LeadsClient({
 
       {err && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{err}</div>
+      )}
+
+      {allTags.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs text-brand-gray-mid">Filter:</span>
+          <button onClick={() => setTagFilter(null)} className={`text-xs rounded-full px-2.5 py-1 ${!tagFilter ? "bg-brand-red text-white" : "bg-brand-gray-light text-brand-gray-mid hover:text-brand-black"}`}>All</button>
+          {allTags.map((t) => (
+            <button key={t} onClick={() => setTagFilter(t === tagFilter ? null : t)} className={`text-xs rounded-full px-2.5 py-1 ${tagFilter === t ? "bg-brand-red text-white" : "bg-brand-gray-light text-brand-gray-mid hover:text-brand-black"}`}>{t}</button>
+          ))}
+        </div>
       )}
 
       {open && (
@@ -157,10 +182,10 @@ export function LeadsClient({
             </tr>
           </thead>
           <tbody>
-            {leads.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-brand-gray-mid">No leads yet. Click “New Lead” to add one.</td></tr>
+            {shown.length === 0 && (
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-brand-gray-mid">{tagFilter ? "No leads with this tag." : "No leads yet. Click “New Lead” to add one."}</td></tr>
             )}
-            {leads.map((l) => (
+            {shown.map((l) => (
               <Fragment key={l.id}>
               <tr className="border-b border-border last:border-0 hover:bg-brand-gray-light/30">
                 <td className="px-4 py-3">
@@ -178,6 +203,14 @@ export function LeadsClient({
                       <Clock className="w-3 h-3" />Next: {fmtShort(nextFollowups[l.id])}
                     </div>
                   )}
+                  <div className="mt-1 flex items-center gap-1 flex-wrap">
+                    {(l.tags ?? []).map((t) => (
+                      <span key={t} className="inline-flex items-center gap-0.5 text-[10px] bg-purple-100 text-purple-700 rounded-full px-1.5 py-0.5">
+                        {t}<button onClick={() => removeTag(l, t)} className="hover:text-purple-900">×</button>
+                      </span>
+                    ))}
+                    <button onClick={() => addTag(l)} disabled={pending} className="text-[10px] text-brand-gray-mid hover:text-brand-red border border-dashed border-border rounded-full px-1.5 py-0.5">+ tag</button>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-xs text-brand-gray-mid">
                   {l.phone && <div className="flex items-center gap-1"><Phone className="w-3 h-3" />{l.phone}</div>}

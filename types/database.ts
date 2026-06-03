@@ -619,6 +619,7 @@ export type Database = {
           address: string | null;
           notes: string | null;
           handed_off_at: string | null;
+          tags: string[];
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -638,6 +639,7 @@ export type Database = {
           address?: string | null;
           notes?: string | null;
           handed_off_at?: string | null;
+          tags?: string[];
           created_by?: string | null;
         };
         Update: {
@@ -654,6 +656,7 @@ export type Database = {
           address?: string | null;
           notes?: string | null;
           handed_off_at?: string | null;
+          tags?: string[];
           updated_at?: string;
         };
       };
@@ -710,6 +713,7 @@ export type Database = {
           notes: string | null;
           converted_account_id: string | null;
           converted_at: string | null;
+          tags: string[];
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -722,6 +726,7 @@ export type Database = {
           lead_type?: CrmLeadType;
           drip_status?: CrmDripStatus;
           drip_started_at?: string | null;
+          tags?: string[];
           source?: string | null;
           phone?: string | null;
           email?: string | null;
@@ -751,6 +756,7 @@ export type Database = {
           notes?: string | null;
           converted_account_id?: string | null;
           converted_at?: string | null;
+          tags?: string[];
           updated_at?: string;
         };
       };

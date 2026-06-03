@@ -177,6 +177,16 @@ export async function startDrip(leadId: string): Promise<Result> {
   return { error: null };
 }
 
+/** Set a lead's tags (deduped, trimmed, capped). */
+export async function setLeadTags(id: string, tags: string[]): Promise<Result> {
+  const clean = Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean))).slice(0, 12);
+  const supabase = (await createClient()) as any;
+  const { error } = await supabase.from("crm_leads").update({ tags: clean }).eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/sales-os/leads");
+  return { error: null };
+}
+
 /** Stop a lead's drip: cancel all still-pending messages. */
 export async function stopDrip(leadId: string): Promise<Result> {
   const supabase = (await createClient()) as any;
