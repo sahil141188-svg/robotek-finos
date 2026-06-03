@@ -21,6 +21,7 @@ export type CrmActivityType  = "call" | "whatsapp" | "meeting" | "visit" | "emai
 export type CrmLeadType      = "corporate" | "channel_partner";
 export type CrmDripStatus    = "none" | "active" | "done" | "stopped";
 export type CrmDripMsgStatus = "pending" | "sent" | "skipped" | "failed" | "cancelled";
+export type CrmQuoteStatus   = "draft" | "sent" | "accepted" | "rejected" | "expired";
 
 /** All granular module permissions — stored as JSONB on each user row */
 export type UserPermissions = {
@@ -886,6 +887,127 @@ export type Database = {
           lead_id?: string | null;
           deal_id?: string | null;
           updated_at?: string;
+        };
+      };
+      crm_products: {
+        Row: {
+          id: string;
+          name: string;
+          sku: string | null;
+          category: string | null;
+          hsn: string | null;
+          unit: string;
+          unit_price: number;
+          gst_rate: number;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          sku?: string | null;
+          category?: string | null;
+          hsn?: string | null;
+          unit?: string;
+          unit_price?: number;
+          gst_rate?: number;
+          is_active?: boolean;
+          created_by?: string | null;
+        };
+        Update: {
+          name?: string;
+          sku?: string | null;
+          category?: string | null;
+          hsn?: string | null;
+          unit?: string;
+          unit_price?: number;
+          gst_rate?: number;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+      };
+      crm_quotes: {
+        Row: {
+          id: string;
+          quote_number: string;
+          account_id: string | null;
+          deal_id: string | null;
+          status: CrmQuoteStatus;
+          subtotal: number;
+          tax_total: number;
+          total: number;
+          valid_until: string | null;
+          notes: string | null;
+          terms: string | null;
+          owner_id: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          quote_number: string;
+          account_id?: string | null;
+          deal_id?: string | null;
+          status?: CrmQuoteStatus;
+          subtotal?: number;
+          tax_total?: number;
+          total?: number;
+          valid_until?: string | null;
+          notes?: string | null;
+          terms?: string | null;
+          owner_id?: string | null;
+          created_by?: string | null;
+        };
+        Update: {
+          status?: CrmQuoteStatus;
+          subtotal?: number;
+          tax_total?: number;
+          total?: number;
+          valid_until?: string | null;
+          notes?: string | null;
+          terms?: string | null;
+          updated_at?: string;
+        };
+      };
+      crm_quote_items: {
+        Row: {
+          id: string;
+          quote_id: string;
+          product_id: string | null;
+          description: string;
+          qty: number;
+          unit_price: number;
+          gst_rate: number;
+          line_subtotal: number;
+          line_tax: number;
+          line_total: number;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          quote_id: string;
+          product_id?: string | null;
+          description: string;
+          qty?: number;
+          unit_price?: number;
+          gst_rate?: number;
+          line_subtotal?: number;
+          line_tax?: number;
+          line_total?: number;
+          sort_order?: number;
+        };
+        Update: {
+          description?: string;
+          qty?: number;
+          unit_price?: number;
+          gst_rate?: number;
+          line_subtotal?: number;
+          line_tax?: number;
+          line_total?: number;
+          sort_order?: number;
         };
       };
     };

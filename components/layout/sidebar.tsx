@@ -13,7 +13,7 @@ import {
   TrendingDown, TrendingUp, FileText, Bell, LogOut,
   Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen, Brain,
   Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
-  Briefcase, GitBranch, UserPlus, ListChecks, Sparkles, BarChart3,
+  Briefcase, GitBranch, UserPlus, ListChecks, Sparkles, BarChart3, Package,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -47,6 +47,8 @@ const NAV_ITEMS: {
   { href: "/dashboard/sales-os/leads",      label: "Leads",            icon: UserPlus,     permKey: "view_crm" },
   { href: "/dashboard/sales-os/pipeline",   label: "Pipeline",         icon: GitBranch,    permKey: "view_crm" },
   { href: "/dashboard/sales-os/accounts",   label: "Accounts",         icon: Building2,    permKey: "view_crm" },
+  { href: "/dashboard/sales-os/products",   label: "Products",         icon: Package,      permKey: "view_crm" },
+  { href: "/dashboard/sales-os/quotes",     label: "Quotations",       icon: FileText,     permKey: "view_crm" },
   { href: "/dashboard/sales-os/activities", label: "Follow-ups",       icon: ListChecks,   permKey: "view_crm" },
   { href: "/dashboard/sales-os/analytics",  label: "Reports & Analytics", icon: BarChart3, permKey: "view_crm" },
   { href: "/dashboard/sales-os/ai",         label: "AI Sales Coach",   icon: Sparkles,     permKey: "view_crm" },
