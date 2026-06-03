@@ -332,14 +332,62 @@ export async function sendBulkReminders(customerIds: string[]): Promise<BulkResu
       })),
     };
   }
+
+  // Phone-verification gate — even with bulk send enabled, only customers whose
+  // CURRENT phone has been human-verified in /reminders/phone-audit may receive
+  // a bulk message. This is the SRMC-incident safeguard.
+  const { getPhoneAudit } = await import("./phone-audit");
+  const audit = await getPhoneAudit();
+
+  const supabaseForVerify = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: phoneRows } = await (supabaseForVerify as any)
+    .from("customers").select("id, phone, name").in("id", customerIds);
+  const liveByCust = new Map<string, { phone: string | null; name: string }>();
+  for (const r of (phoneRows ?? []) as Array<{ id: string; phone: string | null; name: string }>) {
+    liveByCust.set(r.id, { phone: r.phone, name: r.name });
+  }
+
+  const verifiedIds = new Set<string>();
+  const unverified: Array<{ customerId: string; customerName: string; reason: string }> = [];
+  for (const cid of customerIds) {
+    const live = liveByCust.get(cid);
+    const v = audit.verified[cid];
+    if (live && v && live.phone && v.phone === String(live.phone).trim()) {
+      verifiedIds.add(cid);
+    } else {
+      unverified.push({
+        customerId: cid,
+        customerName: live?.name ?? "(unknown)",
+        reason: v
+          ? "Phone changed since last verification — please re-verify in Phone Audit"
+          : "Phone not yet verified — open Reminders → Phone Audit and confirm",
+      });
+    }
+  }
+
   const cooldown = settings.reminders.ar_min_days_between_reminders ?? COOLDOWN_DAYS_DEFAULT;
   const delay    = settings.reminders.ar_inter_message_delay_ms       ?? INTER_DELAY_MS_DEFAULT;
+
+  // Pre-populate the result with blocks for unverified rows
+  const earlyBlocks = unverified.map((u) => ({
+    customerId: u.customerId, customerName: u.customerName,
+    status: "failed" as const, error: u.reason,
+  }));
+  // Replace the customerIds list with only-verified ones for the actual send
+  customerIds = customerIds.filter((id) => verifiedIds.has(id));
 
   // Pull current AR aging so amount + oldest invoice are accurate per customer
   const { customers } = await listOverdueCustomers();
   const byId = new Map(customers.map((c) => [c.id, c]));
 
-  const agg: BulkResult = { total: customerIds.length, sent: 0, skipped: 0, failed: 0, results: [] };
+  const agg: BulkResult = {
+    total:   customerIds.length + earlyBlocks.length,
+    sent:    0,
+    skipped: 0,
+    failed:  earlyBlocks.length,
+    results: [...earlyBlocks],
+  };
 
   for (let i = 0; i < customerIds.length; i++) {
     const cid = customerIds[i];

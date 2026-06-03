@@ -59,8 +59,13 @@ export default async function RemindersPage() {
                 After the 2026-06-03 incident, the &quot;Send All&quot; button is disabled server-side until customer-to-phone mappings are audited.
                 You can still send to individual customers one at a time after verifying their phone number on the row.
               </p>
-              <p className="text-xs mt-1">
-                When ready to re-enable: <Link href="/dashboard/admin/settings" className="underline font-semibold hover:text-red-700">Admin → Notification Settings → Reminder Rules → Unpause bulk send</Link>
+              <p className="text-xs mt-1 flex flex-wrap gap-3">
+                <Link href="/dashboard/reminders/phone-audit" className="underline font-semibold hover:text-red-700">
+                  → Open Phone Audit (verify every customer&apos;s phone)
+                </Link>
+                <Link href="/dashboard/admin/settings" className="underline font-semibold hover:text-red-700">
+                  → Admin Settings (lift the kill switch when audit is done)
+                </Link>
               </p>
             </div>
           </div>
