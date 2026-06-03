@@ -27,8 +27,8 @@ export default async function CrmOverviewPage() {
   return (
     <>
       <Header
-        title="Sales OS"
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Sales OS" }]}
+        title="NBD"
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "NBD" }]}
         showImport={false}
       />
 

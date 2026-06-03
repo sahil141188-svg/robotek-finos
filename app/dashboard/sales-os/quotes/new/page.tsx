@@ -15,7 +15,7 @@ export default async function NewQuotePage() {
         title="New Quotation"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Quotations", href: "/dashboard/sales-os/quotes" },
           { label: "New" },
         ]}

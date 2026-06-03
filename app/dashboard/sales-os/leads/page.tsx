@@ -22,7 +22,7 @@ export default async function LeadsPage() {
         title="Leads"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Leads" },
         ]}
         showImport={false}

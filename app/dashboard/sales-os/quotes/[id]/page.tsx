@@ -19,7 +19,7 @@ export default async function QuoteDetailPage({ params }: { params: Promise<{ id
         title={detail.quote.quote_number}
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Quotations", href: "/dashboard/sales-os/quotes" },
           { label: detail.quote.quote_number },
         ]}

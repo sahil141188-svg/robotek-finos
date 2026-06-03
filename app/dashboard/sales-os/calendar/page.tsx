@@ -30,7 +30,7 @@ export default async function CalendarPage() {
         title="Calendar"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Calendar" },
         ]}
         showImport={false}

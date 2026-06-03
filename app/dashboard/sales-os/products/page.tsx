@@ -15,7 +15,7 @@ export default async function ProductsPage() {
         title="Products"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Products" },
         ]}
         showImport={false}

@@ -24,7 +24,7 @@ export default async function PipelinePage() {
         title="Pipeline"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Pipeline" },
         ]}
         showImport={false}

@@ -29,7 +29,7 @@ export default async function QuotesPage() {
         title="Quotations"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Quotations" },
         ]}
         showImport={false}

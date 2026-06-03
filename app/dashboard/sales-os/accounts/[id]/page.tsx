@@ -21,7 +21,7 @@ export default async function AccountDetailPage({ params }: { params: Promise<{ 
         title={detail.account.name}
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Accounts", href: "/dashboard/sales-os/accounts" },
           { label: detail.account.name },
         ]}

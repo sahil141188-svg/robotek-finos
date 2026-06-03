@@ -19,7 +19,7 @@ export default async function AnalyticsPage() {
         title="Reports & Analytics"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Reports & Analytics" },
         ]}
         showImport={false}

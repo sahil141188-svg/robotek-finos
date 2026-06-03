@@ -18,7 +18,7 @@ export default async function AccountsPage() {
         title="Accounts"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Accounts" },
         ]}
         showImport={false}

@@ -16,7 +16,7 @@ export default async function EmailPage() {
         title="Email"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Email" },
         ]}
         showImport={false}

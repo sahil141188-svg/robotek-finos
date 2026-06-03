@@ -18,7 +18,7 @@ export default async function AiCoachPage() {
         title="AI Sales Coach"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "AI Coach" },
         ]}
         showImport={false}

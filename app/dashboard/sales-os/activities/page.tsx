@@ -30,7 +30,7 @@ export default async function FollowupsPage() {
         title="Follow-ups"
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
-          { label: "Sales OS", href: "/dashboard/sales-os" },
+          { label: "NBD", href: "/dashboard/sales-os" },
           { label: "Follow-ups" },
         ]}
         showImport={false}

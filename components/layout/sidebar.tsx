@@ -8,12 +8,14 @@ import { useSidebar } from "./sidebar-context";
 import { CompanySwitcher } from "./company-switcher";
 import type { Database, UserPermissions } from "@/types/database";
 import { ROLE_LABELS } from "@/lib/roles";
+import { useState } from "react";
 import {
   LayoutDashboard, Upload, CalendarCheck, CheckSquare,
   TrendingDown, TrendingUp, FileText, Bell, LogOut,
   Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen, Brain,
   Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
   Briefcase, GitBranch, UserPlus, ListChecks, Sparkles, BarChart3, Package, Mail, CalendarDays,
+  ChevronDown, ChevronRight, LayoutDashboard as Gauge,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -43,18 +45,25 @@ const NAV_ITEMS: {
   { href: "/dashboard/review",       label: "Review Engine",         icon: FileText,        permKey: "view_review" },
   { href: "/dashboard/alerts",       label: "Alerts",                icon: Bell,            permKey: "view_alerts" },
   { href: "/dashboard/sales",        label: "Sales Coordinator",     icon: Target,          permKey: null },
-  { href: "/dashboard/sales-os",            label: "Sales OS",         icon: Briefcase,    permKey: "view_crm" },
-  { href: "/dashboard/sales-os/leads",      label: "Leads",            icon: UserPlus,     permKey: "view_crm" },
-  { href: "/dashboard/sales-os/pipeline",   label: "Pipeline",         icon: GitBranch,    permKey: "view_crm" },
-  { href: "/dashboard/sales-os/accounts",   label: "Accounts",         icon: Building2,    permKey: "view_crm" },
-  { href: "/dashboard/sales-os/products",   label: "Products",         icon: Package,      permKey: "view_crm" },
-  { href: "/dashboard/sales-os/quotes",     label: "Quotations",       icon: FileText,     permKey: "view_crm" },
-  { href: "/dashboard/sales-os/activities", label: "Follow-ups",       icon: ListChecks,   permKey: "view_crm" },
-  { href: "/dashboard/sales-os/calendar",   label: "Calendar",         icon: CalendarDays, permKey: "view_crm" },
-  { href: "/dashboard/sales-os/email",      label: "Email",            icon: Mail,         permKey: "view_crm" },
-  { href: "/dashboard/sales-os/analytics",  label: "Reports & Analytics", icon: BarChart3, permKey: "view_crm" },
-  { href: "/dashboard/sales-os/ai",         label: "AI Sales Coach",   icon: Sparkles,     permKey: "view_crm" },
   { href: "/dashboard/intel",        label: "Intelligence Hub",      icon: Brain,           permKey: null },
+];
+
+/**
+ * NBD (New Business Development) sub-tabs — the whole Sales OS, grouped under
+ * one collapsible parent and ordered along the lead → conversion journey.
+ */
+const NBD_ITEMS: { href: string; label: string; icon: React.ElementType; exact?: boolean }[] = [
+  { href: "/dashboard/sales-os",            label: "Dashboard",          icon: Gauge,        exact: true },
+  { href: "/dashboard/sales-os/leads",      label: "Leads",              icon: UserPlus },
+  { href: "/dashboard/sales-os/pipeline",   label: "Pipeline",           icon: GitBranch },
+  { href: "/dashboard/sales-os/activities", label: "Follow-ups",         icon: ListChecks },
+  { href: "/dashboard/sales-os/calendar",   label: "Calendar",           icon: CalendarDays },
+  { href: "/dashboard/sales-os/accounts",   label: "Accounts",           icon: Building2 },
+  { href: "/dashboard/sales-os/products",   label: "Products",           icon: Package },
+  { href: "/dashboard/sales-os/quotes",     label: "Quotations",         icon: FileText },
+  { href: "/dashboard/sales-os/email",      label: "Email",              icon: Mail },
+  { href: "/dashboard/sales-os/ai",         label: "AI Sales Coach",     icon: Sparkles },
+  { href: "/dashboard/sales-os/analytics",  label: "Reports & Analytics", icon: BarChart3 },
 ];
 
 interface SidebarProps {
@@ -64,6 +73,11 @@ interface SidebarProps {
 export function Sidebar({ profile }: SidebarProps) {
   const pathname   = usePathname();
   const { isOpen, close } = useSidebar();
+
+  // NBD (Sales OS) collapsible group — visible unless view_crm is explicitly off.
+  const showNbd = profile.permissions?.view_crm !== false;
+  const onNbd   = pathname.startsWith("/dashboard/sales-os");
+  const [nbdOpen, setNbdOpen] = useState(onNbd);
 
   /** Filter nav items based on the user's actual permissions */
   const visibleItems = NAV_ITEMS.filter((item) => {
@@ -120,7 +134,7 @@ export function Sidebar({ profile }: SidebarProps) {
           const isActive =
             item.href === "/dashboard"
               ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
+              : pathname === item.href || pathname.startsWith(item.href + "/");
 
           return (
             <Link
@@ -139,6 +153,47 @@ export function Sidebar({ profile }: SidebarProps) {
             </Link>
           );
         })}
+
+        {/* ── NBD (Sales OS) — collapsible group ── */}
+        {showNbd && (
+          <div className="pt-1">
+            <button
+              onClick={() => setNbdOpen((v) => !v)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
+                onNbd ? "bg-white/10 text-white font-medium" : "text-white/70 hover:text-white hover:bg-white/10"
+              )}
+            >
+              <Briefcase className="w-4 h-4 shrink-0" />
+              <span className="flex-1 text-left">NBD</span>
+              {nbdOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+            </button>
+
+            {nbdOpen && (
+              <div className="mt-0.5 ml-4 pl-3 border-l border-white/10 space-y-0.5">
+                {NBD_ITEMS.map((item) => {
+                  const active = item.exact
+                    ? pathname === item.href
+                    : pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={close}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors",
+                        active ? "bg-brand-red text-white font-medium" : "text-white/60 hover:text-white hover:bg-white/10"
+                      )}
+                    >
+                      <item.icon className="w-4 h-4 shrink-0" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* All Companies consolidated link — CEO/CFO */}
         {(profile.permissions?.admin_users === true || profile.role === "cfo") && (
