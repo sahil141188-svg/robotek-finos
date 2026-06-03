@@ -14,6 +14,7 @@ import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
 import { listOverdueCustomers } from "@/app/actions/reminders";
 import { getNotificationSettings } from "@/app/actions/notification-settings";
+import { isWhatsAppLive } from "@/lib/whatsapp";
 import { ReminderCenter } from "@/components/reminders/reminder-center";
 import { createClient } from "@/lib/supabase/server";
 import { AlertCircle, MessageSquare } from "lucide-react";
@@ -27,9 +28,8 @@ export default async function RemindersPage() {
 
   const { customers, companyId, cooldownDays } = await listOverdueCustomers();
   const settings = await getNotificationSettings();
-  const waEnabled = settings.whatsapp.enabled &&
-    ((settings.whatsapp.provider === "meta"   && !!settings.whatsapp.meta_token && !!settings.whatsapp.meta_phone_id) ||
-     (settings.whatsapp.provider === "twilio" && !!settings.whatsapp.account_sid && !!settings.whatsapp.auth_token && !!settings.whatsapp.from_number));
+  // Centralised check — handles every supported provider (meta/twilio/maytapi).
+  const waEnabled = isWhatsAppLive(settings.whatsapp);
 
   // Resolve the company display name for the message template preview
   let companyName = "Your Company";

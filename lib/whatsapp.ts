@@ -40,6 +40,28 @@ export type SendResult = {
   error?:     string;
 };
 
+/**
+ * Returns true when the WhatsApp toggle is ON AND the selected provider has
+ * every credential it needs. Use this everywhere the UI needs to ask
+ * "is WhatsApp actually live right now?" (status banners, disabled-button
+ * states, cron-eligibility checks). Centralised here so every supported
+ * provider stays in sync — adding a new provider only requires updating
+ * this function + the provider switch in sendWhatsApp().
+ */
+export function isWhatsAppLive(config: WhatsAppConfig): boolean {
+  if (!config.enabled) return false;
+  switch (config.provider) {
+    case "meta":
+      return !!config.meta_token && !!config.meta_phone_id;
+    case "twilio":
+      return !!config.account_sid && !!config.auth_token && !!config.from_number;
+    case "maytapi":
+      return !!config.maytapi_product_id && !!config.maytapi_phone_id && !!config.maytapi_token;
+    default:
+      return false;
+  }
+}
+
 // ── Main sender ──────────────────────────────────────────────────────────────
 
 /**
