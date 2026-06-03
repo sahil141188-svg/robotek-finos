@@ -8,44 +8,112 @@ import { useSidebar } from "./sidebar-context";
 import { CompanySwitcher } from "./company-switcher";
 import type { Database, UserPermissions } from "@/types/database";
 import { ROLE_LABELS } from "@/lib/roles";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard, Upload, CalendarCheck, CheckSquare,
   TrendingDown, TrendingUp, FileText, Bell, LogOut,
   Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen, Brain,
   Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
   Briefcase, GitBranch, UserPlus, ListChecks, Sparkles, BarChart3, Package, Mail, CalendarDays,
-  ChevronDown, ChevronRight, LayoutDashboard as Gauge,
+  ChevronDown, ChevronRight, Coins, ClipboardCheck, Database as DatabaseIcon,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
-/** Maps each nav item to the permission key that controls its visibility */
-const NAV_ITEMS: {
+type NavItem = {
   href:    string;
   label:   string;
   icon:    React.ElementType;
-  permKey: keyof UserPermissions | null; // null = always visible
-}[] = [
-  { href: "/dashboard",              label: "CFO Dashboard",         icon: LayoutDashboard, permKey: "view_dashboard" },
-  { href: "/dashboard/import",       label: "Import Data",           icon: Upload,          permKey: "import_data" },
-  { href: "/dashboard/imports",      label: "Imported Data",         icon: FolderOpen,      permKey: "import_data" },
-  { href: "/dashboard/compliance",   label: "Compliance Calendar",   icon: CalendarCheck,   permKey: "view_compliance" },
-  { href: "/dashboard/tasks",        label: "Task Management",       icon: CheckSquare,     permKey: "manage_tasks" },
-  { href: "/dashboard/payables",     label: "Accounts Payable",      icon: TrendingDown,    permKey: "view_payables" },
-  { href: "/dashboard/receivables",  label: "Accounts Receivable",   icon: TrendingUp,      permKey: "view_receivables" },
-  { href: "/dashboard/banking",      label: "Bank Statements",       icon: Landmark,        permKey: "view_banking" },
-  { href: "/dashboard/expenses",     label: "Expense Tracker",       icon: Wallet,          permKey: "view_dashboard" },
-  { href: "/dashboard/pnl",          label: "P&L Statement",         icon: ScrollText,      permKey: "view_dashboard" },
-  { href: "/dashboard/cashflow",     label: "Cash Flow",             icon: ArrowRightLeft,  permKey: "view_dashboard" },
-  { href: "/dashboard/duties",       label: "Imports & Duties",      icon: Ship,            permKey: "view_dashboard" },
-  { href: "/dashboard/contacts",     label: "Contacts",              icon: Users,           permKey: "view_dashboard" },
-  { href: "/dashboard/customers",    label: "Customers (Group)",     icon: Users,           permKey: "view_receivables" },
-  { href: "/dashboard/reminders",    label: "Send Reminders",        icon: Send,            permKey: "view_receivables" },
-  { href: "/dashboard/review",       label: "Review Engine",         icon: FileText,        permKey: "view_review" },
-  { href: "/dashboard/alerts",       label: "Alerts",                icon: Bell,            permKey: "view_alerts" },
-  { href: "/dashboard/sales",        label: "Sales Coordinator",     icon: Target,          permKey: null },
-  { href: "/dashboard/intel",        label: "Intelligence Hub",      icon: Brain,           permKey: null },
+  /** Permission key controlling visibility. `null` = always visible to anyone with dashboard access. */
+  permKey: keyof UserPermissions | null;
+  /** If true, route matches only on exact path (used for index routes). */
+  exact?:  boolean;
+};
+
+type NavGroup = {
+  id:      string;
+  label:   string;
+  icon:    React.ElementType;
+  items:   NavItem[];
+  /** If true, this group renders only when CEO/admin. */
+  adminOnly?: boolean;
+};
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Sidebar information architecture
+ *
+ * Items are grouped into 6 collapsible sections (plus the NBD/Sales OS
+ * section and two pinned items at the bottom: All Companies + Admin).
+ *
+ * Why grouped: a 17-item flat list was hard to scan, especially on the
+ * iPhone PWA where vertical real-estate is tight. Now each group surfaces
+ * 2-5 related items; only the active group needs to be open at a time.
+ *
+ * Auto-expand rule: a group expands automatically when the current route
+ * matches one of its items. Otherwise the user's last collapsed/expanded
+ * state is restored from localStorage on next page load.
+ * ────────────────────────────────────────────────────────────────────── */
+const NAV_GROUPS: NavGroup[] = [
+  {
+    id:    "overview",
+    label: "Overview",
+    icon:  LayoutDashboard,
+    items: [
+      { href: "/dashboard",       label: "CFO Dashboard",     icon: LayoutDashboard, permKey: "view_dashboard", exact: true },
+      { href: "/dashboard/intel", label: "Intelligence Hub",  icon: Brain,           permKey: null },
+    ],
+  },
+  {
+    id:    "money",
+    label: "Money",
+    icon:  Coins,
+    items: [
+      { href: "/dashboard/pnl",       label: "P&L Statement",   icon: ScrollText,      permKey: "view_dashboard" },
+      { href: "/dashboard/cashflow",  label: "Cash Flow",        icon: ArrowRightLeft,  permKey: "view_dashboard" },
+      { href: "/dashboard/expenses",  label: "Expense Tracker",  icon: Wallet,          permKey: "view_dashboard" },
+    ],
+  },
+  {
+    id:    "ar_ap",
+    label: "Receivables & Payables",
+    icon:  TrendingUp,
+    items: [
+      { href: "/dashboard/receivables", label: "Accounts Receivable", icon: TrendingUp,   permKey: "view_receivables" },
+      { href: "/dashboard/payables",    label: "Accounts Payable",     icon: TrendingDown, permKey: "view_payables" },
+      { href: "/dashboard/customers",   label: "Customers (Group)",    icon: Users,        permKey: "view_receivables" },
+      { href: "/dashboard/reminders",   label: "Send Reminders",       icon: Send,         permKey: "view_receivables" },
+    ],
+  },
+  {
+    id:    "banking",
+    label: "Banking & Trade",
+    icon:  Landmark,
+    items: [
+      { href: "/dashboard/banking", label: "Bank Statements", icon: Landmark, permKey: "view_banking" },
+      { href: "/dashboard/duties",  label: "Imports & Duties", icon: Ship,    permKey: "view_dashboard" },
+    ],
+  },
+  {
+    id:    "compliance",
+    label: "Compliance & Tasks",
+    icon:  ClipboardCheck,
+    items: [
+      { href: "/dashboard/compliance", label: "Compliance Calendar", icon: CalendarCheck, permKey: "view_compliance" },
+      { href: "/dashboard/tasks",      label: "Task Management",      icon: CheckSquare,   permKey: "manage_tasks" },
+      { href: "/dashboard/alerts",     label: "Alerts",               icon: Bell,          permKey: "view_alerts" },
+      { href: "/dashboard/review",     label: "Review Engine",        icon: FileText,      permKey: "view_review" },
+    ],
+  },
+  {
+    id:    "data",
+    label: "Data",
+    icon:  DatabaseIcon,
+    items: [
+      { href: "/dashboard/import",   label: "Import Data",   icon: Upload,     permKey: "import_data" },
+      { href: "/dashboard/imports",  label: "Imported Data", icon: FolderOpen, permKey: "import_data" },
+      { href: "/dashboard/contacts", label: "Contacts",       icon: Users,      permKey: "view_dashboard" },
+    ],
+  },
 ];
 
 /**
@@ -53,7 +121,7 @@ const NAV_ITEMS: {
  * one collapsible parent and ordered along the lead → conversion journey.
  */
 const NBD_ITEMS: { href: string; label: string; icon: React.ElementType; exact?: boolean }[] = [
-  { href: "/dashboard/sales-os",            label: "Dashboard",          icon: Gauge,        exact: true },
+  { href: "/dashboard/sales-os",            label: "Dashboard",          icon: LayoutDashboard, exact: true },
   { href: "/dashboard/sales-os/leads",      label: "Leads",              icon: UserPlus },
   { href: "/dashboard/sales-os/pipeline",   label: "Pipeline",           icon: GitBranch },
   { href: "/dashboard/sales-os/activities", label: "Follow-ups",         icon: ListChecks },
@@ -66,21 +134,30 @@ const NBD_ITEMS: { href: string; label: string; icon: React.ElementType; exact?:
   { href: "/dashboard/sales-os/analytics",  label: "Reports & Analytics", icon: BarChart3 },
 ];
 
+/**
+ * "Sales Coordinator" used to be a top-level item; we keep it as a quick link
+ * inside the Sales OS group rather than its own row to keep the sidebar tight.
+ */
+const SALES_COORD: NavItem = {
+  href: "/dashboard/sales", label: "Sales Coordinator", icon: Target, permKey: null,
+};
+
 interface SidebarProps {
   profile: UserRow;
+}
+
+/** Returns true when the route should mark the item as active. */
+function isItemActive(pathname: string, item: { href: string; exact?: boolean }): boolean {
+  if (item.exact) return pathname === item.href;
+  return pathname === item.href || pathname.startsWith(item.href + "/");
 }
 
 export function Sidebar({ profile }: SidebarProps) {
   const pathname   = usePathname();
   const { isOpen, close } = useSidebar();
 
-  // NBD (Sales OS) collapsible group — visible unless view_crm is explicitly off.
-  const showNbd = profile.permissions?.view_crm !== false;
-  const onNbd   = pathname.startsWith("/dashboard/sales-os");
-  const [nbdOpen, setNbdOpen] = useState(onNbd);
-
-  /** Filter nav items based on the user's actual permissions */
-  const visibleItems = NAV_ITEMS.filter((item) => {
+  // Filter helper — applies the same permission rules used previously.
+  function canSee(item: NavItem): boolean {
     if (item.permKey === null) return true;
     // view_banking / view_crm: show if true OR if the key doesn't exist yet
     // (these were added after some users were created — default-visible).
@@ -88,7 +165,60 @@ export function Sidebar({ profile }: SidebarProps) {
       return profile.permissions?.[item.permKey] !== false;
     }
     return profile.permissions?.[item.permKey] === true;
+  }
+
+  // Compute visible groups + their visible items
+  const visibleGroups = NAV_GROUPS
+    .map((g) => ({ ...g, items: g.items.filter(canSee) }))
+    .filter((g) => g.items.length > 0);
+
+  const showNbd = profile.permissions?.view_crm !== false;
+  const onNbd   = pathname.startsWith("/dashboard/sales-os") || pathname === SALES_COORD.href;
+
+  // Persist + restore group open/closed state. Active group auto-expands on
+  // first paint and any time the user navigates into one of its routes.
+  const STORAGE_KEY = "finos-sidebar-groups-v1";
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    // Pre-compute on first render so we don't flash a collapsed sidebar.
+    const initial: Record<string, boolean> = {};
+    for (const g of visibleGroups) {
+      initial[g.id] = g.items.some((it) => isItemActive(pathname, it));
+    }
+    if (showNbd) initial.nbd = onNbd;
+    return initial;
   });
+
+  // Hydrate from localStorage AFTER first paint — preserves the user's
+  // expand/collapse choices across page loads while keeping the active
+  // group expanded.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Record<string, boolean>;
+      setOpenGroups((prev) => {
+        const next = { ...prev };
+        for (const id of Object.keys(saved)) {
+          // Always force the active group to be open, regardless of saved pref.
+          const grp = visibleGroups.find((g) => g.id === id);
+          const isActive = grp ? grp.items.some((it) => isItemActive(pathname, it)) : (id === "nbd" ? onNbd : false);
+          next[id] = isActive ? true : saved[id];
+        }
+        return next;
+      });
+    } catch { /* localStorage may be unavailable in some contexts */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist whenever the user toggles a group
+  useEffect(() => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(openGroups)); }
+    catch { /* ignore */ }
+  }, [openGroups]);
+
+  function toggleGroup(id: string) {
+    setOpenGroups((s) => ({ ...s, [id]: !s[id] }));
+  }
 
   const isAdmin = profile.permissions?.admin_users === true;
 
@@ -115,7 +245,6 @@ export function Sidebar({ profile }: SidebarProps) {
             <p className="text-white/50 text-xs">Finance OS</p>
           </div>
         </div>
-        {/* Close button — mobile only */}
         <button
           onClick={close}
           className="lg:hidden text-white/60 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors"
@@ -125,64 +254,105 @@ export function Sidebar({ profile }: SidebarProps) {
         </button>
       </div>
 
-      {/* Company switcher — below logo */}
       <CompanySwitcher />
 
-      {/* Nav items */}
+      {/* Nav groups */}
       <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {visibleItems.map((item) => {
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname === item.href || pathname.startsWith(item.href + "/");
+        {visibleGroups.map((g) => {
+          const isOpenGroup = !!openGroups[g.id];
+          const groupActive = g.items.some((it) => isItemActive(pathname, it));
 
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={close} // close sidebar on nav on mobile
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
-                isActive
-                  ? "bg-brand-red text-white font-medium"
-                  : "text-white/70 hover:text-white hover:bg-white/10"
+            <div key={g.id} className="mb-0.5">
+              <button
+                onClick={() => toggleGroup(g.id)}
+                aria-expanded={isOpenGroup}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors",
+                  groupActive ? "text-white" : "text-white/40 hover:text-white/70",
+                )}
+              >
+                <g.icon className={cn("w-3.5 h-3.5 shrink-0", groupActive ? "text-brand-red" : "")} />
+                <span className="flex-1 text-left">{g.label}</span>
+                {isOpenGroup
+                  ? <ChevronDown className="w-3.5 h-3.5" />
+                  : <ChevronRight className="w-3.5 h-3.5" />}
+              </button>
+
+              {isOpenGroup && (
+                <div className="mt-0.5 space-y-0.5">
+                  {g.items.map((item) => {
+                    const active = isItemActive(pathname, item);
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={close}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                          active
+                            ? "bg-brand-red text-white font-medium"
+                            : "text-white/70 hover:text-white hover:bg-white/10",
+                        )}
+                      >
+                        <item.icon className="w-4 h-4 shrink-0" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
               )}
-            >
-              <item.icon className="w-4 h-4 shrink-0" />
-              {item.label}
-            </Link>
+            </div>
           );
         })}
 
-        {/* ── NBD (Sales OS) — collapsible group ── */}
+        {/* ── NBD (Sales OS) — its own collapsible group ── */}
         {showNbd && (
-          <div className="pt-1">
+          <div className="mb-0.5">
             <button
-              onClick={() => setNbdOpen((v) => !v)}
+              onClick={() => toggleGroup("nbd")}
+              aria-expanded={!!openGroups.nbd}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
-                onNbd ? "bg-white/10 text-white font-medium" : "text-white/70 hover:text-white hover:bg-white/10"
+                "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-colors",
+                onNbd ? "text-white" : "text-white/40 hover:text-white/70",
               )}
             >
-              <Briefcase className="w-4 h-4 shrink-0" />
-              <span className="flex-1 text-left">NBD</span>
-              {nbdOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              <Briefcase className={cn("w-3.5 h-3.5 shrink-0", onNbd ? "text-brand-red" : "")} />
+              <span className="flex-1 text-left">NBD / Sales OS</span>
+              {openGroups.nbd
+                ? <ChevronDown className="w-3.5 h-3.5" />
+                : <ChevronRight className="w-3.5 h-3.5" />}
             </button>
 
-            {nbdOpen && (
-              <div className="mt-0.5 ml-4 pl-3 border-l border-white/10 space-y-0.5">
+            {openGroups.nbd && (
+              <div className="mt-0.5 space-y-0.5">
+                {/* Legacy Sales Coordinator entry — pinned at the top of this group */}
+                <Link
+                  key={SALES_COORD.href}
+                  href={SALES_COORD.href}
+                  onClick={close}
+                  className={cn(
+                    "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                    pathname === SALES_COORD.href || pathname.startsWith(SALES_COORD.href + "/")
+                      ? "bg-brand-red text-white font-medium"
+                      : "text-white/70 hover:text-white hover:bg-white/10",
+                  )}
+                >
+                  <SALES_COORD.icon className="w-4 h-4 shrink-0" />
+                  {SALES_COORD.label}
+                </Link>
                 {NBD_ITEMS.map((item) => {
-                  const active = item.exact
-                    ? pathname === item.href
-                    : pathname === item.href || pathname.startsWith(item.href + "/");
+                  const active = isItemActive(pathname, item);
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={close}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-colors",
-                        active ? "bg-brand-red text-white font-medium" : "text-white/60 hover:text-white hover:bg-white/10"
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                        active
+                          ? "bg-brand-red text-white font-medium"
+                          : "text-white/70 hover:text-white hover:bg-white/10",
                       )}
                     >
                       <item.icon className="w-4 h-4 shrink-0" />
@@ -195,8 +365,8 @@ export function Sidebar({ profile }: SidebarProps) {
           </div>
         )}
 
-        {/* All Companies consolidated link — CEO/CFO */}
-        {(profile.permissions?.admin_users === true || profile.role === "cfo") && (
+        {/* All Companies consolidated link — CEO/CFO. Pinned, not in a group. */}
+        {(isAdmin || profile.role === "cfo") && (
           <>
             <div className="my-2 border-t border-white/10" />
             <Link
@@ -206,7 +376,7 @@ export function Sidebar({ profile }: SidebarProps) {
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
                 pathname.startsWith("/dashboard/consolidated")
                   ? "bg-brand-yellow text-brand-black font-medium"
-                  : "text-white/70 hover:text-white hover:bg-white/10"
+                  : "text-white/70 hover:text-white hover:bg-white/10",
               )}
             >
               <LayoutGrid className="w-4 h-4 shrink-0" />
@@ -215,7 +385,7 @@ export function Sidebar({ profile }: SidebarProps) {
           </>
         )}
 
-        {/* Admin link */}
+        {/* Admin link — pinned */}
         {isAdmin && (
           <>
             <div className="my-2 border-t border-white/10" />
@@ -226,7 +396,7 @@ export function Sidebar({ profile }: SidebarProps) {
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
                 pathname.startsWith("/dashboard/admin")
                   ? "bg-brand-red text-white font-medium"
-                  : "text-white/70 hover:text-white hover:bg-white/10"
+                  : "text-white/70 hover:text-white hover:bg-white/10",
               )}
             >
               <ShieldCheck className="w-4 h-4 shrink-0" />
