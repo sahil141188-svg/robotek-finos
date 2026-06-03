@@ -576,3 +576,6 @@ alter table public.crm_accounts
 create index if not exists idx_crm_leads_tags    on public.crm_leads    using gin (tags);
 create index if not exists idx_crm_accounts_tags on public.crm_accounts using gin (tags);
 
+
+-- ── Refresh the API schema cache so the new tables are visible immediately ──
+NOTIFY pgrst, 'reload schema';
