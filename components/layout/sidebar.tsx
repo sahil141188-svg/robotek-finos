@@ -64,6 +64,19 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    // CRR = Customer Retention / existing-business. Houses the AI Sales
+    // Coordinator and all its quantity/value targets (item, customer, category).
+    id:    "crr",
+    label: "CRR — Existing Business",
+    icon:  Target,
+    items: [
+      { href: "/dashboard/sales",            label: "AI Sales Coordinator", icon: Target,     permKey: null, exact: true },
+      { href: "/dashboard/sales/customers",  label: "Customer Targets",     icon: Users,      permKey: null },
+      { href: "/dashboard/sales/items",      label: "Company Item Targets", icon: Package,    permKey: null },
+      { href: "/dashboard/sales/categories", label: "Category Targets",     icon: LayoutGrid, permKey: null },
+    ],
+  },
+  {
     id:    "money",
     label: "Money",
     icon:  Coins,

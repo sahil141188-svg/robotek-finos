@@ -21,18 +21,20 @@ const rows = xlsx.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" 
 const sales = (await db.from("sales_customers").select("id,name")).data || [];
 const byName = new Map(sales.map((s) => [s.name.trim().toUpperCase(), s.id]));
 
-let applied = 0; const skipped = [], nomatch = [];
+let applied = 0; const skipped = [], nomatch = []; let belowDivider = false;
 for (const r of rows) {
   const name = String(r["sales_customer"] || "").trim();
-  if (!name || name.startsWith("---")) continue;
+  if (!name) continue;
+  if (name.startsWith("---")) { belowDivider = true; continue; } // "no number found, please add" section
   const keep = String(r["keep? (y/n)"] || "").trim().toUpperCase();
   const guess = String(r["phone_guess"] || "").trim();
   const corr = String(r["correct_phone_if_no"] || "").trim();
   let phone = "";
   if (keep === "YES" || keep === "Y") phone = norm10(guess);
   else if (keep === "NO" || keep === "N") phone = norm10(corr);
+  else if (belowDivider) phone = norm10(guess || corr); // newly-added numbers in the bottom section
   else { if (guess) skipped.push(`${name} (left blank)`); continue; }
-  if (!phone || phone.length < 10) { skipped.push(`${name} (no valid number)`); continue; }
+  if (!phone || phone.length < 10) { skipped.push(`${name} (no number / discontinued)`); continue; }
   const id = byName.get(name.toUpperCase());
   if (!id) { nomatch.push(name); continue; }
   await db.from("sales_customers").update({ phone, updated_at: new Date().toISOString() }).eq("id", id);
