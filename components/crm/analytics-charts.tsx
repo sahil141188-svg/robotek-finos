@@ -103,6 +103,37 @@ export function AnalyticsCharts({ data }: { data: SalesAnalytics }) {
         </CardBox>
       </div>
 
+      {/* ── Forecast ── */}
+      <CardBox title="Sales Forecast (stage-weighted)" icon={<LineChart className="w-4 h-4 text-brand-red" />}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="space-y-3">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <div className="text-xs text-emerald-700 font-medium">Weighted forecast</div>
+              <div className="text-2xl font-bold text-emerald-800">{formatIndian(data.forecast.weightedTotal, 0)}</div>
+              <div className="text-[11px] text-emerald-700 mt-0.5">expected from open deals</div>
+            </div>
+            <div className="rounded-lg border border-border bg-brand-gray-light/40 p-4">
+              <div className="text-xs text-brand-gray-mid font-medium">Best case (all open)</div>
+              <div className="text-xl font-bold text-brand-black">{formatIndian(data.forecast.grossOpen, 0)}</div>
+            </div>
+          </div>
+          <div className="lg:col-span-2 h-56">
+            {data.forecast.byMonth.length === 0 ? <Empty msg="No open deals to forecast." /> : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.forecast.byMonth} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F5F4F4" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: GRAY }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: GRAY }} axisLine={false} tickLine={false} tickFormatter={(v) => (v >= 100000 ? `${(v / 100000).toFixed(0)}L` : `${v}`)} />
+                  <Tooltip content={<Tip money />} cursor={{ fill: "#F5F4F4" }} />
+                  <Bar dataKey="gross" name="Best case" fill={GRAY} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="weighted" name="Weighted" fill="#059669" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+      </CardBox>
+
       {/* ── Pipeline by stage ── */}
       <CardBox title="Pipeline Value by Stage" icon={<GitBranch className="w-4 h-4 text-brand-red" />}>
         <div className="h-64">
