@@ -6,6 +6,7 @@
  */
 import { getLeads, getDeals, getFollowups } from "./queries";
 import { DEAL_STAGES } from "./types";
+import { scoreLead, type ScoreBand } from "./scoring";
 import type { CrmDealStage } from "@/types/database";
 
 export type StageDatum = { stage: CrmDealStage; label: string; count: number; value: number };
@@ -38,6 +39,7 @@ export type SalesAnalytics = {
   leadTypeSplit: { type: string; count: number }[];
   activityByType: { type: string; count: number }[];
   deptSplit: { dept: string; count: number; value: number }[];
+  scoreBands: { band: ScoreBand; count: number }[];
   overdueFollowups: number;
 };
 
@@ -135,6 +137,14 @@ export async function getSalesAnalytics(): Promise<SalesAnalytics> {
   leads.forEach((l) => typeMap.set(l.lead_type, (typeMap.get(l.lead_type) ?? 0) + 1));
   const leadTypeSplit = [...typeMap.entries()].map(([type, count]) => ({ type, count }));
 
+  // ── Lead score bands ──
+  const bandMap = new Map<ScoreBand, number>([["hot", 0], ["warm", 0], ["cold", 0]]);
+  leads.forEach((l) => {
+    const { band } = scoreLead(l);
+    bandMap.set(band, (bandMap.get(band) ?? 0) + 1);
+  });
+  const scoreBands = (["hot", "warm", "cold"] as ScoreBand[]).map((band) => ({ band, count: bandMap.get(band) ?? 0 }));
+
   // ── Activity volume by type ──
   const actMap = new Map<string, number>();
   followups.forEach((a) => actMap.set(a.type, (actMap.get(a.type) ?? 0) + 1));
@@ -170,6 +180,7 @@ export async function getSalesAnalytics(): Promise<SalesAnalytics> {
     leadTypeSplit,
     activityByType,
     deptSplit,
+    scoreBands,
     overdueFollowups,
   };
 }

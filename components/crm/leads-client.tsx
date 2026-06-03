@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createLead, updateLeadStatus, convertLead, scheduleFollowup, startDrip, stopDrip } from "@/app/actions/crm";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, CRM_SOURCES } from "@/lib/crm/types";
 import { LEAD_TYPE_LABELS, DRIP_STATUS_LABELS, DRIP_STATUS_COLORS } from "@/lib/crm/drip";
+import { scoreLead, BAND_LABELS, BAND_COLORS } from "@/lib/crm/scoring";
 import { formatIndian } from "@/lib/format";
 import type { CrmLeadStatus } from "@/types/database";
 import type { LeadWithNames } from "@/lib/crm/queries";
@@ -158,7 +159,14 @@ export function LeadsClient({
               <Fragment key={l.id}>
               <tr className="border-b border-border last:border-0 hover:bg-brand-gray-light/30">
                 <td className="px-4 py-3">
-                  <div className="font-medium text-brand-black">{l.name}</div>
+                  <div className="font-medium text-brand-black flex items-center gap-2">
+                    {l.name}
+                    {(() => { const { score, band } = scoreLead(l); return (
+                      <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-medium ${BAND_COLORS[band]}`} title={`Lead score ${score}/100`}>
+                        {BAND_LABELS[band]} {score}
+                      </span>
+                    ); })()}
+                  </div>
                   <div className="text-[10px] text-brand-gray-mid">{LEAD_TYPE_LABELS[l.lead_type]}{l.company ? ` · ${l.company}` : ""}</div>
                   {nextFollowups[l.id] && (
                     <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-amber-700">

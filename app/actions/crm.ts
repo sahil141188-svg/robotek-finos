@@ -66,6 +66,40 @@ function num(formData: FormData, key: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * Pick the NBD team member with the fewest open (non-converted) leads, so new
+ * unassigned leads are spread evenly. Returns null if no NBD members exist.
+ */
+async function pickNbdAssignee(supabase: any): Promise<string | null> {
+  const { data: members } = await supabase
+    .from("users")
+    .select("id")
+    .eq("crm_department", "nbd")
+    .eq("is_active", true);
+  const ids = (members ?? []).map((m: { id: string }) => m.id);
+  if (ids.length === 0) return null;
+
+  const { data: openLeads } = await supabase
+    .from("crm_leads")
+    .select("assigned_to")
+    .neq("status", "converted")
+    .neq("status", "unqualified");
+
+  const load = new Map<string, number>();
+  ids.forEach((id: string) => load.set(id, 0));
+  (openLeads ?? []).forEach((l: { assigned_to: string | null }) => {
+    if (l.assigned_to && load.has(l.assigned_to)) load.set(l.assigned_to, (load.get(l.assigned_to) ?? 0) + 1);
+  });
+
+  let best = ids[0];
+  let min = Infinity;
+  for (const id of ids) {
+    const c = load.get(id) ?? 0;
+    if (c < min) { min = c; best = id; }
+  }
+  return best;
+}
+
 // ── LEADS ───────────────────────────────────────────────────
 
 export async function createLead(formData: FormData): Promise<Result> {
@@ -76,6 +110,11 @@ export async function createLead(formData: FormData): Promise<Result> {
   if (!name) return { error: "Lead name is required" };
 
   const supabase = (await createClient()) as any;
+
+  // Round-robin / least-loaded auto-assignment when no owner is chosen.
+  let assignedTo = str(formData, "assigned_to");
+  if (!assignedTo) assignedTo = await pickNbdAssignee(supabase);
+
   const { error } = await supabase.from("crm_leads").insert({
     name,
     lead_type: (str(formData, "lead_type") as never) ?? "channel_partner",
@@ -86,7 +125,7 @@ export async function createLead(formData: FormData): Promise<Result> {
     city: str(formData, "city"),
     state: str(formData, "state"),
     est_value: num(formData, "est_value"),
-    assigned_to: str(formData, "assigned_to"),
+    assigned_to: assignedTo,
     notes: str(formData, "notes"),
     created_by: uid,
   });

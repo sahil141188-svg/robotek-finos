@@ -171,6 +171,23 @@ export function AnalyticsCharts({ data }: { data: SalesAnalytics }) {
           )}
         </CardBox>
 
+        <CardBox title="Lead Quality (score)" icon={<Target className="w-4 h-4 text-brand-red" />}>
+          {data.scoreBands.every((b) => b.count === 0) ? <Empty /> : (
+            <div className="grid grid-cols-3 gap-3">
+              {data.scoreBands.map((b) => {
+                const c = b.band === "hot" ? "text-red-700 bg-red-50 border-red-200" : b.band === "warm" ? "text-amber-700 bg-amber-50 border-amber-200" : "text-blue-700 bg-blue-50 border-blue-200";
+                const label = b.band === "hot" ? "🔥 Hot" : b.band === "warm" ? "Warm" : "Cold";
+                return (
+                  <div key={b.band} className={`rounded-lg border p-4 text-center ${c}`}>
+                    <div className="text-2xl font-bold">{b.count}</div>
+                    <div className="text-xs mt-1">{label}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardBox>
+
         <CardBox title="Leads by Type" icon={<Target className="w-4 h-4 text-brand-red" />}>
           {data.leadTypeSplit.length === 0 ? <Empty /> : (
             <div className="h-60">
