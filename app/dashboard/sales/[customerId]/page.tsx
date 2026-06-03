@@ -14,6 +14,8 @@ import { formatQty } from "@/lib/format";
 import { WhatsAppButton } from "@/components/sales/whatsapp-button";
 import { WhatsAppSendButton } from "@/components/sales/whatsapp-send-button";
 import { CustomerPhone } from "@/components/sales/customer-phone";
+import { CustomerTargetsEditor } from "@/components/sales/customer-targets-editor";
+import { seasonalFactor } from "@/lib/sales/seasonality";
 import { churnNudgeWithItems, waLink } from "@/lib/sales/whatsapp-templates";
 import { ArrowLeft, Star, Clock, Package, AlertTriangle, CheckCircle2 } from "lucide-react";
 
@@ -33,6 +35,12 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
   if (!data) notFound();
 
   const { customer, focus, occasional, churn, focusMonthlyTotal, currentMonth, provisionalMonth } = data;
+
+  // active products for the "add item" picker in the editor
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: prodData } = await (supabase as any).from("sales_products").select("id,name").eq("is_active", true).order("name");
+  const activeProducts = (prodData ?? []) as { id: string; name: string }[];
+  const factor = seasonalFactor(currentMonth);
   const overdue = churn && churn.overdueRatio >= 1.5;
 
   return (
@@ -113,36 +121,13 @@ export default async function CustomerPage({ params }: { params: Promise<{ custo
             </div>
             <span className="text-xs text-brand-gray-mid">Baseline <strong className="text-brand-black">{formatQty(focusMonthlyTotal)}</strong>/mo</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-xs text-brand-gray-mid bg-brand-gray-light/50">
-                  <th className="text-left font-medium px-5 py-2.5">Item</th>
-                  <th className="text-right font-medium px-3 py-2.5">Monthly baseline</th>
-                  <th className="text-right font-medium px-3 py-2.5">{MONTHS[currentMonth]} goal{provisionalMonth ? " *" : ""}</th>
-                  <th className="text-right font-medium px-3 py-2.5">Regularity</th>
-                  <th className="text-right font-medium px-5 py-2.5">Last qty</th>
-                </tr>
-              </thead>
-              <tbody>
-                {focus.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-8 text-center text-xs text-brand-gray-mid">No regular focus items yet.</td></tr>
-                )}
-                {focus.map((r) => (
-                  <tr key={r.productId} className="border-t border-border hover:bg-brand-gray-light/40 transition-colors">
-                    <td className="px-5 py-2.5 font-medium text-brand-black">
-                      {r.highValue && <Star className="inline w-3.5 h-3.5 mr-1.5 text-brand-yellow fill-brand-yellow align-text-bottom" />}
-                      {r.productName}
-                    </td>
-                    <td className="px-3 py-2.5 text-right text-brand-gray-mid">{formatQty(r.monthlyTarget)}</td>
-                    <td className="px-3 py-2.5 text-right font-semibold text-brand-black">{formatQty(r.thisMonthTarget)}</td>
-                    <td className="px-3 py-2.5 text-right text-brand-gray-mid">{r.monthsActive}/8 mo</td>
-                    <td className="px-5 py-2.5 text-right text-brand-gray-mid">{r.lastQty != null ? formatQty(r.lastQty) : "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <CustomerTargetsEditor
+            customerId={customer.id}
+            initialFocus={focus.map((r) => ({ productId: r.productId, productName: r.productName, monthlyTarget: r.monthlyTarget, monthsActive: r.monthsActive, lastQty: r.lastQty, highValue: r.highValue }))}
+            products={activeProducts}
+            factor={factor}
+            monthLabel={MONTHS[currentMonth]}
+          />
           {provisionalMonth && (
             <p className="px-5 py-2.5 text-[11px] text-brand-gray-mid border-t border-border">* {MONTHS[currentMonth]} has no historical data yet — goal shown at baseline until the live tab fills it in.</p>
           )}

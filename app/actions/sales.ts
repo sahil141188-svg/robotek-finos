@@ -4,11 +4,24 @@
  * Server actions for the AI Sales Coordinator.
  */
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { getWhatsAppConfig } from "@/app/actions/notification-settings";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { getCustomerDetail } from "@/lib/supabase/sales-queries";
 import { churnNudgeWithItems } from "@/lib/sales/whatsapp-templates";
+
+/** Service-role client for sales_* writes (the customer-item target table has no
+ * authenticated write policy). Server-only; we auth-check the caller first. */
+function salesAdmin() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } }) as any;
+}
+async function requireUser() {
+  const supa = await createClient();
+  const { data } = await supa.auth.getUser();
+  return data.user;
+}
 
 /** Save / update a sales customer's WhatsApp phone number. */
 export async function setSalesCustomerPhone(id: string, phone: string) {
@@ -51,4 +64,41 @@ export async function sendChurnNudgeWhatsApp(customerId: string) {
   await (supabase as any).from("sales_customers").update({ notes: `wa_nudged:${new Date().toISOString()}` }).eq("id", customerId);
   revalidatePath(`/dashboard/sales/${customerId}`);
   return { ok: true as const, messageId: res.messageId ?? null };
+}
+
+/** Update a customer's monthly target qty for one item. */
+export async function updateCustomerItemTarget(customerId: string, productId: string, qty: number) {
+  if (!(await requireUser())) return { ok: false as const, error: "Not signed in" };
+  const q = Math.max(0, Math.round(Number(qty) || 0));
+  const { error } = await salesAdmin()
+    .from("sales_customer_item_targets")
+    .update({ monthly_target_qty: q, updated_at: new Date().toISOString() })
+    .eq("customer_id", customerId).eq("product_id", productId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/dashboard/sales/${customerId}`);
+  return { ok: true as const };
+}
+
+/** Add (or upsert) a focus item target for a customer. */
+export async function addCustomerItemTarget(customerId: string, productId: string, qty: number) {
+  if (!(await requireUser())) return { ok: false as const, error: "Not signed in" };
+  if (!productId) return { ok: false as const, error: "Pick an item" };
+  const q = Math.max(0, Math.round(Number(qty) || 0));
+  const { error } = await salesAdmin()
+    .from("sales_customer_item_targets")
+    .upsert({ customer_id: customerId, product_id: productId, monthly_target_qty: q, is_focus: true, months_active: 0, total_qty: 0, updated_at: new Date().toISOString() }, { onConflict: "customer_id,product_id" });
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/dashboard/sales/${customerId}`);
+  return { ok: true as const };
+}
+
+/** Remove an item target from a customer's list. */
+export async function removeCustomerItemTarget(customerId: string, productId: string) {
+  if (!(await requireUser())) return { ok: false as const, error: "Not signed in" };
+  const { error } = await salesAdmin()
+    .from("sales_customer_item_targets")
+    .delete().eq("customer_id", customerId).eq("product_id", productId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath(`/dashboard/sales/${customerId}`);
+  return { ok: true as const };
 }
