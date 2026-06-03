@@ -61,7 +61,7 @@ export default async function CategoryTargetsPage() {
             </table>
           </div>
         </section>
-        <p className="text-xs text-brand-gray-mid">Categories are auto-derived from item-name series (DC, HF, ANS, TWS, S, W…). Tell me your real category names anytime and I&apos;ll regroup.</p>
+        <p className="text-xs text-brand-gray-mid">Categories from your Stock List. <strong>Total sold</strong> includes discontinued items&apos; demand (it stays in the category); <strong>targets &amp; item counts are for active items only</strong>.</p>
       </main>
     </>
   );

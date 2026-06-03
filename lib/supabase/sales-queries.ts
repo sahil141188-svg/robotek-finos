@@ -45,8 +45,8 @@ export type BreakevenItem = {
   highValue: boolean;          // ⭐ rough value signal — push first (no ₹ shown)
 };
 
-// sales_products + the new unit_value column (rough Rs/unit, reference only)
-type ProductRowV = ProductRow & { unit_value: number | null };
+// sales_products + the newer unit_value + is_active columns
+type ProductRowV = ProductRow & { unit_value: number | null; is_active: boolean };
 /** A product is "high value" if its rough Rs/unit is at/above this. Internal only. */
 const HIGH_VALUE_PER_UNIT = 20;
 const isHighValue = (uv: number | null | undefined) => (uv ?? 0) >= HIGH_VALUE_PER_UNIT;
@@ -107,7 +107,7 @@ export async function getSalesOverview(db: DB) {
   const sb = db as any;
   const { data: customers } = await sb.from("sales_customers").select("*");
   const { data: products } = await sb
-    .from("sales_products").select("*").eq("is_breakeven", true).order("monthly_target_qty", { ascending: false });
+    .from("sales_products").select("*").eq("is_breakeven", true).eq("is_active", true).order("monthly_target_qty", { ascending: false });
   const { count: focusTargetCount } = await sb
     .from("sales_customer_item_targets").select("*", { count: "exact", head: true }).eq("is_focus", true);
 
@@ -192,15 +192,18 @@ export async function getCustomerDetail(db: DB, customerId: string) {
   const ids = targets.map((t) => t.product_id);
   const nameMap = new Map<string, string>();
   const valueMap = new Map<string, number | null>();
+  const activeMap = new Map<string, boolean>();
   if (ids.length) {
-    const { data: prods } = await sb.from("sales_products").select("id,name,unit_value").in("id", ids);
-    for (const p of (prods ?? []) as Pick<ProductRowV, "id" | "name" | "unit_value">[]) {
+    const { data: prods } = await sb.from("sales_products").select("id,name,unit_value,is_active").in("id", ids);
+    for (const p of (prods ?? []) as Pick<ProductRowV, "id" | "name" | "unit_value" | "is_active">[]) {
       nameMap.set(p.id, p.name);
       valueMap.set(p.id, p.unit_value);
+      activeMap.set(p.id, p.is_active);
     }
   }
 
   const rows: CustomerTargetRow[] = targets
+    .filter((t) => activeMap.get(t.product_id) !== false) // drop discontinued items
     .map((t) => ({
       productId: t.product_id,
       productName: nameMap.get(t.product_id) ?? "—",
@@ -249,7 +252,7 @@ export async function getItemTargets(db: DB, limit = 50) {
   const currentMonth = new Date().getMonth() + 1;
   const factor = seasonalFactor(currentMonth);
   const sb = db as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  const { data } = await sb.from("sales_products").select("*").order("total_qty_sold", { ascending: false }).limit(limit);
+  const { data } = await sb.from("sales_products").select("*").eq("is_active", true).order("total_qty_sold", { ascending: false }).limit(limit);
   const items: ItemTargetRow[] = ((data ?? []) as ProductRowV[]).map((p) => {
     const monthlyTarget = p.monthly_target_qty ?? 0;
     return {
@@ -288,11 +291,13 @@ export async function getCategoryTargets(db: DB) {
     const cat = p.category || "OTHER";
     if (!map.has(cat)) map.set(cat, { category: cat, itemCount: 0, breakevenCount: 0, highValueCount: 0, totalSold: 0, monthlyTarget: 0, thisMonthTarget: 0 });
     const r = map.get(cat)!;
-    r.itemCount++;
-    if (p.is_breakeven) r.breakevenCount++;
-    if (isHighValue(p.unit_value)) r.highValueCount++;
-    r.totalSold += p.total_qty_sold || 0;
-    r.monthlyTarget += p.monthly_target_qty ?? 0;
+    r.totalSold += p.total_qty_sold || 0; // ALL qty incl. discontinued — demand stays in the category
+    if (p.is_active) {
+      r.itemCount++;
+      if (p.is_breakeven) r.breakevenCount++;
+      if (isHighValue(p.unit_value)) r.highValueCount++;
+      r.monthlyTarget += p.monthly_target_qty ?? 0;
+    }
   }
   const rows = [...map.values()].map((r) => ({ ...r, thisMonthTarget: Math.round(r.monthlyTarget * factor) }));
   rows.sort((a, b) => b.monthlyTarget - a.monthlyTarget || b.totalSold - a.totalSold);
@@ -316,10 +321,13 @@ export type CustomerListRow = {
 export async function getCustomerTargetsList(db: DB) {
   const sb = db as any; // eslint-disable-line @typescript-eslint/no-explicit-any
   const { data: customers } = await sb.from("sales_customers").select("*");
-  const { data: foci } = await sb.from("sales_customer_item_targets").select("customer_id,monthly_target_qty,is_focus").eq("is_focus", true);
+  const { data: foci } = await sb.from("sales_customer_item_targets").select("customer_id,product_id,monthly_target_qty,is_focus").eq("is_focus", true);
+  const { data: actives } = await sb.from("sales_products").select("id").eq("is_active", true);
+  const activeSet = new Set((actives ?? []).map((p: { id: string }) => p.id));
   const custList = (customers ?? []) as CustomerRow[];
   const focusByCust = new Map<string, { n: number; total: number }>();
-  for (const f of (foci ?? []) as { customer_id: string; monthly_target_qty: number }[]) {
+  for (const f of (foci ?? []) as { customer_id: string; product_id: string; monthly_target_qty: number }[]) {
+    if (!activeSet.has(f.product_id)) continue; // skip discontinued items
     if (!focusByCust.has(f.customer_id)) focusByCust.set(f.customer_id, { n: 0, total: 0 });
     const e = focusByCust.get(f.customer_id)!;
     e.n++; e.total += f.monthly_target_qty || 0;
