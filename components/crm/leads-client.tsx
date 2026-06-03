@@ -84,15 +84,20 @@ export function LeadsClient({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-brand-gray-mid">{leads.length} leads</p>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-brand-red text-white rounded-lg text-sm font-medium hover:bg-brand-maroon transition-colors"
-        >
-          {open ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {open ? "Close" : "New Lead"}
-        </button>
+        <div className="flex items-center gap-2">
+          <a href="/intake" target="_blank" rel="noopener noreferrer" className="text-xs text-brand-gray-mid hover:text-brand-red underline">
+            Public intake form ↗
+          </a>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand-red text-white rounded-lg text-sm font-medium hover:bg-brand-maroon transition-colors"
+          >
+            {open ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {open ? "Close" : "New Lead"}
+          </button>
+        </div>
       </div>
 
       {err && (
