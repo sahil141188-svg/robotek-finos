@@ -111,7 +111,8 @@ export async function getSalesOverview(db: DB) {
   const { count: focusTargetCount } = await sb
     .from("sales_customer_item_targets").select("*", { count: "exact", head: true }).eq("is_focus", true);
 
-  const custList = (customers ?? []) as CustomerRow[];
+  // exclude discontinued dealers from churn + counts (status added in migration 014)
+  const custList = ((customers ?? []) as (CustomerRow & { status?: string })[]).filter((c) => c.status !== "discontinued");
   const prodList = (products ?? []) as ProductRowV[];
 
   // reference "today" = latest order date in the data (historical dataset)
@@ -324,7 +325,7 @@ export async function getCustomerTargetsList(db: DB) {
   const { data: foci } = await sb.from("sales_customer_item_targets").select("customer_id,product_id,monthly_target_qty,is_focus").eq("is_focus", true);
   const { data: actives } = await sb.from("sales_products").select("id").eq("is_active", true);
   const activeSet = new Set((actives ?? []).map((p: { id: string }) => p.id));
-  const custList = (customers ?? []) as CustomerRow[];
+  const custList = ((customers ?? []) as (CustomerRow & { status?: string })[]).filter((c) => c.status !== "discontinued");
   const focusByCust = new Map<string, { n: number; total: number }>();
   for (const f of (foci ?? []) as { customer_id: string; product_id: string; monthly_target_qty: number }[]) {
     if (!activeSet.has(f.product_id)) continue; // skip discontinued items
