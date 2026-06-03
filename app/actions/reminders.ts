@@ -353,10 +353,18 @@ export async function sendBulkReminders(customerIds: string[]): Promise<BulkResu
 /**
  * One-click "send today's reminders": picks every eligible customer for the
  * currently-selected company and sends. Returns a structured summary.
+ *
+ * @param excludedIds - Customer IDs the operator explicitly chose to skip in
+ *   the pre-send preview dialog. After the 2026-06-03 misfire, every bulk
+ *   send goes through a row-level confirmation; this param carries the
+ *   "unchecked" rows from the UI.
  */
-export async function sendAllTodaysReminders(): Promise<BulkResult & { totalEligible: number }> {
+export async function sendAllTodaysReminders(
+  excludedIds: string[] = [],
+): Promise<BulkResult & { totalEligible: number }> {
   const { customers } = await listOverdueCustomers();
-  const eligible = customers.filter((c) => c.eligibleToday);
+  const excludedSet = new Set(excludedIds);
+  const eligible = customers.filter((c) => c.eligibleToday && !excludedSet.has(c.id));
   const result   = await sendBulkReminders(eligible.map((c) => c.id));
   return { ...result, totalEligible: eligible.length };
 }

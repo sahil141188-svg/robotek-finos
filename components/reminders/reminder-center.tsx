@@ -59,6 +59,9 @@ export function ReminderCenter({ customers: initial, waEnabled, template, cooldo
   const [bulkResult, setBulkResult] = useState<(BulkResult & { totalEligible: number }) | null>(null);
   const [showCooldown, setShowCooldown] = useState(false);
   const [showAll, setShowAll]           = useState(false);
+  // Preview-then-confirm dialog before bulk send (prevents 2026-06-03-style blunders)
+  const [previewOpen, setPreviewOpen]   = useState(false);
+  const [excluded, setExcluded]         = useState<Set<string>>(new Set());
 
   const eligible      = useMemo(() => customers.filter((c) => c.eligibleToday), [customers]);
   const missingPhone  = useMemo(() => customers.filter((c) => !c.phone), [customers]);
@@ -107,17 +110,24 @@ export function ReminderCenter({ customers: initial, waEnabled, template, cooldo
     });
   }
 
+  /**
+   * Open the preview-and-confirm dialog. Previously a one-line browser
+   * confirm() was used — but on 2026-06-03 the bulk send misfired with
+   * wrong amounts because there was no chance for the operator to verify
+   * each row. Now we render the full list (customer · phone · amount ·
+   * days overdue) with row-level exclusion before sending.
+   */
   function sendAll() {
     if (eligible.length === 0) { setToast({ kind: "err", text: "No eligible customers to message." }); return; }
-    const ok = confirm(
-      `Send WhatsApp payment reminder to ${eligible.length} customer${eligible.length === 1 ? "" : "s"}?\n\n` +
-      `Cooldown: each customer gets at most one reminder every ${cooldownDays} days.\n` +
-      `Customers already messaged within the last ${cooldownDays} days will be skipped.`,
-    );
-    if (!ok) return;
+    setExcluded(new Set()); // reset
+    setPreviewOpen(true);
+  }
+
+  function confirmSendAll() {
+    setPreviewOpen(false);
     startTransition(async () => {
       setBulkResult(null);
-      const r = await sendAllTodaysReminders();
+      const r = await sendAllTodaysReminders(Array.from(excluded));
       setBulkResult(r);
       setToast({
         kind: r.sent > 0 ? "ok" : "err",
@@ -126,12 +136,110 @@ export function ReminderCenter({ customers: initial, waEnabled, template, cooldo
     });
   }
 
+  function toggleExclude(id: string) {
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  // Suspicion flags help spot obviously-wrong rows during the preview
+  function suspicious(c: OverdueCustomer): string | null {
+    if (c.outstanding < 500)        return "Very small balance — confirm before sending";
+    if (c.outstanding > 10_00_000)  return "Very large balance — confirm before sending";
+    if (!c.phone || c.phone.replace(/\D/g, "").length < 10) return "Phone number looks incomplete";
+    return null;
+  }
+
+  const selectedToSend = eligible.filter((c) => !excluded.has(c.id));
+  const selectedTotal  = selectedToSend.reduce((s, c) => s + c.outstanding, 0);
+
   return (
     <>
       {toast && (
         <div className={`fixed bottom-4 right-4 z-50 rounded-lg shadow-lg px-4 py-3 text-sm cursor-pointer ${toast.kind === "ok" ? "bg-green-600 text-white" : "bg-red-600 text-white"}`}
              onClick={() => setToast(null)}>
           {toast.text}
+        </div>
+      )}
+
+      {/* ── Pre-send confirmation dialog — every customer + amount visible ────── */}
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setPreviewOpen(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[85dvh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-border flex items-start justify-between gap-3 shrink-0">
+              <div>
+                <h2 className="text-base font-bold text-brand-black flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  Verify before sending
+                </h2>
+                <p className="text-xs text-brand-gray-mid mt-1">
+                  Each row will receive a WhatsApp message with the amount shown. Uncheck any row to exclude it.
+                  After 2026-06-03, this preview is mandatory.
+                </p>
+              </div>
+              <button onClick={() => setPreviewOpen(false)} className="text-brand-gray-mid hover:text-brand-black p-1"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5 space-y-1">
+              {eligible.map((c) => {
+                const flag = suspicious(c);
+                const excludedNow = excluded.has(c.id);
+                return (
+                  <label key={c.id}
+                    className={`flex items-center gap-3 p-2.5 rounded-lg cursor-pointer ${excludedNow ? "bg-brand-gray-light opacity-50" : flag ? "bg-amber-50" : "hover:bg-brand-gray-light/60"}`}>
+                    <input
+                      type="checkbox"
+                      checked={!excludedNow}
+                      onChange={() => toggleExclude(c.id)}
+                      className="w-4 h-4 accent-brand-red"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-brand-black truncate">{c.name}</p>
+                      <p className="text-[11px] text-brand-gray-mid">
+                        📞 {c.phone || "—"}
+                        {c.daysOverdue > 0 && <span> · {c.daysOverdue}d overdue</span>}
+                        {c.oldestInvoice && <span> · oldest {new Date(c.oldestInvoice + "T00:00:00").toLocaleDateString("en-IN", { day:"numeric", month:"short" })}</span>}
+                      </p>
+                      {flag && <p className="text-[11px] text-amber-700 mt-0.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{flag}</p>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className={`text-sm font-bold tabular-nums ${excludedNow ? "text-brand-gray-mid" : "text-brand-black"}`}>₹{fmtINR(c.outstanding)}</p>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="p-5 border-t border-border bg-brand-gray-light/30 shrink-0">
+              <div className="flex items-center justify-between gap-4 mb-3">
+                <div>
+                  <p className="text-xs text-brand-gray-mid">Will send to</p>
+                  <p className="text-lg font-bold text-brand-black">{selectedToSend.length} customer{selectedToSend.length === 1 ? "" : "s"}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-brand-gray-mid">Total being requested</p>
+                  <p className="text-lg font-bold text-brand-red tabular-nums">₹{fmtINR(selectedTotal)}</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPreviewOpen(false)}
+                  className="flex-1 h-10 rounded-lg border border-border text-sm font-medium text-brand-black hover:bg-white"
+                >
+                  Cancel — don&apos;t send anything
+                </button>
+                <button
+                  onClick={confirmSendAll}
+                  disabled={selectedToSend.length === 0}
+                  className="flex-1 h-10 rounded-lg bg-brand-red text-white text-sm font-bold hover:bg-brand-maroon disabled:opacity-50"
+                >
+                  Confirm — send {selectedToSend.length} now
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

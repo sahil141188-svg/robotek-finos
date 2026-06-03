@@ -155,70 +155,95 @@ export async function buildPartyAging(
       (a, b) => a.transaction_date.localeCompare(b.transaction_date)
     );
 
-    // FIFO match: charges contribute positive, payments consume positive from queue.
-    type Open = { date: string; voucher: string | null; amount: number };
-    const queue: Open[] = [];
-
+    // ─── Step 1: Authoritative net balance — sum(charges) - sum(payments) ─────
+    // This is the ONLY number we trust to decide "how much does this party
+    // owe us right now". The FIFO matching below is for displaying aging
+    // buckets / which specific invoices are open — but the TOTAL is always
+    // net charges minus net payments, capped at zero.
+    //
+    // Why this matters: the previous version derived `total` from the FIFO
+    // queue, which had a subtle bug where overpayment advances stored as
+    // negative entries would later be "consumed" by a subsequent payment
+    // (remaining -= -X means remaining += X), incorrectly inflating the
+    // queue's positive balance. Result: customers with credit balances were
+    // dunned for thousands they didn't owe (incident: 2026-06-03 bulk send).
+    let chargeSum = 0, payRecvSum = 0;
     let lastPayDate: string | null = null;
     let lastPayAmt: number | null = null;
+    for (const t of txns) {
+      const amt = Number(t.amount);
+      const s = sign(t.dr_cr);
+      if (s > 0) chargeSum  += amt;
+      else       payRecvSum += amt;
+      if (s < 0 && (!lastPayDate || t.transaction_date >= lastPayDate)) {
+        lastPayDate = t.transaction_date;
+        lastPayAmt = amt;
+      }
+    }
+    const netBalance = chargeSum - payRecvSum;
+    const total = Math.max(0, netBalance); // never report a negative as "outstanding"
 
+    // ─── Step 2: FIFO match — for aging buckets only, not for the total ───────
+    // Charges go into a queue; payments consume the oldest entries. We cap
+    // the produced positive open-balance at `total` (the authoritative net)
+    // by pruning the queue's TAIL — the newest unmatched charges — once the
+    // queue's positive sum exceeds `total`. This guarantees the bucket sums
+    // never overstate, even if the FIFO has matching-order quirks.
+    type Open = { date: string; voucher: string | null; amount: number };
+    const queue: Open[] = [];
     for (const t of txns) {
       const s = sign(t.dr_cr);
       const amt = Number(t.amount);
       if (s > 0) {
-        // Charge / invoice
         queue.push({ date: t.transaction_date, voucher: t.voucher_number, amount: amt });
       } else {
-        // Payment — consume from oldest
+        // Consume positive entries only; never the negatives we (used to) push.
         let remaining = amt;
         while (remaining > 0 && queue.length > 0) {
           const head = queue[0];
-          if (head.amount > remaining) {
-            head.amount -= remaining;
-            remaining = 0;
-          } else {
-            remaining -= head.amount;
-            queue.shift();
-          }
+          if (head.amount <= 0) { queue.shift(); continue; } // defensive — should not occur
+          if (head.amount > remaining) { head.amount -= remaining; remaining = 0; }
+          else                          { remaining -= head.amount; queue.shift(); }
         }
-        if (remaining > 0) {
-          // Overpaid — push a negative open charge (advance / credit note)
-          queue.push({ date: t.transaction_date, voucher: t.voucher_number, amount: -remaining });
-        }
-        // Track most recent payment
-        if (!lastPayDate || t.transaction_date >= lastPayDate) {
-          lastPayDate = t.transaction_date;
-          lastPayAmt = amt;
-        }
+        // Discard any unconsumed payment. The net balance is the truth; advances
+        // are not modelled as queue entries any more (caused incident 2026-06-03).
       }
     }
 
-    // Aggregate buckets. Negative entries (advances received from a customer
-    // or to a vendor) are skipped — they represent the OPPOSITE direction
-    // (we owe them, not vice versa) and would otherwise distort the aging.
+    // Cap the queue's positive sum at `total` by trimming NEWEST entries
+    // (the oldest invoices should be the ones flagged as open).
+    let queuePos = 0;
+    for (const o of queue) if (o.amount > 0) queuePos += o.amount;
+    if (queuePos > total) {
+      let overshoot = queuePos - total;
+      for (let i = queue.length - 1; i >= 0 && overshoot > 0; i--) {
+        if (queue[i].amount <= 0) continue;
+        if (queue[i].amount <= overshoot) { overshoot -= queue[i].amount; queue[i].amount = 0; }
+        else                              { queue[i].amount -= overshoot; overshoot = 0; }
+      }
+    }
+
+    // ─── Step 3: Bucket the remaining open invoices ──────────────────────────
     let ag0to30 = 0, ag31to60 = 0, ag61to90 = 0, ag90plus = 0;
     const open_invoices: OpenInvoice[] = [];
     for (const o of queue) {
-      if (o.amount <= 0) continue; // skip advances / negative balances
+      if (o.amount <= 0) continue;
       const age = daysBetween(o.date, today);
-      const bucket =
-        age <= 30 ? "ag0to30" : age <= 60 ? "ag31to60" : age <= 90 ? "ag61to90" : "ag90plus";
-      if (bucket === "ag0to30") ag0to30 += o.amount;
-      else if (bucket === "ag31to60") ag31to60 += o.amount;
-      else if (bucket === "ag61to90") ag61to90 += o.amount;
-      else ag90plus += o.amount;
+      if (age <= 30)      ag0to30 += o.amount;
+      else if (age <= 60) ag31to60 += o.amount;
+      else if (age <= 90) ag61to90 += o.amount;
+      else                ag90plus += o.amount;
 
       open_invoices.push({
         id: `${o.voucher || "n/a"}-${o.date}`,
         invoice_no: o.voucher || "—",
         invoice_date: o.date,
-        due_date: o.date, // we don't have explicit due dates; treat = invoice date
+        due_date: o.date,
         amount: o.amount,
         status: age > 30 ? "overdue" : "outstanding",
         days_outstanding: age,
       });
     }
-    const total = ag0to30 + ag31to60 + ag61to90 + ag90plus;
     out.push({
       party_id: p.id, party_name: p.name, gstin: p.gstin,
       contact_person: p.contact_person, phone: p.phone, email: p.email,
