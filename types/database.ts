@@ -1010,6 +1010,36 @@ export type Database = {
           sort_order?: number;
         };
       };
+      crm_email_templates: {
+        Row: {
+          id: string;
+          name: string;
+          subject: string;
+          body: string;
+          category: string | null;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          subject: string;
+          body: string;
+          category?: string | null;
+          is_active?: boolean;
+          created_by?: string | null;
+        };
+        Update: {
+          name?: string;
+          subject?: string;
+          body?: string;
+          category?: string | null;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };
