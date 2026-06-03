@@ -1,12 +1,9 @@
 -- ============================================================
--- Robotek FinOS — NBD / Sales OS — ALL migrations (011–015)
--- Paste this whole file into Supabase → SQL Editor → Run.
--- Safe to run once on a DB that already has migrations 001–010.
+-- Robotek FinOS — NBD / Sales OS — ALL migrations (011–016)
+-- Paste into Supabase → SQL Editor → Run (project huvoohwtexhtadmuedno).
 -- ============================================================
 
--- ─────────────────────────────────────────────────────────
--- 011_crm.sql
--- ─────────────────────────────────────────────────────────
+-- ── 011_crm.sql ──
 -- ============================================================
 -- Robotek FinOS — CRM Module (CRR + NBD departments)
 -- Migration: 011_crm
@@ -323,9 +320,7 @@ grant select, insert, update on public.crm_leads       to authenticated;
 grant select, insert, update on public.crm_deals       to authenticated;
 grant select, insert, update on public.crm_activities  to authenticated;
 
--- ─────────────────────────────────────────────────────────
--- 012_crm_drip.sql
--- ─────────────────────────────────────────────────────────
+-- ── 012_crm_drip.sql ──
 -- ============================================================
 -- Robotek FinOS — Sales OS: Lead types + Drip campaigns
 -- Migration: 012_crm_drip
@@ -387,9 +382,7 @@ create policy "crm_drip_update" on public.crm_drip_messages
 
 grant select, insert, update on public.crm_drip_messages to authenticated;
 
--- ─────────────────────────────────────────────────────────
--- 013_crm_quotes.sql
--- ─────────────────────────────────────────────────────────
+-- ── 013_crm_quotes.sql ──
 -- ============================================================
 -- Robotek FinOS — Sales OS: Products catalog + Quotations (CPQ)
 -- Migration: 013_crm_quotes
@@ -484,9 +477,7 @@ grant select, insert, update on public.crm_products    to authenticated;
 grant select, insert, update on public.crm_quotes      to authenticated;
 grant select, insert, update on public.crm_quote_items to authenticated;
 
--- ─────────────────────────────────────────────────────────
--- 014_crm_email.sql
--- ─────────────────────────────────────────────────────────
+-- ── 014_crm_email.sql ──
 -- ============================================================
 -- Robotek FinOS — Sales OS: Email templates (email channel)
 -- Migration: 014_crm_email
@@ -516,9 +507,7 @@ create trigger crm_email_templates_updated_at before update on public.crm_email_
 
 grant select, insert, update on public.crm_email_templates to authenticated;
 
--- ─────────────────────────────────────────────────────────
--- 015_crm_tags.sql
--- ─────────────────────────────────────────────────────────
+-- ── 015_crm_tags.sql ──
 -- ============================================================
 -- Robotek FinOS — Sales OS: Tags / segments
 -- Migration: 015_crm_tags
@@ -534,4 +523,32 @@ alter table public.crm_accounts
 
 create index if not exists idx_crm_leads_tags    on public.crm_leads    using gin (tags);
 create index if not exists idx_crm_accounts_tags on public.crm_accounts using gin (tags);
+
+-- ── 016_crm_lead_fields.sql ──
+-- ============================================================
+-- Robotek FinOS — NBD: extend crm_leads to match the real
+-- enquiry-capture / FSR / sales-funnel sheets.
+-- Migration: 016_crm_lead_fields
+-- ============================================================
+
+alter table public.crm_leads
+  add column if not exists enquiry_no            text,      -- F#### / FSR-#### / enquiry number (their key)
+  add column if not exists enquiry_type          text,      -- Retailer / Wholesaler / Distributor / Dealer / SS
+  add column if not exists filled_by             text,      -- capture clerk (Alka / Payal / Sadhna)
+  add column if not exists sc_name               text,      -- sales coordinator name
+  add column if not exists assigned_name         text,      -- raw sales-person name from the sheet
+  add column if not exists product_interest      text,      -- focused products / enquiry for products
+  add column if not exists existing_brand        text,      -- existing products/brand selling
+  add column if not exists monthly_turnover      text,      -- current monthly turnover (kept as text: "40-50K")
+  add column if not exists investment_amount     text,      -- investment amount (kept as text: "50K")
+  add column if not exists priority              text,      -- COLD / MEDIUM / HOT
+  add column if not exists external_status       text,      -- raw Stages/Status from the sheet (Qualified, Transfer to SS…)
+  add column if not exists lead_time_days        integer,   -- lead time for next call (days)
+  add column if not exists first_billing_date    date,
+  add column if not exists first_billing_amount  numeric(15, 2),
+  add column if not exists dream_customer        boolean not null default false,
+  add column if not exists whatsapp_link         text,
+  add column if not exists visit_date            date;      -- FSR date of visit
+
+create index if not exists idx_crm_leads_enquiry_no on public.crm_leads (enquiry_no);
 

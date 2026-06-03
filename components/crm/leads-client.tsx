@@ -102,6 +102,9 @@ export function LeadsClient({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-brand-gray-mid">{tagFilter ? `${shown.length} of ${leads.length}` : leads.length} leads</p>
         <div className="flex items-center gap-2">
+          <a href="/dashboard/sales-os/leads/import" className="text-xs text-brand-gray-mid hover:text-brand-red underline">
+            Import from sheet
+          </a>
           <a href="/intake" target="_blank" rel="noopener noreferrer" className="text-xs text-brand-gray-mid hover:text-brand-red underline">
             Public intake form ↗
           </a>
