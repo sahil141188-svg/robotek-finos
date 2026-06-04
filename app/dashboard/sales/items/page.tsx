@@ -1,19 +1,20 @@
 /**
- * CRR — Company Item Targets. Top 50 selling items with their monthly target
- * (history +10%), this month's seasonal goal, category and ⭐ value flag.
+ * CRR — Company Item Targets. Top 50 selling items with inline-editable
+ * monthly targets. Server component with client EditableTarget cells.
  */
 import { Header } from "@/components/layout/header";
 import { createClient } from "@/lib/supabase/server";
 import { getItemTargets } from "@/lib/supabase/sales-queries";
 import { formatQty } from "@/lib/format";
 import { Star, Package } from "lucide-react";
+import { ItemTargetRow as ItemTargetRowComp } from "@/components/sales/item-target-row";
 
 export const dynamic = "force-dynamic";
-const MONTHS = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS = ["","January","February","March","April","May","June","July","August","September","October","November","December"];
 
 export default async function ItemTargetsPage() {
   const supabase = await createClient();
-  const { items, currentMonth, provisionalMonth } = await getItemTargets(supabase, 50);
+  const { items, currentMonth } = await getItemTargets(supabase, 50);
   const totalMonthly = items.reduce((a, i) => a + i.monthlyTarget, 0);
 
   return (
@@ -28,12 +29,13 @@ export default async function ItemTargetsPage() {
           <div className="rounded-xl border border-border bg-white p-4 flex items-center gap-3">
             <Package className="w-5 h-5 text-brand-red" />
             <div>
-              <p className="text-xs text-brand-gray-mid">Top 50 items · combined {MONTHS[currentMonth]} target</p>
-              <p className="text-lg font-bold text-brand-black">{formatQty(Math.round(totalMonthly * (provisionalMonth ? 1 : 1)))} <span className="text-xs font-normal text-brand-gray-mid">baseline units/mo</span></p>
+              <p className="text-xs text-brand-gray-mid">Top 50 items · combined monthly baseline</p>
+              <p className="text-lg font-bold text-brand-black">{formatQty(totalMonthly)} <span className="text-xs font-normal text-brand-gray-mid">units/mo</span></p>
             </div>
           </div>
           <p className="text-xs text-brand-gray-mid max-w-sm">
-            Ranked by units sold. <Star className="inline w-3 h-3 text-brand-yellow fill-brand-yellow" /> = high-value (push first). Targets in quantity; monthly goal scales by season.
+            <Star className="inline w-3 h-3 text-brand-yellow fill-brand-yellow" /> = high-value.
+            Hover any target to edit it inline. Targets scale by the seasonal curve.
           </p>
         </div>
 
@@ -52,22 +54,13 @@ export default async function ItemTargetsPage() {
               </thead>
               <tbody>
                 {items.map((it, i) => (
-                  <tr key={it.id} className="border-t border-border hover:bg-brand-gray-light/40 transition-colors">
-                    <td className="px-5 py-2.5 text-brand-gray-mid">{i + 1}</td>
-                    <td className="px-3 py-2.5 font-medium text-brand-black">
-                      {it.highValue && <Star className="inline w-3.5 h-3.5 mr-1.5 text-brand-yellow fill-brand-yellow align-text-bottom" />}
-                      {it.name}
-                    </td>
-                    <td className="px-3 py-2.5"><span className="text-xs rounded-full bg-brand-gray-light px-2 py-0.5 text-brand-gray-mid">{it.category ?? "—"}</span></td>
-                    <td className="px-3 py-2.5 text-right text-brand-gray-mid">{formatQty(it.totalSold)}</td>
-                    <td className="px-3 py-2.5 text-right text-brand-gray-mid">{it.monthlyTarget ? formatQty(it.monthlyTarget) : "—"}</td>
-                    <td className="px-5 py-2.5 text-right font-semibold text-brand-black">{it.monthlyTarget ? formatQty(it.thisMonthTarget) : "—"}</td>
-                  </tr>
+                  <ItemTargetRowComp key={it.id} item={it} rank={i + 1} monthLabel={MONTHS[currentMonth]} />
                 ))}
               </tbody>
             </table>
           </div>
         </section>
+        <p className="text-xs text-brand-gray-mid">Targets = active-month demand across all dealers + 10% growth, scaled by season. Rapid + Rapid-C are separate SKUs — their combined demand is {formatQty(items.filter(i => /^rapid/i.test(i.name)).reduce((s,i) => s + i.monthlyTarget, 0))} units/mo.</p>
       </main>
     </>
   );

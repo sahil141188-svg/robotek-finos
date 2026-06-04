@@ -66,6 +66,20 @@ export async function sendChurnNudgeWhatsApp(customerId: string) {
   return { ok: true as const, messageId: res.messageId ?? null };
 }
 
+/** Update a company-level item monthly target. */
+export async function updateProductTarget(productId: string, qty: number) {
+  if (!(await requireUser())) return { ok: false as const, error: "Not signed in" };
+  const q = Math.max(0, Math.round(Number(qty) || 0));
+  const { error } = await salesAdmin()
+    .from("sales_products")
+    .update({ monthly_target_qty: q || null, updated_at: new Date().toISOString() })
+    .eq("id", productId);
+  if (error) return { ok: false as const, error: error.message };
+  revalidatePath("/dashboard/sales/items");
+  revalidatePath("/dashboard/sales/categories");
+  return { ok: true as const };
+}
+
 /** Update a customer's monthly target qty for one item. */
 export async function updateCustomerItemTarget(customerId: string, productId: string, qty: number) {
   if (!(await requireUser())) return { ok: false as const, error: "Not signed in" };
