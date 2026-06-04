@@ -240,20 +240,31 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={(v) => handleRoleChange(v as UserRole)}>
-              <SelectTrigger id="role">
-                <SelectValue />
-              </SelectTrigger>
-              {/* Bug #16 fix: z-50 keeps dropdown below the sheet close button */}
-              <SelectContent className="z-50">
-                {ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {ROLE_LABELS[r]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label htmlFor="role">
+              {crmTeamRole ? "System Role" : "Role"}
+            </Label>
+            {crmTeamRole ? (
+              // Sales team member — show their actual job title, not the hidden "accounts" base
+              <div className="flex items-center gap-2 h-9 px-3 rounded-lg border border-brand-red/30 bg-brand-red/5">
+                <span className="text-sm font-medium text-brand-red capitalize">
+                  {crmDept?.toUpperCase()} — {crmTeamRole.replace(/_/g, " ").replace(/\b\w/g, l => l.toUpperCase())}
+                </span>
+              </div>
+            ) : (
+              <Select value={role} onValueChange={(v) => handleRoleChange(v as UserRole)}>
+                <SelectTrigger id="role">
+                  <SelectValue />
+                </SelectTrigger>
+                {/* Bug #16 fix: z-50 keeps dropdown below the sheet close button */}
+                <SelectContent className="z-50">
+                  {ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -281,7 +292,11 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
       {/* ── Sales team (NBD / CRR) ── */}
       <div className="space-y-3">
         <h3 className="font-semibold text-sm">Sales Team (NBD / CRR) Role</h3>
-        <p className="text-xs text-muted-foreground">Pick a role — it sets the department + Sales OS access automatically (view + manage, all finance modules off).</p>
+        <p className="text-xs text-muted-foreground">
+          For sales staff — click a preset below. It sets their role, department, and Sales OS access automatically.
+          {crmTeamRole && <span className="text-brand-red font-medium"> ✓ Preset active — the Role field above shows their job title.</span>}
+          {!crmTeamRole && " Leave blank for finance-only users (CEO, CFO, Accounts etc)."}
+        </p>
         <div className="grid grid-cols-2 gap-2">
           {[
             { label: "NBD — Sales Coordinator", dept: "nbd", role: "sales_coordinator" },
@@ -331,7 +346,15 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
             </select>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground">“Set as NBD Sales Coordinator” gives NBD-only access (view + manage CRM, everything else off).</p>
+        {crmTeamRole && (
+          <button
+            type=”button”
+            onClick={() => { setCrmDept(“”); setCrmTeamRole(“”); if(!isEditing) setPermissions(DEFAULT_PERMISSIONS[role]); }}
+            className=”text-xs text-muted-foreground hover:text-brand-red underline”
+          >
+            ✕ Clear sales role — switch to finance role instead
+          </button>
+        )}
       </div>
 
       <Separator />
