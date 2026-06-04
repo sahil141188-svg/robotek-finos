@@ -293,10 +293,12 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
       <div className="space-y-3">
         <h3 className="font-semibold text-sm">Sales Team (NBD / CRR) Role</h3>
         <p className="text-xs text-muted-foreground">
-          For sales staff — click a preset below. It sets their role, department, and Sales OS access automatically.
-          {crmTeamRole && <span className="text-brand-red font-medium"> ✓ Preset active — the Role field above shows their job title.</span>}
-          {!crmTeamRole && " Leave blank for finance-only users (CEO, CFO, Accounts etc)."}
+          For sales staff &mdash; click a preset. It sets their role, department and Sales OS access automatically.
+          {!crmTeamRole && " Leave blank for finance-only users (CEO, CFO, Accounts, CA)."}
         </p>
+        {crmTeamRole && (
+          <p className="text-xs text-brand-red font-medium">&#10003; Preset active &mdash; the Role field above shows their job title.</p>
+        )}
         <div className="grid grid-cols-2 gap-2">
           {[
             { label: "NBD — Sales Coordinator", dept: "nbd", role: "sales_coordinator" },
@@ -349,10 +351,10 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         {crmTeamRole && (
           <button
             type=”button”
-            onClick={() => { setCrmDept(“”); setCrmTeamRole(“”); if(!isEditing) setPermissions(DEFAULT_PERMISSIONS[role]); }}
+            onClick={() => { setCrmDept(“”); setCrmTeamRole(“”); if (!isEditing) setPermissions(DEFAULT_PERMISSIONS[role]); }}
             className=”text-xs text-muted-foreground hover:text-brand-red underline”
           >
-            ✕ Clear sales role — switch to finance role instead
+            Clear sales role &mdash; switch to finance role instead
           </button>
         )}
       </div>
