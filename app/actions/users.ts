@@ -151,6 +151,8 @@ export async function updateUser(
     is_active?: boolean;
     permissions?: UserPermissions;
     email?: string;
+    crm_department?: string | null;
+    crm_team_role?: string | null;
   }
 ) {
   await assertCEO();

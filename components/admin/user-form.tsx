@@ -60,17 +60,17 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [crmTeamRole, setCrmTeamRole] = useState<string>((user as any)?.crm_team_role ?? "");
 
-  /** One-click: configure this user as an NBD Sales Coordinator with NBD-only access. */
-  function applyNbdSc() {
-    setRole("accounts");
-    setCrmDept("nbd");
-    setCrmTeamRole("sales_coordinator");
-    const nbdOnly = Object.fromEntries(
+  /** Apply a Sales OS role preset: sets department + team role + Sales-OS-only access. */
+  function applyPreset(dept: string, teamRole: string) {
+    setRole("accounts");          // base finance role (lowest); access comes from permissions
+    setCrmDept(dept);
+    setCrmTeamRole(teamRole);
+    const salesOnly = Object.fromEntries(
       Object.keys(permissions).map((k) => [k, false])
     ) as UserPermissions;
-    nbdOnly.view_crm = true;
-    nbdOnly.manage_crm = true;
-    setPermissions(nbdOnly);
+    salesOnly.view_crm = true;
+    salesOnly.manage_crm = true;
+    setPermissions(salesOnly);
   }
 
   /** When the role changes, reset permissions to the role's defaults */
@@ -138,6 +138,8 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
             role,
             is_active: isActive,
             permissions,
+            crm_department: crmDept || null,
+            crm_team_role: crmTeamRole || null,
           });
         } else {
           const fd = new FormData();
@@ -278,11 +280,34 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
 
       {/* ── Sales team (NBD / CRR) ── */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm">Sales Team (NBD / CRR)</h3>
-          <button type="button" onClick={applyNbdSc} className="text-xs text-brand-red hover:underline">
-            Set as NBD Sales Coordinator
-          </button>
+        <h3 className="font-semibold text-sm">Sales Team (NBD / CRR) Role</h3>
+        <p className="text-xs text-muted-foreground">Pick a role — it sets the department + Sales OS access automatically (view + manage, all finance modules off).</p>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: "NBD — Sales Coordinator", dept: "nbd", role: "sales_coordinator" },
+            { label: "NBD — Sales Expert",      dept: "nbd", role: "sales_expert" },
+            { label: "NBD — Field Sales Rep",   dept: "nbd", role: "fsr" },
+            { label: "NBD — Lead Generation",   dept: "nbd", role: "lead_gen" },
+            { label: "CRR — Sales Coordinator", dept: "crr", role: "sales_coordinator" },
+            { label: "CRR — CRM (Acct Manager)",dept: "crr", role: "crm" },
+            { label: "CRR — Sales Expert",      dept: "crr", role: "sales_expert" },
+            { label: "Sales Head (NBD + CRR)",  dept: "nbd", role: "sales_head" },
+          ].map((p) => {
+            const active = crmDept === p.dept && crmTeamRole === p.role;
+            return (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => applyPreset(p.dept, p.role)}
+                className={cn(
+                  "text-xs rounded-lg border px-3 py-2 text-left transition-colors",
+                  active ? "border-brand-red bg-brand-red/5 text-brand-red font-medium" : "border-border hover:border-brand-red/50"
+                )}
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
