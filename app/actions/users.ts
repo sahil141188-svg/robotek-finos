@@ -36,8 +36,11 @@ async function assertCEO(): Promise<string> {
     .single();
 
   const profile = data as Pick<UserRow, "role" | "permissions"> | null;
-  if (!profile || profile.role !== "ceo") {
-    throw new Error("Only the CEO can manage users.");
+  // Allow CEO role OR admin_users permission (in case role hasn't synced in JWT)
+  const isAdmin = profile?.permissions?.admin_users === true;
+  if (!profile || (profile.role !== "ceo" && !isAdmin)) {
+    console.error("[assertCEO] blocked — role:", profile?.role, "admin_users:", isAdmin);
+    throw new Error("Only the CEO can manage users. Make sure you are logged in as CEO.");
   }
   return user.id;
 }

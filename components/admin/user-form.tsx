@@ -21,6 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, Eye, EyeOff, Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
@@ -154,7 +155,9 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         }
         onSuccess?.();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Something went wrong");
+        const msg = err instanceof Error ? err.message : "Something went wrong";
+        setError(msg);
+        toast.error(msg);
       }
     });
   }
