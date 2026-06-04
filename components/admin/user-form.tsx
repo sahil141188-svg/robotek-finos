@@ -364,8 +364,8 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
 
       <Separator />
 
-      {/* ── Company Access ── */}
-      <div className="space-y-3">
+      {/* ── Company Access — hidden for sales-team users (no finance access = no company switcher needed) ── */}
+      {!crmTeamRole && <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Building2 className="w-4 h-4 text-brand-red" />
@@ -422,11 +422,16 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         <p className="text-xs text-muted-foreground">
           {companyIds.length} of {COMPANIES.length} companies selected
         </p>
-      </div>
+      </div>}
 
       <Separator />
 
-      {/* ── Permissions ── */}
+      {/* ── Permissions — show simple summary for sales users, full editor for finance users ── */}
+      {crmTeamRole ? (
+        <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          <strong>Sales OS access only</strong> — Sales Coordinator can view and manage leads, pipeline, activities and accounts. All finance modules are off.
+        </div>
+      ) : (
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -497,6 +502,7 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
           );
         })}
       </div>
+      )}
 
       {error && (
         <div className="text-sm text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
