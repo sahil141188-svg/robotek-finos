@@ -247,9 +247,9 @@ export function UserTable({ users: initialUsers }: UserTableProps) {
                 <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
                 <TableCell>
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${
-                    roleColors[user.role] ?? "bg-gray-50 text-gray-700 border-gray-200"
+                    roleBadgeClass(user)
                   }`}>
-                    {ROLE_LABELS[user.role] ?? user.role}
+                    {roleLabel(user)}
                   </span>
                 </TableCell>
                 <TableCell>
