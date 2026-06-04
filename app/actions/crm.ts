@@ -307,6 +307,32 @@ export async function shareLead(input: {
   return { error: null };
 }
 
+/** Upsert a user's weekly performance targets (week_start = Monday). */
+export async function setWeeklyTarget(
+  userId: string,
+  weekStart: string,
+  t: { followups: number; meetings: number; conversions: number; value: number }
+): Promise<Result> {
+  const uid = await currentUserId();
+  const supabase = (await createClient()) as any;
+  const { error } = await supabase.from("crm_weekly_targets").upsert(
+    {
+      user_id: userId,
+      week_start: weekStart,
+      followups_target: Math.max(0, Math.round(t.followups || 0)),
+      meetings_target: Math.max(0, Math.round(t.meetings || 0)),
+      conversions_target: Math.max(0, Math.round(t.conversions || 0)),
+      value_target: Math.max(0, t.value || 0),
+      updated_by: uid,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,week_start" }
+  );
+  if (error) return { error: error.message };
+  revalidatePath("/dashboard/sales-os/performance");
+  return { error: null };
+}
+
 /** Set a lead's tags (deduped, trimmed, capped). */
 export async function setLeadTags(id: string, tags: string[]): Promise<Result> {
   const clean = Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean))).slice(0, 12);

@@ -15,7 +15,7 @@ import {
   Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen, Brain,
   Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
   Briefcase, GitBranch, UserPlus, ListChecks, Sparkles, BarChart3, Package, Mail, CalendarDays,
-  ChevronDown, ChevronRight, Coins, ClipboardCheck, Database as DatabaseIcon, CalendarClock,
+  ChevronDown, ChevronRight, Coins, ClipboardCheck, Database as DatabaseIcon, CalendarClock, Trophy,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -146,6 +146,7 @@ const NBD_ITEMS: { href: string; label: string; icon: React.ElementType; exact?:
   { href: "/dashboard/sales-os/email",      label: "Email",              icon: Mail },
   { href: "/dashboard/sales-os/ai",         label: "AI Sales Coach",     icon: Sparkles },
   { href: "/dashboard/sales-os/analytics",  label: "Reports & Analytics", icon: BarChart3 },
+  { href: "/dashboard/sales-os/performance", label: "Performance",        icon: Trophy },
 ];
 
 /**
