@@ -25,8 +25,8 @@ import { toast } from "sonner";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
 
-// Bug #6 fix: COO role added to the role selector
-const ROLES: UserRole[] = ["ceo", "cfo", "coo", "accounts", "ca"];
+// Only CEO and Accounts shown — CFO/COO/CA removed (not used at Robotek)
+const ROLES: UserRole[] = ["ceo", "accounts"];
 
 interface UserFormProps {
   /** Pass an existing user to edit; omit to create a new one */

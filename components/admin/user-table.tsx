@@ -12,7 +12,7 @@
  *   - Toggle active / inactive with Switch
  */
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { Database } from "@/types/database";
 import { toggleUserActive, deleteUser } from "@/app/actions/users";
@@ -47,6 +47,8 @@ interface UserTableProps {
 export function UserTable({ users: initialUsers }: UserTableProps) {
   const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>(initialUsers);
+  // Sync when server re-fetches (router.refresh() updates props but useState ignores it)
+  useEffect(() => { setUsers(initialUsers); }, [initialUsers]);
   const [editingUser, setEditingUser] = useState<UserRow | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
