@@ -22,6 +22,8 @@ export type CrmLeadType      = "corporate" | "channel_partner";
 export type CrmDripStatus    = "none" | "active" | "done" | "stopped";
 export type CrmDripMsgStatus = "pending" | "sent" | "skipped" | "failed" | "cancelled";
 export type CrmQuoteStatus   = "draft" | "sent" | "accepted" | "rejected" | "expired";
+export type CrmMeetingMode   = "physical" | "zoom" | "phone";
+export type CrmMeetingStatus = "scheduled" | "done" | "cancelled" | "no_show";
 
 /** All granular module permissions — stored as JSONB on each user row */
 export type UserPermissions = {
@@ -1094,6 +1096,52 @@ export type Database = {
           body?: string;
           category?: string | null;
           is_active?: boolean;
+          updated_at?: string;
+        };
+      };
+      crm_meetings: {
+        Row: {
+          id: string;
+          lead_id: string | null;
+          account_id: string | null;
+          assigned_to: string | null;
+          arranged_by: string | null;
+          mode: CrmMeetingMode;
+          scheduled_at: string;
+          location: string | null;
+          meeting_link: string | null;
+          agenda: string | null;
+          conversation_notes: string | null;
+          status: CrmMeetingStatus;
+          outcome: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id?: string | null;
+          account_id?: string | null;
+          assigned_to?: string | null;
+          arranged_by?: string | null;
+          mode?: CrmMeetingMode;
+          scheduled_at: string;
+          location?: string | null;
+          meeting_link?: string | null;
+          agenda?: string | null;
+          conversation_notes?: string | null;
+          status?: CrmMeetingStatus;
+          outcome?: string | null;
+        };
+        Update: {
+          assigned_to?: string | null;
+          mode?: CrmMeetingMode;
+          scheduled_at?: string;
+          location?: string | null;
+          meeting_link?: string | null;
+          agenda?: string | null;
+          conversation_notes?: string | null;
+          status?: CrmMeetingStatus;
+          outcome?: string | null;
           updated_at?: string;
         };
       };

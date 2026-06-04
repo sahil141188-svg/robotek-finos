@@ -58,6 +58,9 @@ export async function createUserWithPassword(formData: FormData) {
   const permissions = permissionsRaw
     ? (JSON.parse(permissionsRaw) as UserPermissions)
     : DEFAULT_PERMISSIONS[role];
+  // Optional sales-team assignment (NBD/CRR + role like sales_coordinator)
+  const crmDepartment = (formData.get("crm_department") as string) || null;
+  const crmTeamRole   = (formData.get("crm_team_role") as string) || null;
 
   // Create auth user with password; mark email as confirmed so they can log in immediately
   const { data, error } = await admin.auth.admin.createUser({
@@ -88,6 +91,8 @@ export async function createUserWithPassword(formData: FormData) {
       role,
       permissions,
       is_active: true,
+      crm_department: crmDepartment,
+      crm_team_role: crmTeamRole,
     });
 
   if (profileError) throw new Error(profileError.message);

@@ -287,9 +287,11 @@ export async function getCategoryTargets(db: DB) {
   const sb = db as any; // eslint-disable-line @typescript-eslint/no-explicit-any
   const { data } = await sb.from("sales_products").select("*");
   const prods = (data ?? []) as ProductRowV[];
+  const EXCLUDED = new Set(["Advertising Material"]); // branding/merch — never a sales target
   const map = new Map<string, CategoryTargetRow>();
   for (const p of prods) {
     const cat = p.category || "OTHER";
+    if (EXCLUDED.has(cat)) continue;
     if (!map.has(cat)) map.set(cat, { category: cat, itemCount: 0, breakevenCount: 0, highValueCount: 0, totalSold: 0, monthlyTarget: 0, thisMonthTarget: 0 });
     const r = map.get(cat)!;
     r.totalSold += p.total_qty_sold || 0; // ALL qty incl. discontinued — demand stays in the category

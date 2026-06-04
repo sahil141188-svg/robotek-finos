@@ -2,10 +2,11 @@
 
 import { useState, useTransition, Fragment } from "react";
 import { useRouter } from "next/navigation";
-import { createLead, updateLeadStatus, convertLead, scheduleFollowup, startDrip, stopDrip, setLeadTags } from "@/app/actions/crm";
+import { createLead, updateLeadStatus, convertLead, scheduleFollowup, startDrip, stopDrip, setLeadTags, distributeLeads } from "@/app/actions/crm";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, CRM_SOURCES } from "@/lib/crm/types";
 import { LEAD_TYPE_LABELS, DRIP_STATUS_LABELS, DRIP_STATUS_COLORS } from "@/lib/crm/drip";
 import { scoreLead, BAND_LABELS, BAND_COLORS } from "@/lib/crm/scoring";
+import { ArrangeMeeting, type MeetingTarget } from "@/components/crm/arrange-meeting";
 import { formatIndian } from "@/lib/format";
 import type { CrmLeadStatus } from "@/types/database";
 import type { LeadWithNames } from "@/lib/crm/queries";
@@ -20,8 +21,8 @@ function fmtShort(iso: string): string {
 }
 
 export function LeadsClient({
-  leads, sales, nextFollowups,
-}: { leads: LeadWithNames[]; sales: SalesMember[]; nextFollowups: Record<string, string> }) {
+  leads, sales, nextFollowups, meetingTargets,
+}: { leads: LeadWithNames[]; sales: SalesMember[]; nextFollowups: Record<string, string>; meetingTargets: MeetingTarget[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -102,6 +103,13 @@ export function LeadsClient({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm text-brand-gray-mid">{tagFilter ? `${shown.length} of ${leads.length}` : leads.length} leads</p>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => start(async () => { const r = await distributeLeads(); setErr(r.error ?? (r.assigned ? null : "Nothing to assign")); if (!r.error) { setErr(null); window.alert(`Assigned ${r.assigned} leads to NBD Sales Coordinators.`); } router.refresh(); })}
+            disabled={pending}
+            className="text-xs text-brand-gray-mid hover:text-brand-red underline disabled:opacity-60"
+          >
+            Distribute to SCs
+          </button>
           <a href="/dashboard/sales-os/leads/import" className="text-xs text-brand-gray-mid hover:text-brand-red underline">
             Import from sheet
           </a>
@@ -248,6 +256,7 @@ export function LeadsClient({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <span className="mr-3 inline-block"><ArrangeMeeting leadId={l.id} leadName={l.name} targets={meetingTargets} defaultNotes={l.notes} compact /></span>
                   <button
                     onClick={() => { setFuLead(fuLead === l.id ? null : l.id); setFuDate(""); setFuSubject(""); }}
                     disabled={pending}

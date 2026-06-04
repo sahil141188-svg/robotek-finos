@@ -5,15 +5,17 @@
  */
 import { Header } from "@/components/layout/header";
 import { getLeads, getSalesTeam, getNextFollowupDates } from "@/lib/crm/queries";
+import { getMeetingTargets } from "@/lib/crm/meetings";
 import { LeadsClient } from "@/components/crm/leads-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeadsPage() {
-  const [leads, sales, followups] = await Promise.all([
+  const [leads, sales, followups, meetingTargets] = await Promise.all([
     getLeads(),
     getSalesTeam(),
     getNextFollowupDates(),
+    getMeetingTargets(),
   ]);
 
   return (
@@ -28,7 +30,7 @@ export default async function LeadsPage() {
         showImport={false}
       />
       <main className="flex-1 p-6 max-w-6xl">
-        <LeadsClient leads={leads} sales={sales} nextFollowups={followups.byLead} />
+        <LeadsClient leads={leads} sales={sales} nextFollowups={followups.byLead} meetingTargets={meetingTargets} />
       </main>
     </>
   );

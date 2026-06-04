@@ -199,6 +199,57 @@ export async function startDrip(leadId: string): Promise<Result> {
   return { error: null };
 }
 
+/**
+ * Distribute all unassigned (open) leads among the active NBD Sales
+ * Coordinators. If a lead's imported assigned_name matches an SC's name, it
+ * goes to them; the rest are spread round-robin.
+ */
+export async function distributeLeads(): Promise<{ error: string | null; assigned: number }> {
+  const supabase = (await createClient()) as any;
+  const { data: scs } = await supabase
+    .from("users")
+    .select("id, full_name")
+    .eq("crm_department", "nbd")
+    .eq("crm_team_role", "sales_coordinator")
+    .eq("is_active", true)
+    .order("full_name");
+  const list = (scs ?? []) as { id: string; full_name: string }[];
+  if (list.length === 0) return { error: "No NBD Sales Coordinators found. Create Sandhya & Alka in Admin first.", assigned: 0 };
+
+  const byName = new Map(list.map((u) => [u.full_name.trim().toLowerCase(), u.id]));
+
+  const { data: leads } = await supabase
+    .from("crm_leads")
+    .select("id, assigned_name")
+    .is("assigned_to", null)
+    .neq("status", "converted")
+    .neq("status", "unqualified");
+  const rows = (leads ?? []) as { id: string; assigned_name: string | null }[];
+  if (rows.length === 0) return { error: null, assigned: 0 };
+
+  const assignMap = new Map<string, string[]>();
+  let rr = 0;
+  for (const l of rows) {
+    let target = l.assigned_name ? byName.get(l.assigned_name.trim().toLowerCase()) ?? null : null;
+    if (!target) { target = list[rr % list.length].id; rr++; }
+    if (!assignMap.has(target)) assignMap.set(target, []);
+    assignMap.get(target)!.push(l.id);
+  }
+
+  let assigned = 0;
+  for (const [uid, ids] of assignMap) {
+    for (let i = 0; i < ids.length; i += 150) {
+      const chunk = ids.slice(i, i + 150);
+      const { error } = await supabase.from("crm_leads").update({ assigned_to: uid }).in("id", chunk);
+      if (!error) assigned += chunk.length;
+    }
+  }
+
+  revalidatePath("/dashboard/sales-os/leads");
+  revalidatePath("/dashboard/sales-os");
+  return { error: null, assigned };
+}
+
 /** Set a lead's tags (deduped, trimmed, capped). */
 export async function setLeadTags(id: string, tags: string[]): Promise<Result> {
   const clean = Array.from(new Set(tags.map((t) => t.trim()).filter(Boolean))).slice(0, 12);

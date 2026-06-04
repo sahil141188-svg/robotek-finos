@@ -15,7 +15,7 @@ import {
   Building2, ShieldCheck, X, Landmark, LayoutGrid, FolderOpen, Brain,
   Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
   Briefcase, GitBranch, UserPlus, ListChecks, Sparkles, BarChart3, Package, Mail, CalendarDays,
-  ChevronDown, ChevronRight, Coins, ClipboardCheck, Database as DatabaseIcon,
+  ChevronDown, ChevronRight, Coins, ClipboardCheck, Database as DatabaseIcon, CalendarClock,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -139,6 +139,7 @@ const NBD_ITEMS: { href: string; label: string; icon: React.ElementType; exact?:
   { href: "/dashboard/sales-os/pipeline",   label: "Pipeline",           icon: GitBranch },
   { href: "/dashboard/sales-os/activities", label: "Follow-ups",         icon: ListChecks },
   { href: "/dashboard/sales-os/calendar",   label: "Calendar",           icon: CalendarDays },
+  { href: "/dashboard/sales-os/meetings",   label: "Meetings",           icon: CalendarClock },
   { href: "/dashboard/sales-os/accounts",   label: "Accounts",           icon: Building2 },
   { href: "/dashboard/sales-os/products",   label: "Products",           icon: Package },
   { href: "/dashboard/sales-os/quotes",     label: "Quotations",         icon: FileText },

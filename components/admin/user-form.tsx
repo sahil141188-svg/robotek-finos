@@ -54,6 +54,24 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (user as any)?.company_ids ?? COMPANIES.map((c) => c.id)
   );
+  // Sales team (NBD/CRR) assignment
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [crmDept,     setCrmDept]     = useState<string>((user as any)?.crm_department ?? "");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [crmTeamRole, setCrmTeamRole] = useState<string>((user as any)?.crm_team_role ?? "");
+
+  /** One-click: configure this user as an NBD Sales Coordinator with NBD-only access. */
+  function applyNbdSc() {
+    setRole("accounts");
+    setCrmDept("nbd");
+    setCrmTeamRole("sales_coordinator");
+    const nbdOnly = Object.fromEntries(
+      Object.keys(permissions).map((k) => [k, false])
+    ) as UserPermissions;
+    nbdOnly.view_crm = true;
+    nbdOnly.manage_crm = true;
+    setPermissions(nbdOnly);
+  }
 
   /** When the role changes, reset permissions to the role's defaults */
   function handleRoleChange(newRole: UserRole) {
@@ -128,6 +146,8 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
           fd.set("password",    password);
           fd.set("role",        role);
           fd.set("permissions", JSON.stringify(permissions));
+          fd.set("crm_department", crmDept);
+          fd.set("crm_team_role",  crmTeamRole);
           await createUserWithPassword(fd);
         }
         onSuccess?.();
@@ -252,6 +272,41 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
             </div>
           </div>
         </div>
+      </div>
+
+      <Separator />
+
+      {/* ── Sales team (NBD / CRR) ── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm">Sales Team (NBD / CRR)</h3>
+          <button type="button" onClick={applyNbdSc} className="text-xs text-brand-red hover:underline">
+            Set as NBD Sales Coordinator
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>Department</Label>
+            <select value={crmDept} onChange={(e) => setCrmDept(e.target.value)} className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm">
+              <option value="">— none —</option>
+              <option value="nbd">NBD (New Business)</option>
+              <option value="crr">CRR (Retention)</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Sales role</Label>
+            <select value={crmTeamRole} onChange={(e) => setCrmTeamRole(e.target.value)} className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm">
+              <option value="">— none —</option>
+              <option value="lead_gen">Lead Generation</option>
+              <option value="sales_coordinator">Sales Coordinator (SC)</option>
+              <option value="sales_expert">Sales Expert</option>
+              <option value="crm">CRM (Account Manager)</option>
+              <option value="fsr">Field Sales Rep (FSR)</option>
+              <option value="sales_head">Sales Head</option>
+            </select>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">“Set as NBD Sales Coordinator” gives NBD-only access (view + manage CRM, everything else off).</p>
       </div>
 
       <Separator />
