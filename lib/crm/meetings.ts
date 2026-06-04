@@ -21,16 +21,27 @@ async function db(): Promise<any> {
   return (await createClient()) as any;
 }
 
-/** Sales Experts + FSRs — the people a meeting can be assigned to. */
+/** Sales Experts + FSRs — the people a meeting can be assigned to / a lead forwarded to. */
 export async function getMeetingTargets() {
   const sb = await db();
   const { data } = await sb
     .from("users")
-    .select("id, full_name, crm_team_role")
+    .select("id, full_name, crm_team_role, whatsapp_number")
     .in("crm_team_role", ["sales_expert", "fsr"])
     .eq("is_active", true)
     .order("full_name");
-  return (data ?? []) as { id: string; full_name: string; crm_team_role: string }[];
+  return (data ?? []) as { id: string; full_name: string; crm_team_role: string; whatsapp_number: string | null }[];
+}
+
+/** Super Stockist accounts — existing customers a lead can be transferred to. */
+export async function getSuperStockists() {
+  const sb = await db();
+  const { data } = await sb
+    .from("crm_accounts")
+    .select("id, name, phone, city, state")
+    .eq("type", "super_stockist")
+    .order("name");
+  return (data ?? []) as { id: string; name: string; phone: string | null; city: string | null; state: string | null }[];
 }
 
 export async function getMeetings(): Promise<MeetingWithContext[]> {

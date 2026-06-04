@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import type { CrmDealStage, CrmLeadStatus, CrmActivityType, CrmLeadType } from "@/types/database";
+import type { CrmDealStage, CrmLeadStatus, CrmActivityType, CrmLeadType, CrmShareType } from "@/types/database";
 import { DRIP_SEQUENCES, renderDrip } from "@/lib/crm/drip";
 
 type Result = { error: string | null };
@@ -248,6 +248,63 @@ export async function distributeLeads(): Promise<{ error: string | null; assigne
   revalidatePath("/dashboard/sales-os/leads");
   revalidatePath("/dashboard/sales-os");
   return { error: null, assigned };
+}
+
+/**
+ * Forward a lead's details + query to an FSR / Sales Expert (internal) or
+ * transfer it to a Super Stockist (existing-customer account). Logs the share,
+ * adds a timeline note, and applies side effects (assign / mark transferred).
+ */
+export async function shareLead(input: {
+  leadId: string;
+  shareType: CrmShareType;
+  toUserId?: string | null;
+  toAccountId?: string | null;
+  toName?: string | null;
+  message: string;
+  assign?: boolean;
+}): Promise<Result> {
+  const uid = await currentUserId();
+  if (!uid) return { error: "Not authenticated" };
+  if (!input.leadId) return { error: "Missing lead" };
+  if (!input.toUserId && !input.toAccountId) return { error: "Pick who to forward to" };
+
+  const supabase = (await createClient()) as any;
+
+  const { error } = await supabase.from("crm_lead_shares").insert({
+    lead_id: input.leadId,
+    share_type: input.shareType,
+    to_user_id: input.toUserId ?? null,
+    to_account_id: input.toAccountId ?? null,
+    to_name: input.toName ?? null,
+    channel: "whatsapp",
+    message: input.message ?? null,
+    shared_by: uid,
+  });
+  if (error) return { error: error.message };
+
+  // Timeline note on the lead.
+  await supabase.from("crm_activities").insert({
+    type: "note",
+    subject: `Forwarded to ${input.toName ?? "recipient"}${input.shareType === "ss" ? " (Super Stockist)" : ""}`,
+    body: input.message ?? null,
+    owner_id: uid,
+    lead_id: input.leadId,
+    done: true,
+    done_at: new Date().toISOString(),
+    created_by: uid,
+  });
+
+  if (input.shareType === "ss") {
+    const { data: lead } = await supabase.from("crm_leads").select("tags").eq("id", input.leadId).single();
+    const tags = Array.from(new Set([...((lead?.tags as string[]) ?? []), "transferred-to-SS"]));
+    await supabase.from("crm_leads").update({ tags, external_status: `Transferred to SS: ${input.toName ?? ""}`.trim() }).eq("id", input.leadId);
+  } else if (input.assign && input.toUserId) {
+    await supabase.from("crm_leads").update({ assigned_to: input.toUserId, assigned_name: input.toName ?? null }).eq("id", input.leadId);
+  }
+
+  revalidatePath("/dashboard/sales-os/leads");
+  return { error: null };
 }
 
 /** Set a lead's tags (deduped, trimmed, capped). */

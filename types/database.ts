@@ -24,6 +24,7 @@ export type CrmDripMsgStatus = "pending" | "sent" | "skipped" | "failed" | "canc
 export type CrmQuoteStatus   = "draft" | "sent" | "accepted" | "rejected" | "expired";
 export type CrmMeetingMode   = "physical" | "zoom" | "phone";
 export type CrmMeetingStatus = "scheduled" | "done" | "cancelled" | "no_show";
+export type CrmShareType     = "fsr" | "sales_expert" | "ss" | "other";
 
 /** All granular module permissions — stored as JSONB on each user row */
 export type UserPermissions = {
@@ -1144,6 +1145,32 @@ export type Database = {
           outcome?: string | null;
           updated_at?: string;
         };
+      };
+      crm_lead_shares: {
+        Row: {
+          id: string;
+          lead_id: string;
+          share_type: CrmShareType;
+          to_user_id: string | null;
+          to_account_id: string | null;
+          to_name: string | null;
+          channel: string;
+          message: string | null;
+          shared_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          lead_id: string;
+          share_type: CrmShareType;
+          to_user_id?: string | null;
+          to_account_id?: string | null;
+          to_name?: string | null;
+          channel?: string;
+          message?: string | null;
+          shared_by?: string | null;
+        };
+        Update: { message?: string | null };
       };
     };
     Views: { [_ in never]: never };

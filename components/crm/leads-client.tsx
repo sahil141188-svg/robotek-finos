@@ -6,7 +6,8 @@ import { createLead, updateLeadStatus, convertLead, scheduleFollowup, startDrip,
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, CRM_SOURCES } from "@/lib/crm/types";
 import { LEAD_TYPE_LABELS, DRIP_STATUS_LABELS, DRIP_STATUS_COLORS } from "@/lib/crm/drip";
 import { scoreLead, BAND_LABELS, BAND_COLORS } from "@/lib/crm/scoring";
-import { ArrangeMeeting, type MeetingTarget } from "@/components/crm/arrange-meeting";
+import { ArrangeMeeting } from "@/components/crm/arrange-meeting";
+import { ForwardLead, type ExpertTarget, type SsTarget } from "@/components/crm/forward-lead";
 import { formatIndian } from "@/lib/format";
 import type { CrmLeadStatus } from "@/types/database";
 import type { LeadWithNames } from "@/lib/crm/queries";
@@ -21,8 +22,8 @@ function fmtShort(iso: string): string {
 }
 
 export function LeadsClient({
-  leads, sales, nextFollowups, meetingTargets,
-}: { leads: LeadWithNames[]; sales: SalesMember[]; nextFollowups: Record<string, string>; meetingTargets: MeetingTarget[] }) {
+  leads, sales, nextFollowups, meetingTargets, superStockists,
+}: { leads: LeadWithNames[]; sales: SalesMember[]; nextFollowups: Record<string, string>; meetingTargets: ExpertTarget[]; superStockists: SsTarget[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -256,6 +257,7 @@ export function LeadsClient({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <span className="mr-3 inline-block"><ForwardLead lead={l} experts={meetingTargets} superStockists={superStockists} /></span>
                   <span className="mr-3 inline-block"><ArrangeMeeting leadId={l.id} leadName={l.name} targets={meetingTargets} defaultNotes={l.notes} compact /></span>
                   <button
                     onClick={() => { setFuLead(fuLead === l.id ? null : l.id); setFuDate(""); setFuSubject(""); }}
