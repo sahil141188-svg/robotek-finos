@@ -350,9 +350,9 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         </div>
         {crmTeamRole && (
           <button
-            type=”button”
-            onClick={() => { setCrmDept(“”); setCrmTeamRole(“”); if (!isEditing) setPermissions(DEFAULT_PERMISSIONS[role]); }}
-            className=”text-xs text-muted-foreground hover:text-brand-red underline”
+            type="button"
+            onClick={() => { setCrmDept(""); setCrmTeamRole(""); if (!isEditing) setPermissions(DEFAULT_PERMISSIONS[role]); }}
+            className="text-xs text-muted-foreground hover:text-brand-red underline"
           >
             Clear sales role &mdash; switch to finance role instead
           </button>
