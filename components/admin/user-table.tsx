@@ -96,11 +96,26 @@ export function UserTable({ users: initialUsers }: UserTableProps) {
 
   const roleColors: Record<string, string> = {
     ceo:      "bg-brand-red/10 text-brand-red border-brand-red/20",
-    cfo:      "bg-blue-50 text-blue-700 border-blue-200",
-    coo:      "bg-teal-50 text-teal-700 border-teal-200",
     accounts: "bg-purple-50 text-purple-700 border-purple-200",
-    ca:       "bg-amber-50 text-amber-700 border-amber-200",
+    sales:    "bg-green-50 text-green-700 border-green-200",
   };
+
+  /** Display label for a user: sales team role takes priority over base system role */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function roleLabel(user: any): string {
+    if (user.crm_team_role && user.crm_department) {
+      const dept = String(user.crm_department).toUpperCase();
+      const role = String(user.crm_team_role).replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase());
+      return `${dept} — ${role}`;
+    }
+    return ROLE_LABELS[user.role as keyof typeof ROLE_LABELS] ?? user.role;
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function roleBadgeClass(user: any): string {
+    if (user.crm_team_role) return roleColors.sales;
+    return roleColors[user.role as keyof typeof roleColors] ?? "bg-gray-50 text-gray-700 border-gray-200";
+  }
 
   return (
     <>
@@ -128,9 +143,9 @@ export function UserTable({ users: initialUsers }: UserTableProps) {
                 <p className="text-sm text-muted-foreground truncate">{user.email}</p>
               </div>
               <span className={`shrink-0 inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${
-                roleColors[user.role] ?? "bg-gray-50 text-gray-700 border-gray-200"
+                roleBadgeClass(user)
               }`}>
-                {ROLE_LABELS[user.role] ?? user.role}
+                {roleLabel(user)}
               </span>
             </div>
 
