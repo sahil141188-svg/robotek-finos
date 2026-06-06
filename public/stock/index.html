@@ -550,14 +550,15 @@ function chipHtml(p){
   var hot=p.fast?'<span class="hotbdg">🔥 Hot</span>':'';
   var scm=p.scheme?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\',\''+esc(p.scheme)+'\')">🏷️ Scheme</button>':'';
   var hotCls=p.fast?' hot':'';
+  var scmAttr=p.scheme?' data-scm="1"':'';
   if(!p.stock){
-    return '<span class="chip oos'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" onclick="tEnq(this)">'+
+    return '<span class="chip oos'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" onclick="tEnq(this)">'+
       '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+'<span class="oosl">'+t.out+'</span>'+scm+'</span>'+
       '<button class="enqbtn">'+t.enq+'</button>'+
     '</span>';
   }
   var isPoly=p.catKey.indexOf("polymer")!==-1;
-  return '<span class="chip'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+'</span>'+qctrlHtml(isPoly)+'</span>';
+  return '<span class="chip'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+'</span>'+qctrlHtml(isPoly)+'</span>';
 }
 function sectionHtml(key,title,cls,icon,chips){
   var t=T[lang];
@@ -595,7 +596,6 @@ function render(rows, isSample){
   var html="";
   // Special sections hidden from default view — accessible via tab only
   if(news.length)html+=sectionHtml("newl",t.newl,"nh","✨",news.map(chipHtml));
-  if(schms.length)html+=sectionHtml("schm",t.schm,"sh","🏷️",schms.map(chipHtml));
   order.forEach(function(k){
     var g=groups[k];
     // Sort: fast (hot) items first, then rest — preserves original order within each group
@@ -704,13 +704,17 @@ function fC(cat,el){
       var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"flex":"none";
     }
   } else if(cat==="schm"){
-    // Special: show only the dedicated schemes section
+    // Special: show all categories but only chips with a scheme
     for(var i=0;i<secs.length;i++){
-      var isSchm=secs[i].getAttribute("data-cat")==="schm";
-      secs[i].classList.toggle("hidden",!isSchm);
-      var chips=secs[i].querySelectorAll(".chip");
-      for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");if(isSchm)n++;}
-      var g=secs[i].querySelector(".cgrid");if(g)g.style.display=isSchm?"flex":"none";
+      var chips=secs[i].querySelectorAll(".chip"),sf=0;
+      for(var j=0;j<chips.length;j++){
+        var hasScm=chips[j].hasAttribute("data-scm");
+        chips[j].style.display=hasScm?"":"none";
+        chips[j].classList.remove("match");
+        if(hasScm){n++;sf++;}
+      }
+      secs[i].classList.toggle("hidden",sf===0);
+      var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"flex":"none";
     }
   } else {
     for(var i=0;i<secs.length;i++){
