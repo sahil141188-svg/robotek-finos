@@ -366,7 +366,7 @@ var T = {
     setName:"Set name", searchPh:"Search — DC 101, BN47, SC 222...",
     products:"Products", categories:"Categories",
     noResults:"No products found.", loading:"Loading live stock…",
-    all:"All", fast:"Fast Selling", newl:"New Launch",
+    all:"All", fast:"Fast Selling", newl:"New Launch", schm:"Schemes",
     selectAll:"Select All", out:"Out of Stock", enq:"📩 Add to Enquiry", enqSel:"✓ Enquiry Added",
     enqSection:"Also Enquiring (Out of Stock):",
     box:"Box", pcs:"Inner Box", boxes:"Boxes", pieces:"Pcs",
@@ -411,7 +411,7 @@ var T = {
     setName:"नाम दर्ज करें", searchPh:"खोजें — DC 101, BN47, SC 222...",
     products:"उत्पाद", categories:"श्रेणियाँ",
     noResults:"कोई उत्पाद नहीं मिला।", loading:"स्टॉक लोड हो रहा है…",
-    all:"सभी", fast:"तेज बिकने वाले", newl:"नई लॉन्च",
+    all:"सभी", fast:"तेज बिकने वाले", newl:"नई लॉन्च", schm:"स्कीम",
     selectAll:"सब चुनें", out:"स्टॉक में नहीं", enq:"📩 पूछताछ में जोड़ें", enqSel:"✓ जोड़ा गया",
     enqSection:"पूछताछ (स्टॉक में नहीं):",
     box:"बॉक्स", pcs:"इनर बॉक्स", boxes:"बॉक्स", pieces:"पीस",
@@ -578,6 +578,7 @@ function render(rows, isSample){
   });
   var fast=products.filter(function(p){return p.fast;});
   var news=products.filter(function(p){return p.new;});
+  var schms=products.filter(function(p){return p.scheme;});
   var inStockCount=products.filter(function(p){return p.stock;}).length;
   TOT=products.length;
 
@@ -586,13 +587,15 @@ function render(rows, isSample){
   var tabs='<div class="tab active" onclick="fC(\'all\',this)">'+t.all+' &middot; '+TOT+'</div>';
   if(fast.length)tabs+='<div class="tab" onclick="fC(\'fast\',this)">★ '+t.fast+' &middot; '+fast.length+'</div>';
   if(news.length)tabs+='<div class="tab" onclick="fC(\'newl\',this)">✨ '+t.newl+' &middot; '+news.length+'</div>';
+  if(schms.length)tabs+='<div class="tab" onclick="fC(\'schm\',this)">🏷️ '+t.schm+' &middot; '+schms.length+'</div>';
   order.forEach(function(k){tabs+='<div class="tab" onclick="fC(\''+k+'\',this)">'+esc(groups[k].name)+' &middot; '+groups[k].items.length+'</div>';});
   document.getElementById("tw").innerHTML=tabs;
 
   // sections
   var html="";
-  // Fast Selling section hidden from default view — accessible via tab only
+  // Special sections hidden from default view — accessible via tab only
   if(news.length)html+=sectionHtml("newl",t.newl,"nh","✨",news.map(chipHtml));
+  if(schms.length)html+=sectionHtml("schm",t.schm,"sh","🏷️",schms.map(chipHtml));
   order.forEach(function(k){
     var g=groups[k];
     // Sort: fast (hot) items first, then rest — preserves original order within each group
@@ -699,6 +702,15 @@ function fC(cat,el){
       }
       secs[i].classList.toggle("hidden",sf===0);
       var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"flex":"none";
+    }
+  } else if(cat==="schm"){
+    // Special: show only the dedicated schemes section
+    for(var i=0;i<secs.length;i++){
+      var isSchm=secs[i].getAttribute("data-cat")==="schm";
+      secs[i].classList.toggle("hidden",!isSchm);
+      var chips=secs[i].querySelectorAll(".chip");
+      for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");if(isSchm)n++;}
+      var g=secs[i].querySelector(".cgrid");if(g)g.style.display=isSchm?"flex":"none";
     }
   } else {
     for(var i=0;i<secs.length;i++){
