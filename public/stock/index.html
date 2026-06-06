@@ -568,7 +568,7 @@ function render(rows, isSample){
 
   // sections
   var html="";
-  if(fast.length)html+=sectionHtml("fast",t.fast,"fh","★",fast.map(chipHtml));
+  // Fast Selling section hidden from default view — accessible via tab only
   if(news.length)html+=sectionHtml("newl",t.newl,"nh","✨",news.map(chipHtml));
   order.forEach(function(k){
     var g=groups[k];
