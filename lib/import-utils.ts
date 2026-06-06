@@ -141,6 +141,12 @@ export function autoDetectColumns(headers: string[], module?: string): ColumnMap
       // caught by the short "date" variant when both appear in the list.
       const idx = normalisedHeaders.findIndex((h) => h === variant || h.includes(variant));
       if (idx !== -1) {
+        // Skip direction indicator columns (e.g. "Dr / Cr", "CR/DR", "CR / DR") for amount
+        // fields — they are text labels ("DR"/"CR"), not numeric debit/credit amounts.
+        if (field === "dr_amount" || field === "cr_amount") {
+          const stripped = normalisedHeaders[idx].replace(/[\s./]/g, "");
+          if (stripped === "drcr" || stripped === "crdr") continue;
+        }
         (mapping as Record<string, string | null>)[field] = headers[idx];
         break;
       }
@@ -233,10 +239,15 @@ export function autoDetectModule(headers: string[]): ModuleDetectionResult {
   const h = headers.map((s) => s.toLowerCase().trim());
   const has = (...terms: string[]) => terms.some((t) => h.some((col) => col.includes(t)));
 
-  // Bank statement — key signal is "balance" column + withdrawal/deposit or cheque
+  // Bank statement — key signal is "balance" column + withdrawal/deposit or cheque/direction
+  // Also catches Kotak/IDBI format: single "Amount" + "Dr / Cr" direction indicator.
+  const hasDirection = h.some((col) => {
+    const stripped = col.replace(/[\s./]/g, "");
+    return stripped === "drcr" || stripped === "crdr";
+  });
   if (
     has("balance", "closing balance") &&
-    (has("withdrawal", "deposit", "chq", "cheque") || has("credit", "debit"))
+    (has("withdrawal", "deposit", "chq", "cheque") || has("credit", "debit") || hasDirection)
   ) {
     return {
       moduleId:   "bank_statement",
@@ -398,9 +409,17 @@ export async function parseExcelFile(file: File): Promise<ParsedFile> {
     }
   }
 
-  const headers = (rawMatrix[headerRowIndex] as (string | null)[])
-    .map((h) => (h ?? "").toString().trim())
-    .filter((h) => h.length > 0);
+  // Deduplicate headers: if the same name appears twice, suffix the second with _1, _2…
+  // This is critical for banks like Kotak that export two "Dr / Cr" columns (transaction
+  // direction + balance direction). Without dedup the second overwrites the first.
+  const rawHeaders = (rawMatrix[headerRowIndex] as (string | null)[])
+    .map((h) => (h ?? "").toString().trim());
+  const headerCount: Record<string, number> = {};
+  const headers = rawHeaders.map((h) => {
+    if (!h) return h;
+    headerCount[h] = (headerCount[h] ?? 0) + 1;
+    return headerCount[h] === 1 ? h : `${h}_${headerCount[h] - 1}`;
+  }).filter((h) => h.length > 0);
 
   const dataRows: RawRow[] = [];
   for (let i = headerRowIndex + 1; i < rawMatrix.length; i++) {

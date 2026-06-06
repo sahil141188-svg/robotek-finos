@@ -192,27 +192,68 @@ export default function ImportPage() {
         // so importBankStatement can read them consistently regardless of file format.
         let rowsForImport: RawRow[] = parsed.rows as RawRow[];
         if (!isPDF) {
-          rowsForImport = (parsed.rows as RawRow[]).map((row) => ({
-            Date:
-              mapping.transaction_date
-                ? row[mapping.transaction_date as string]
-                : null,
-            Description:
-              (mapping.ledger_name   ? row[mapping.ledger_name   as string] : null) ??
-              (mapping.narration     ? row[mapping.narration     as string] : null) ??
-              "",
-            Debit:   mapping.dr_amount     ? row[mapping.dr_amount     as string] : null,
-            Credit:  mapping.cr_amount     ? row[mapping.cr_amount     as string] : null,
-            // Balance column name varies by bank: try common variants
-            Balance:
-              row["Balance"] ??
-              row["Bal"] ??
-              row["Closing Balance"] ??
-              row["Closing Bal"] ??
-              row["Running Balance"] ??
-              null,
-            Reference: mapping.voucher_number ? row[mapping.voucher_number as string] : null,
-          }));
+          // Detect Kotak/IDBI-style Amount + direction indicator pattern.
+          // These banks export a single "Amount" column plus a "Dr / Cr" or "CR/DR"
+          // text column instead of separate Debit/Credit columns.
+          const sampleRow = (parsed.rows as RawRow[])[0] ?? {};
+          const rawHeaders = Object.keys(sampleRow);
+
+          const directionKey = rawHeaders.find((k) => {
+            const stripped = k.toLowerCase().replace(/[\s./]/g, "");
+            return stripped === "drcr" || stripped === "crdr";
+          });
+
+          const amountKey = rawHeaders.find((k) => {
+            const n = k.toLowerCase().trim();
+            return n === "amount" || n === "amount (inr)" || n === "txn amount" || n === "transaction amount";
+          });
+
+          const balanceKey = rawHeaders.find((k) => {
+            const n = k.toLowerCase().trim();
+            return n.includes("balance") || n === "bal";
+          });
+
+          if (directionKey && amountKey) {
+            // Amount + direction format (Kotak CSV, IDBI XLS)
+            rowsForImport = (parsed.rows as RawRow[]).map((row) => {
+              const dir = String(row[directionKey] ?? "").toUpperCase().trim();
+              const amt = row[amountKey];
+              return {
+                Date: mapping.transaction_date ? row[mapping.transaction_date as string] : null,
+                Description:
+                  (mapping.ledger_name ? row[mapping.ledger_name as string] : null) ??
+                  (mapping.narration   ? row[mapping.narration   as string] : null) ??
+                  "",
+                Debit:     dir === "DR" ? amt : null,
+                Credit:    dir === "CR" ? amt : null,
+                Balance:   balanceKey ? row[balanceKey] : null,
+                Reference: mapping.voucher_number ? row[mapping.voucher_number as string] : null,
+              };
+            });
+          } else {
+            // Standard format with separate Debit/Credit columns (HDFC, ICICI, SBI, Axis…)
+            rowsForImport = (parsed.rows as RawRow[]).map((row) => ({
+              Date:
+                mapping.transaction_date
+                  ? row[mapping.transaction_date as string]
+                  : null,
+              Description:
+                (mapping.ledger_name ? row[mapping.ledger_name as string] : null) ??
+                (mapping.narration   ? row[mapping.narration   as string] : null) ??
+                "",
+              Debit:   mapping.dr_amount ? row[mapping.dr_amount as string] : null,
+              Credit:  mapping.cr_amount ? row[mapping.cr_amount as string] : null,
+              // Balance column name varies by bank: try common variants
+              Balance:
+                row["Balance"] ??
+                row["Bal"] ??
+                row["Closing Balance"] ??
+                row["Closing Bal"] ??
+                row["Running Balance"] ??
+                null,
+              Reference: mapping.voucher_number ? row[mapping.voucher_number as string] : null,
+            }));
+          }
         }
         const result = await importBankStatement(bankMetadata, rowsForImport, file.name);
         setResult(result);
