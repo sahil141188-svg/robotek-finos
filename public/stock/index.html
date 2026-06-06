@@ -80,6 +80,14 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .scm-product{font-size:12px;color:var(--muted);margin-bottom:10px}
 .scm-text{font-size:20px;font-weight:700;color:var(--black);background:#dcfce7;border-radius:10px;padding:14px;margin-bottom:10px;line-height:1.4}
 .scm-till{font-size:12px;color:var(--muted);margin-bottom:16px}
+.alt-bar{position:fixed;bottom:0;left:0;right:0;z-index:650;background:#fff;border-top:2px solid #f59e0b;box-shadow:0 -4px 20px rgba(0,0,0,.15);padding:14px 16px 24px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,1.25,.52,1)}
+.alt-bar.show{transform:translateY(0)}
+.alt-head{font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.alt-body{font-size:14px;color:var(--black);margin-bottom:12px;line-height:1.5}
+.alt-body b{color:var(--red)}
+.alt-btns{display:flex;gap:8px}
+.alt-ok{flex:1;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;padding:11px;border-radius:9px;cursor:pointer}
+.alt-skip{background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;padding:11px 16px;border-radius:9px;cursor:pointer}
 .chip.sel .cq{color:rgba(255,255,255,.8);background:rgba(255,255,255,.18)}
 .qctrl{display:none;flex-direction:column;gap:8px;margin-top:8px}
 .chip.sel .qctrl{display:flex}
@@ -249,6 +257,16 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
   </div>
 </div>
 
+<!-- Alternative suggestion bar -->
+<div id="altBar" class="alt-bar">
+  <div class="alt-head">💡 Alternative Available</div>
+  <div class="alt-body" id="alt-body"></div>
+  <div class="alt-btns">
+    <button class="alt-ok" id="alt-ok-btn" onclick="addAlt()">Add Alternative to Order</button>
+    <button class="alt-skip" onclick="closeAlt()">Keep Enquiry</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- Install / Add to Home Screen bottom sheet -->
@@ -289,7 +307,7 @@ var CONFIG = {
   WHATSAPP: "918851403037",                // CRM number — default HO fallback
   ORDER_LOG_URL: "https://script.google.com/macros/s/AKfycbwVp6SXct5WhWWA9FxJI-nsT_TDE0XQEINnwnL7joMgSzC5GPK_AhhxkSbS3PXpzm8r/exec",   // Apps Script web-app URL (auto-logs orders to Orders tab)
   // 0-based column positions in your sheet:
-  COL: { category:0, name:1, box:2, stock:3, fast:4, new:5, inner:6 }
+  COL: { category:0, name:1, box:2, stock:3, fast:4, new:5, inner:6, scheme:7, alt:8 }
 };
 
 /* Sample data so the app works before you connect your sheet */
@@ -496,7 +514,7 @@ function loadStock(){
       var name=cell(CONFIG.COL.name);
       if(!String(name).trim())continue;
       if(/^\s*\[.*\]\s*$/.test(String(name)))continue;   // skip template placeholder rows like "[Add products here]"
-      data.push([cell(CONFIG.COL.category)||"Other",name,cell(CONFIG.COL.box),cell(CONFIG.COL.stock),cell(CONFIG.COL.fast),cell(CONFIG.COL.new),cell(CONFIG.COL.inner)]);
+      data.push([cell(CONFIG.COL.category)||"Other",name,cell(CONFIG.COL.box),cell(CONFIG.COL.stock),cell(CONFIG.COL.fast),cell(CONFIG.COL.new),cell(CONFIG.COL.inner),cell(CONFIG.COL.scheme),cell(CONFIG.COL.alt)]);
     }
     render(data, false);
   }).catch(function(e){
@@ -526,15 +544,15 @@ function chipHtml(p){
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
   var inr=p.inner?'<span class="cq" style="color:#1a56db;background:rgba(26,86,219,.08)">In:'+esc(p.inner)+'</span>':'';
   var hot=p.fast?'<span class="hotbdg">🔥 Hot</span>':'';
-  var scm=SCHEMES[p.name]?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\')">🏷️ Scheme</button>':'';
+  var scm=p.scheme?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\',\''+esc(p.scheme)+'\')">🏷️ Scheme</button>':'';
   var hotCls=p.fast?' hot':'';
   if(!p.stock){
-    return '<span class="chip oos'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" onclick="tEnq(this)">'+
+    return '<span class="chip oos'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" onclick="tEnq(this)">'+
       '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+'<span class="oosl">'+t.out+'</span>'+scm+'</span>'+
       '<button class="enqbtn">'+t.enq+'</button>'+
     '</span>';
   }
-  return '<span class="chip'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+'</span>'+qctrlHtml()+'</span>';
+  return '<span class="chip'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+'</span>'+qctrlHtml()+'</span>';
 }
 function sectionHtml(key,title,cls,icon,chips){
   var t=T[lang];
@@ -543,7 +561,7 @@ function sectionHtml(key,title,cls,icon,chips){
 
 function render(rows, isSample){
   var products=rows.map(function(r){
-    return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5]),inner:r[6]!==""&&r[6]!=null?r[6]:""};
+    return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5]),inner:r[6]!==""&&r[6]!=null?r[6]:"",scheme:String(r[7]||"").trim(),alt:String(r[8]||"").trim()};
   });
   products.forEach(function(p){p.catKey=slug(p.cat);});
 
@@ -963,11 +981,45 @@ function maybeShowInstallSheet(){
 
 /* ---------- ENQUIRY TOGGLE (OUT OF STOCK) ---------- */
 function tEnq(el){
+  var wasSelected=el.classList.contains("enq-sel");
   el.classList.toggle("enq-sel");
   var t=T[lang];
   var btn=el.querySelector(".enqbtn");
   if(btn) btn.textContent=el.classList.contains("enq-sel")?t.enqSel:t.enq;
+  // Show alternative suggestion on first tap if available
+  if(!wasSelected){
+    var alt=el.getAttribute("data-alt")||"";
+    var name=el.getAttribute("data-name")||"";
+    if(alt) showAltSuggestion(name,alt);
+  }
   uB();
+}
+
+/* ---------- ALTERNATIVE SUGGESTION ---------- */
+var _altName="";
+function showAltSuggestion(oosName, altName){
+  _altName=altName.trim();
+  var t=T[lang];
+  document.getElementById("alt-body").innerHTML=
+    '<b>'+esc(oosName)+'</b> is out of stock.<br>We have <b>'+esc(_altName)+'</b> as an alternative — want to add it to your order?';
+  document.getElementById("altBar").classList.add("show");
+  setTimeout(function(){document.getElementById("altBar").classList.remove("show");},8000);
+}
+function closeAlt(){document.getElementById("altBar").classList.remove("show");}
+function addAlt(){
+  closeAlt();
+  // Find the alternative chip and select it
+  var chips=document.querySelectorAll(".chip:not(.oos)");
+  var found=false;
+  for(var i=0;i<chips.length;i++){
+    var n=(chips[i].getAttribute("data-name")||"").toLowerCase().trim();
+    if(n===_altName.toLowerCase().trim()){
+      if(!chips[i].classList.contains("sel")) tC(chips[i]);
+      chips[i].scrollIntoView({block:"center",behavior:"smooth"});
+      found=true; break;
+    }
+  }
+  if(!found) toast(_altName+" — search for it above to add");
 }
 
 /* ---------- SCHEMES ---------- */
@@ -988,14 +1040,14 @@ function loadSchemes(){
     }catch(e){}
   }).catch(function(){});
 }
-function showScheme(ev,name){
+function showScheme(ev,name,scheme){
   if(ev){ev.stopPropagation();ev.preventDefault();}
-  var s=SCHEMES[name];if(!s)return;
+  if(!scheme)return;
   var t=T[lang];
   document.getElementById("scm-title").textContent=t.scmTitle;
   document.getElementById("scm-product").textContent=name;
-  document.getElementById("scm-text").textContent=s.text;
-  document.getElementById("scm-till").textContent=s.till?(t.scmTill+" "+s.till):"";
+  document.getElementById("scm-text").textContent=scheme;
+  document.getElementById("scm-till").textContent="";
   document.getElementById("t-scmClose").textContent=t.scmClose;
   document.getElementById("scmOvl").classList.add("show");
 }
@@ -1010,7 +1062,7 @@ function boot(){
   initSC();
   applyLang();
   refreshWho();
-  loadSchemes();                  // load scheme data before stock renders
+  // scheme + alternative data comes from stock sheet cols H & I — no separate load needed
   if(!getCust().name)openName();
   else maybeShowInstallSheet();
   loadStock();
