@@ -71,6 +71,15 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .chip.oos.enq-sel .enqbtn{background:#fef3c7;border-color:#f59e0b;border-style:solid;color:#92400e}
 .enqbtn:active{opacity:.7}
 .cq{font-size:10px;font-weight:700;color:var(--muted);background:rgba(0,0,0,.07);border-radius:4px;padding:1px 6px;flex-shrink:0}
+.hotbdg{font-size:10px;font-weight:700;color:#c2410c;background:#fff7ed;border-radius:4px;padding:1px 5px;flex-shrink:0}
+.chip.hot{border-color:#fed7aa}
+.scmbdg{font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border-radius:4px;padding:1px 6px;flex-shrink:0;cursor:pointer;border:none;font-family:inherit;line-height:1}
+.scmbdg:active{opacity:.7}
+.scm-modal{text-align:center}
+.scm-icon{font-size:36px;margin-bottom:8px}
+.scm-product{font-size:12px;color:var(--muted);margin-bottom:10px}
+.scm-text{font-size:20px;font-weight:700;color:var(--black);background:#dcfce7;border-radius:10px;padding:14px;margin-bottom:10px;line-height:1.4}
+.scm-till{font-size:12px;color:var(--muted);margin-bottom:16px}
 .chip.sel .cq{color:rgba(255,255,255,.8);background:rgba(255,255,255,.18)}
 .qctrl{display:none;flex-direction:column;gap:8px;margin-top:8px}
 .chip.sel .qctrl{display:flex}
@@ -227,6 +236,19 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
   </div>
 </div>
 
+<div class="ovl" id="scmOvl">
+  <div class="modal">
+    <div class="scm-modal">
+      <div class="scm-icon">🏷️</div>
+      <h2 id="scm-title" style="font-size:15px;margin-bottom:4px"></h2>
+      <div class="scm-product" id="scm-product"></div>
+      <div class="scm-text" id="scm-text"></div>
+      <div class="scm-till" id="scm-till"></div>
+      <button class="mbtn" onclick="document.getElementById('scmOvl').classList.remove('show')" id="t-scmClose">Got it 👍</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- Install / Add to Home Screen bottom sheet -->
@@ -292,6 +314,7 @@ var WA = CONFIG.WHATSAPP;
 var TOT = 0;
 var bOpen = false;
 var lang = localStorage.getItem("rb_lang") || "en";
+var SCHEMES = {};  // {productName: {text, till}}
 
 /* SC routing — short ref codes keep numbers private in URLs */
 var REFS = {
@@ -339,6 +362,7 @@ var T = {
     shareTitle:"Share Robotek Stock",
     shareDesc:"Scan to open on phone. Save & print to share with customers.",
     dlQR:"⬇ Save QR Image", clQR:"Close",
+    scmTitle:"🎉 Active Scheme", scmClose:"Got it 👍", scmTill:"Valid till:",
     isTitle:"Add Robotek Stock to Home Screen",
     isSub:"Open in one tap — like a real app, always ready",
     isBtn:"⤓ Add to Home Screen", isLater:"Maybe Later",
@@ -383,6 +407,7 @@ var T = {
     shareTitle:"Robotek Stock शेयर करें",
     shareDesc:"फोन पर खोलने के लिए स्कैन करें। प्रिंट करके ग्राहकों को दें।",
     dlQR:"⬇ QR इमेज सेव करें", clQR:"बंद करें",
+    scmTitle:"🎉 चल रही स्कीम", scmClose:"समझ गया 👍", scmTill:"वैध तक:",
     isTitle:"Robotek Stock होम स्क्रीन पर लगाएं",
     isSub:"एक टैप में खुलेगा — बिल्कुल ऐप की तरह",
     isBtn:"⤓ होम स्क्रीन पर लगाएं", isLater:"बाद में",
@@ -500,13 +525,16 @@ function chipHtml(p){
   var t=T[lang];
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
   var inr=p.inner?'<span class="cq" style="color:#1a56db;background:rgba(26,86,219,.08)">In:'+esc(p.inner)+'</span>':'';
+  var hot=p.fast?'<span class="hotbdg">🔥 Hot</span>':'';
+  var scm=SCHEMES[p.name]?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\')">🏷️ Scheme</button>':'';
+  var hotCls=p.fast?' hot':'';
   if(!p.stock){
-    return '<span class="chip oos" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" onclick="tEnq(this)">'+
-      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+inr+'<span class="oosl">'+t.out+'</span></span>'+
+    return '<span class="chip oos'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" onclick="tEnq(this)">'+
+      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+'<span class="oosl">'+t.out+'</span>'+scm+'</span>'+
       '<button class="enqbtn">'+t.enq+'</button>'+
     '</span>';
   }
-  return '<span class="chip" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+bx+inr+'</span>'+qctrlHtml()+'</span>';
+  return '<span class="chip'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+'</span>'+qctrlHtml()+'</span>';
 }
 function sectionHtml(key,title,cls,icon,chips){
   var t=T[lang];
@@ -542,7 +570,12 @@ function render(rows, isSample){
   var html="";
   if(fast.length)html+=sectionHtml("fast",t.fast,"fh","★",fast.map(chipHtml));
   if(news.length)html+=sectionHtml("newl",t.newl,"nh","✨",news.map(chipHtml));
-  order.forEach(function(k){var g=groups[k];html+=sectionHtml(g.key,g.name,"",catIcon(g.name),g.items.map(chipHtml));});
+  order.forEach(function(k){
+    var g=groups[k];
+    // Sort: fast (hot) items first, then rest — preserves original order within each group
+    g.items.sort(function(a,b){return (b.fast?1:0)-(a.fast?1:0);});
+    html+=sectionHtml(g.key,g.name,"",catIcon(g.name),g.items.map(chipHtml));
+  });
   document.getElementById("sections").innerHTML=html;
 
   // header / stats
@@ -922,6 +955,36 @@ function tEnq(el){
   uB();
 }
 
+/* ---------- SCHEMES ---------- */
+function loadSchemes(){
+  if(!CONFIG.SHEET_ID||CONFIG.SHEET_ID==="PASTE_YOUR_SHEET_ID_HERE") return;
+  var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json&sheet=Schemes";
+  fetch(url).then(function(r){return r.text();}).then(function(txt){
+    try{
+      var json=JSON.parse(txt.substring(txt.indexOf("{"),txt.lastIndexOf("}")+1));
+      var rows=json.table.rows||[];
+      rows.forEach(function(r){
+        var c=r.c||[];
+        var name=c[0]&&c[0].v?String(c[0].v).trim():"";
+        var text=c[1]&&c[1].v?String(c[1].v).trim():"";
+        var till=c[2]&&c[2].v?String(c[2].v).trim():"";
+        if(name&&text) SCHEMES[name]={text:text,till:till};
+      });
+    }catch(e){}
+  }).catch(function(){});
+}
+function showScheme(ev,name){
+  if(ev){ev.stopPropagation();ev.preventDefault();}
+  var s=SCHEMES[name];if(!s)return;
+  var t=T[lang];
+  document.getElementById("scm-title").textContent=t.scmTitle;
+  document.getElementById("scm-product").textContent=name;
+  document.getElementById("scm-text").textContent=s.text;
+  document.getElementById("scm-till").textContent=s.till?(t.scmTill+" "+s.till):"";
+  document.getElementById("t-scmClose").textContent=t.scmClose;
+  document.getElementById("scmOvl").classList.add("show");
+}
+
 /* ---------- QR SHARE ---------- */
 function openQR(){document.getElementById("qrOvl").classList.add("show");}
 function closeQR(){document.getElementById("qrOvl").classList.remove("show");}
@@ -932,8 +995,9 @@ function boot(){
   initSC();
   applyLang();
   refreshWho();
+  loadSchemes();                  // load scheme data before stock renders
   if(!getCust().name)openName();
-  else maybeShowInstallSheet();   // only show if name modal won't appear
+  else maybeShowInstallSheet();
   loadStock();
   if("serviceWorker" in navigator){navigator.serviceWorker.register("/stock/sw.js",{scope:"/stock/"}).catch(function(){});}
 }
