@@ -663,11 +663,26 @@ function fC(cat,el){
   el.classList.add("active");try{el.scrollIntoView(false);}catch(e){}
   document.getElementById("si").value="";
   var n=0,secs=document.querySelectorAll(".cs");
-  for(var i=0;i<secs.length;i++){
-    var v=secs[i].getAttribute("data-cat"),show=(cat==="all"||v===cat);
-    secs[i].classList.toggle("hidden",!show);
-    if(show){var chips=secs[i].querySelectorAll(".chip");for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");n++;}
-      var g=secs[i].querySelector(".cgrid");if(g)g.style.display="flex";}
+  if(cat==="fast"){
+    // Special: show all categories but only .hot chips
+    for(var i=0;i<secs.length;i++){
+      var chips=secs[i].querySelectorAll(".chip"),sf=0;
+      for(var j=0;j<chips.length;j++){
+        var isHot=chips[j].classList.contains("hot");
+        chips[j].style.display=isHot?"":"none";
+        chips[j].classList.remove("match");
+        if(isHot){n++;sf++;}
+      }
+      secs[i].classList.toggle("hidden",sf===0);
+      var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"flex":"none";
+    }
+  } else {
+    for(var i=0;i<secs.length;i++){
+      var v=secs[i].getAttribute("data-cat"),show=(cat==="all"||v===cat);
+      secs[i].classList.toggle("hidden",!show);
+      if(show){var chips=secs[i].querySelectorAll(".chip");for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");n++;}
+        var g=secs[i].querySelector(".cgrid");if(g)g.style.display="flex";}
+    }
   }
   document.getElementById("nores").style.display="none";
   document.getElementById("sinf").innerHTML="Showing <b>"+n+"</b> of "+TOT+" products";
