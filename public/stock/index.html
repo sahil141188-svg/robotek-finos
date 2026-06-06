@@ -718,7 +718,9 @@ function fC(cat,el){
     }
   } else {
     for(var i=0;i<secs.length;i++){
-      var v=secs[i].getAttribute("data-cat"),show=(cat==="all"||v===cat);
+      var v=secs[i].getAttribute("data-cat");
+      var isSpecial=(v==="newl"||v==="schm");
+      var show=isSpecial?(v===cat):(cat==="all"||v===cat);
       secs[i].classList.toggle("hidden",!show);
       if(show){var chips=secs[i].querySelectorAll(".chip");for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");n++;}
         var g=secs[i].querySelector(".cgrid");if(g)g.style.display="flex";}
