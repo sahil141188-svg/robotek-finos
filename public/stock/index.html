@@ -62,6 +62,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .chip.sel{background:var(--red);border-color:var(--red);color:#fff}
 .chip.sel .cdot{background:rgba(255,255,255,.6)}
 .chip.match{background:#fff8e1;border-color:#e8c800}
+.chip.sel.match{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important}
 .chip.oos{opacity:.7;cursor:pointer}
 .chip.oos .cdot{background:#bbb}
 .chip.oos.enq-sel{opacity:1;background:#fffbeb;border-color:#f59e0b}
@@ -95,9 +96,9 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .qm{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.35);color:rgba(255,255,255,.85);border-radius:6px;padding:5px 16px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
 .qm.on{background:#fff;color:var(--red);border-color:#fff}
 .qstep{display:flex;align-items:center;gap:7px}
-.qs{background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:7px;width:36px;height:36px;font-size:22px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0}
-.qs:active{background:rgba(255,255,255,.4)}
-.qnum{width:58px;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);color:#fff;border-radius:7px;padding:6px 4px;font-size:18px;font-weight:700;text-align:center;font-family:inherit;-moz-appearance:textfield;outline:none}
+.qs{background:rgba(255,255,255,.9);border:1.5px solid rgba(255,255,255,.9);color:var(--red);border-radius:7px;width:36px;height:36px;font-size:22px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0}
+.qs:active{background:#fff;opacity:.8}
+.qnum{width:58px;background:rgba(255,255,255,.9);border:1.5px solid rgba(255,255,255,.9);color:var(--red);border-radius:7px;padding:6px 4px;font-size:18px;font-weight:700;text-align:center;font-family:inherit;-moz-appearance:textfield;outline:none}
 .qnum::-webkit-outer-spin-button,.qnum::-webkit-inner-spin-button{-webkit-appearance:none}
 .qlbl{font-size:10px;color:rgba(255,255,255,.65);align-self:center}
 .nores{display:none;text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
