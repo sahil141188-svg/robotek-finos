@@ -368,7 +368,7 @@ var T = {
     all:"All", fast:"Fast Selling", newl:"New Launch",
     selectAll:"Select All", out:"Out of Stock", enq:"📩 Add to Enquiry", enqSel:"✓ Enquiry Added",
     enqSection:"Also Enquiring (Out of Stock):",
-    box:"Box", pcs:"Inner Box", boxes:"Boxes",
+    box:"Box", pcs:"Inner Box", boxes:"Boxes", pieces:"Pcs",
     pcsTotal:"pcs total", inrTotal:"pcs",
     yourOrder:"Your Order", tapReview:"Tap to review",
     clear:"Clear", sendWA:"💬 Send Order on WhatsApp",
@@ -413,7 +413,7 @@ var T = {
     all:"सभी", fast:"तेज बिकने वाले", newl:"नई लॉन्च",
     selectAll:"सब चुनें", out:"स्टॉक में नहीं", enq:"📩 पूछताछ में जोड़ें", enqSel:"✓ जोड़ा गया",
     enqSection:"पूछताछ (स्टॉक में नहीं):",
-    box:"बॉक्स", pcs:"इनर बॉक्स", boxes:"बॉक्स",
+    box:"बॉक्स", pcs:"इनर बॉक्स", boxes:"बॉक्स", pieces:"पीस",
     pcsTotal:"पीस कुल", inrTotal:"पीस",
     yourOrder:"आपका ऑर्डर", tapReview:"देखने के लिए टैप करें",
     clear:"हटाएं", sendWA:"💬 WhatsApp पर ऑर्डर भेजें",
@@ -489,6 +489,7 @@ function applyLang(){
   document.querySelectorAll(".chip.oos.enq-sel .enqbtn").forEach(function(b){b.textContent=t.enqSel;});
   document.querySelectorAll(".qm[data-role='box']").forEach(function(b){b.textContent=t.box;});
   document.querySelectorAll(".qm[data-role='pcs']").forEach(function(b){b.textContent=t.pcs;});
+  document.querySelectorAll(".qm[data-role='pieces']").forEach(function(b){b.textContent=t.pieces;});
   if(document.querySelectorAll(".chip").length>0) uB();
 }
 
@@ -524,12 +525,14 @@ function loadStock(){
 }
 
 /* ---------- RENDER ---------- */
-function qctrlHtml(){
+function qctrlHtml(showPcs){
   var t=T[lang];
+  var pcsBtn=showPcs?'<button class="qm" data-role="pieces" onclick="setMode(event,this,\'pieces\')">'+t.pieces+'</button>':'';
   return '<div class="qctrl" onclick="event.stopPropagation()">'+
     '<div class="qtog">'+
       '<button class="qm on" data-role="box" onclick="setMode(event,this,\'box\')">'+t.box+'</button>'+
       '<button class="qm" data-role="pcs" onclick="setMode(event,this,\'pcs\')">'+t.pcs+'</button>'+
+      pcsBtn+
     '</div>'+
     '<div class="qstep">'+
       '<button class="qs" onclick="stepQ(event,this,-1)">−</button>'+
@@ -552,7 +555,8 @@ function chipHtml(p){
       '<button class="enqbtn">'+t.enq+'</button>'+
     '</span>';
   }
-  return '<span class="chip'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+'</span>'+qctrlHtml()+'</span>';
+  var isPoly=p.catKey.indexOf("polymer")!==-1;
+  return '<span class="chip'+hotCls+'" data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+'</span>'+qctrlHtml(isPoly)+'</span>';
 }
 function sectionHtml(key,title,cls,icon,chips){
   var t=T[lang];
@@ -614,6 +618,7 @@ function qLabel(chip){
   var oq=parseInt(chip.dataset.oq,10)||1;
   var mode=chip.dataset.mode||"box";
   var t=T[lang];
+  if(mode==="pieces") return oq+" "+t.pieces;
   if(mode==="pcs"){
     var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
     var inrTotal=inrNum?oq*inrNum:0;
@@ -625,7 +630,7 @@ function resetChip(el){
   el.dataset.oq="1"; el.dataset.mode="box";
   var inp=el.querySelector(".qnum"); if(inp)inp.value=1;
   var ms=el.querySelectorAll(".qm");
-  for(var i=0;i<ms.length;i++){ms[i].classList.toggle("on",ms[i].getAttribute("data-role")==="box");}
+  for(var i=0;i<ms.length;i++){ms[i].classList.toggle("on",ms[i].getAttribute("data-role")==="box");ms[i].classList.remove("on");if(ms[i].getAttribute("data-role")==="box")ms[i].classList.add("on");}
 }
 function tC(el){
   if(el.classList.contains("sel")){el.classList.remove("sel");resetChip(el);}
@@ -750,7 +755,8 @@ function uB(){
     var mode=chip.dataset.mode||"box",oq=parseInt(chip.dataset.oq,10)||1;
     var lbl=qLabel(chip),sub="";
     var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
-    if(mode==="box"&&bx){var tot=oq*parseFloat(bx);sub="Bx:"+bx+" · "+tot+" pcs";}
+    if(mode==="pieces"){sub="loose pcs";}
+    else if(mode==="box"&&bx){var tot=oq*parseFloat(bx);sub="Bx:"+bx+" · "+tot+" pcs";}
     else if(mode==="pcs"&&inrNum){sub="In:"+inrNum+" · "+(oq*inrNum)+" pcs total";}
     var row=document.createElement("div");row.className="bitm";
     row.innerHTML="<div><div class='bnm'>"+esc(nm)+"</div><div class='bqt'>"+lbl+(sub?" · "+sub:"")+"</div></div><button class='brm' data-n='"+esc(nm)+"' onclick='rI(this)'>&#10005;</button>";
@@ -826,7 +832,10 @@ function placeOrder(){
     var oq=parseInt(sel[i].dataset.oq,10)||1;
     var bx=sel[i].getAttribute("data-bx"),nm=sel[i].getAttribute("data-name");
     var bxNum=bx?parseFloat(bx):0;
-    if(mode==="pcs"){
+    if(mode==="pieces"){
+      msg+=(i+1)+". "+nm+" — "+oq+" Pcs (loose)\n";
+      items.push({name:nm,qty:oq+" Pcs",boxes:0,boxSize:"",totalQty:oq,mode:"pieces"});
+    }else if(mode==="pcs"){
       var inrNum2=parseFloat(sel[i].getAttribute("data-in"))||0;
       var inrTotal2=inrNum2?oq*inrNum2:0;
       var inrStr=inrNum2?" ("+inrTotal2+" pcs)":"";
