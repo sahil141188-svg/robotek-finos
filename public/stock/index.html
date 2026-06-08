@@ -542,7 +542,23 @@ function loadStock(){
     for(var i=0;i<rows.length;i++){
       var c=rows[i].c||[];
       function cell(idx){return c[idx]&&c[idx].v!=null?c[idx].v:"";}
+      var cat=String(cell(0)).trim().toUpperCase();
       var name=cell(CONFIG.COL.name);
+      // Detect ANNOUNCEMENT row — col A = "ANNOUNCEMENT", col B = message, col C = date
+      if(cat==="ANNOUNCEMENT"){
+        var annMsg=String(cell(1)||"").trim();
+        var annDate=String(cell(2)||"").trim();
+        if(annMsg){
+          var dismissed=localStorage.getItem("rb_ann_dismissed");
+          if(dismissed!==annMsg){
+            _annMsg=annMsg; _annDate=annDate;
+            document.getElementById("annMsg").textContent=annMsg;
+            document.getElementById("annDate").textContent=annDate;
+            document.getElementById("annBar").classList.add("show");
+          }
+        }
+        continue; // don't add to product list
+      }
       if(!String(name).trim())continue;
       if(/^\s*\[.*\]\s*$/.test(String(name)))continue;   // skip template placeholder rows like "[Add products here]"
       data.push([cell(CONFIG.COL.category)||"Other",name,cell(CONFIG.COL.box),cell(CONFIG.COL.stock),cell(CONFIG.COL.fast),cell(CONFIG.COL.new),cell(CONFIG.COL.inner),cell(CONFIG.COL.scheme),cell(CONFIG.COL.alt),cell(CONFIG.COL.warranty)]);
@@ -1178,7 +1194,6 @@ function boot(){
   applyLang();
   refreshWho();
   initAdmin();
-  loadAnnouncement();
   // scheme + alternative data comes from stock sheet cols H & I — no separate load needed
   if(!getCust().name)openName();
   else maybeShowInstallSheet();
