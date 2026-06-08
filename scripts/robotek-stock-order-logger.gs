@@ -77,17 +77,12 @@ function getSheet(ss, tabName) {
     hRange.setBackground("#1F1B20").setFontColor("#F7DA11").setFontWeight("bold");
     return sheet;
   }
-  // Ensure header is v3 format
+  // Ensure header exists — NEVER clear existing data
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(HEADER);
     sheet.setFrozenRows(1);
-  } else {
-    var first = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    if (first.length !== HEADER.length || String(first[1]) !== "Order ID") {
-      sheet.clear();
-      sheet.appendRow(HEADER);
-      sheet.setFrozenRows(1);
-    }
+    var hRange = sheet.getRange(1, 1, 1, HEADER.length);
+    hRange.setBackground("#1F1B20").setFontColor("#F7DA11").setFontWeight("bold");
   }
   return sheet;
 }
