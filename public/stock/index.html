@@ -1135,12 +1135,13 @@ function showScheme(ev,name,scheme){
 var _annMsg="",_annDate="";
 function loadAnnouncement(){
   if(!CONFIG.SHEET_ID||CONFIG.SHEET_ID==="PASTE_YOUR_SHEET_ID_HERE") return;
-  // Use gid directly — more reliable than sheet name lookup
+  var isAdmin=new URLSearchParams(window.location.search).get("admin")==="1";
   var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json&gid=1060563022";
   fetch(url).then(function(r){return r.text();}).then(function(txt){
     try{
       var json=JSON.parse(txt.substring(txt.indexOf("{"),txt.lastIndexOf("}")+1));
       var rows=json.table.rows||[];
+      if(!rows.length){if(isAdmin)alert("Updates sheet loaded but no rows found.");return;}
       for(var i=0;i<rows.length;i++){
         var c=rows[i].c||[];
         var msg=c[0]&&c[0].v?String(c[0].v).trim():"";
@@ -1149,7 +1150,8 @@ function loadAnnouncement(){
         if(msg&&(activeCell==="yes"||activeCell==="y")){
           _annMsg=msg; _annDate=date;
           var dismissed=localStorage.getItem("rb_ann_dismissed");
-          if(dismissed!==msg){
+          // Admin always sees banner; normal users see if not dismissed
+          if(isAdmin||dismissed!==msg){
             document.getElementById("annMsg").textContent=msg;
             document.getElementById("annDate").textContent=date;
             document.getElementById("annBar").classList.add("show");
@@ -1157,8 +1159,8 @@ function loadAnnouncement(){
           break;
         }
       }
-    }catch(e){}
-  }).catch(function(){});
+    }catch(e){if(isAdmin)alert("Ann parse error: "+e.message);}
+  }).catch(function(e){if(isAdmin)alert("Ann fetch error: "+e.message);});
 }
 function dismissAnn(){
   document.getElementById("annBar").classList.remove("show");
