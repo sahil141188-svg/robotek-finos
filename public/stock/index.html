@@ -75,6 +75,11 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .hotbdg{font-size:10px;font-weight:700;color:#c2410c;background:#fff7ed;border-radius:4px;padding:1px 5px;flex-shrink:0}
 .chip.hot{border-color:#fed7aa}
 .scmbdg{font-size:10px;font-weight:700;color:#166534;background:#dcfce7;border-radius:4px;padding:1px 6px;flex-shrink:0;cursor:pointer;border:none;font-family:inherit;line-height:1}
+.wbdg{font-size:10px;font-weight:700;border-radius:4px;padding:1px 6px;flex-shrink:0;line-height:1}
+.wbdg.w1y{color:#1e40af;background:#dbeafe}
+.wbdg.w6m{color:#6d28d9;background:#ede9fe}
+.wbdg.wno{color:#6b7280;background:#f3f4f6}
+.chip.sel .wbdg{opacity:.9}
 .scmbdg:active{opacity:.7}
 .scm-modal{text-align:center}
 .scm-icon{font-size:36px;margin-bottom:8px}
@@ -308,7 +313,7 @@ var CONFIG = {
   WHATSAPP: "918851403037",                // CRM number — default HO fallback
   ORDER_LOG_URL: "https://script.google.com/macros/s/AKfycbwVp6SXct5WhWWA9FxJI-nsT_TDE0XQEINnwnL7joMgSzC5GPK_AhhxkSbS3PXpzm8r/exec",   // Apps Script web-app URL (auto-logs orders to Orders tab)
   // 0-based column positions in your sheet:
-  COL: { category:0, name:1, box:2, stock:3, fast:4, new:5, inner:6, scheme:7, alt:8 }
+  COL: { category:0, name:1, box:2, stock:3, fast:4, new:5, inner:6, scheme:7, alt:8, warranty:9 }
 };
 
 /* Sample data so the app works before you connect your sheet */
@@ -516,7 +521,7 @@ function loadStock(){
       var name=cell(CONFIG.COL.name);
       if(!String(name).trim())continue;
       if(/^\s*\[.*\]\s*$/.test(String(name)))continue;   // skip template placeholder rows like "[Add products here]"
-      data.push([cell(CONFIG.COL.category)||"Other",name,cell(CONFIG.COL.box),cell(CONFIG.COL.stock),cell(CONFIG.COL.fast),cell(CONFIG.COL.new),cell(CONFIG.COL.inner),cell(CONFIG.COL.scheme),cell(CONFIG.COL.alt)]);
+      data.push([cell(CONFIG.COL.category)||"Other",name,cell(CONFIG.COL.box),cell(CONFIG.COL.stock),cell(CONFIG.COL.fast),cell(CONFIG.COL.new),cell(CONFIG.COL.inner),cell(CONFIG.COL.scheme),cell(CONFIG.COL.alt),cell(CONFIG.COL.warranty)]);
     }
     render(data, false);
   }).catch(function(e){
@@ -551,14 +556,20 @@ function chipHtml(p){
   var scm=p.scheme?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\',\''+esc(p.scheme)+'\')">🏷️ Scheme</button>':'';
   var hotCls=p.fast?' hot':'';
   var scmAttr=p.scheme?' data-scm="1"':'';
+  var wty=p.warranty?p.warranty.toLowerCase().trim():"";
+  var wBadge="";
+  if(wty==="1 year"||wty==="1year"||wty==="1yr"||wty==="1 yr"){wBadge='<span class="wbdg w1y">🛡️ 1 Year</span>';}
+  else if(wty==="6 months"||wty==="6months"||wty==="6m"||wty==="6 m"||wty==="6month"){wBadge='<span class="wbdg w6m">🛡️ 6 Months</span>';}
+  else if(wty&&(wty==="no"||wty==="none"||wty==="no warranty"||wty==="non warranty")){wBadge='<span class="wbdg wno">No Warranty</span>';}
+  else if(wty){wBadge='<span class="wbdg w6m">🛡️ '+esc(p.warranty)+'</span>';}
   if(!p.stock){
     return '<span class="chip oos'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" onclick="tEnq(this)">'+
-      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+'<span class="oosl">'+t.out+'</span>'+scm+'</span>'+
+      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+'<span class="oosl">'+t.out+'</span>'+scm+wBadge+'</span>'+
       '<button class="enqbtn">'+t.enq+'</button>'+
     '</span>';
   }
   var isPoly=p.catKey.indexOf("polymer")!==-1;
-  return '<span class="chip'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+'</span>'+qctrlHtml(isPoly)+'</span>';
+  return '<span class="chip'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+wBadge+'</span>'+qctrlHtml(isPoly)+'</span>';
 }
 function sectionHtml(key,title,cls,icon,chips){
   var t=T[lang];
@@ -567,7 +578,7 @@ function sectionHtml(key,title,cls,icon,chips){
 
 function render(rows, isSample){
   var products=rows.map(function(r){
-    return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5]),inner:r[6]!==""&&r[6]!=null?r[6]:"",scheme:String(r[7]||"").trim(),alt:String(r[8]||"").trim()};
+    return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5]),inner:r[6]!==""&&r[6]!=null?r[6]:"",scheme:String(r[7]||"").trim(),alt:String(r[8]||"").trim(),warranty:String(r[9]||"").trim()};
   });
   products.forEach(function(p){p.catKey=slug(p.cat);});
 
