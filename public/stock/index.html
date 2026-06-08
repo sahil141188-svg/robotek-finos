@@ -106,6 +106,18 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .qnum{width:58px;background:rgba(255,255,255,.9);border:1.5px solid rgba(255,255,255,.9);color:var(--red);border-radius:7px;padding:6px 4px;font-size:18px;font-weight:700;text-align:center;font-family:inherit;-moz-appearance:textfield;outline:none}
 .qnum::-webkit-outer-spin-button,.qnum::-webkit-inner-spin-button{-webkit-appearance:none}
 .qlbl{font-size:10px;color:rgba(255,255,255,.65);align-self:center}
+/* --- Announcement Banner --- */
+.ann-bar{display:none;align-items:flex-start;gap:10px;background:#fff8e1;border-bottom:2px solid #f7da11;padding:10px 14px;font-size:13px;color:#1a1200;line-height:1.45}
+.ann-bar.show{display:flex}
+.ann-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.ann-msg{flex:1;font-weight:500}
+.ann-date{font-size:11px;color:#92600a;margin-top:2px}
+.ann-close{background:none;border:none;font-size:18px;color:#92600a;cursor:pointer;padding:0;line-height:1;flex-shrink:0}
+/* --- Admin Broadcast Button --- */
+.admin-bar{display:none;align-items:center;gap:10px;background:#1F1B20;padding:10px 14px;font-size:12px;color:#fff}
+.admin-bar.show{display:flex}
+.admin-lbl{flex:1;font-weight:600;color:#F7DA11}
+.admin-wa{background:#25D366;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
 .nores{display:none;text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
 .loadbox{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
 .spin{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;margin:0 auto 14px;animation:sp .8s linear infinite}
@@ -192,6 +204,18 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
     <span class="live" id="t-live">Live Stock</span>
     <span><span class="who" id="whoLbl" onclick="openName()">Set name</span> &nbsp;&middot;&nbsp; <span id="metaRight">Loading…</span> &nbsp;&middot;&nbsp; <button class="qrbtn" onclick="openQR()" title="Share QR">📲</button></span>
   </div>
+</div>
+
+<!-- Announcement Banner -->
+<div class="ann-bar" id="annBar">
+  <span class="ann-icon">📢</span>
+  <div style="flex:1"><div class="ann-msg" id="annMsg"></div><div class="ann-date" id="annDate"></div></div>
+  <button class="ann-close" onclick="dismissAnn()" title="Dismiss">✕</button>
+</div>
+<!-- Admin Broadcast Bar (visible only with ?admin=1) -->
+<div class="admin-bar" id="adminBar">
+  <span class="admin-lbl">📣 Admin: Send Update to Customers</span>
+  <button class="admin-wa" onclick="sendBroadcast()">WhatsApp Broadcast</button>
 </div>
 
 <div class="srchw">
@@ -1091,6 +1115,51 @@ function showScheme(ev,name,scheme){
   document.getElementById("scmOvl").classList.add("show");
 }
 
+/* ---------- ANNOUNCEMENTS ---------- */
+var _annMsg="",_annDate="";
+function loadAnnouncement(){
+  if(!CONFIG.SHEET_ID||CONFIG.SHEET_ID==="PASTE_YOUR_SHEET_ID_HERE") return;
+  var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json&sheet=Updates";
+  fetch(url).then(function(r){return r.text();}).then(function(txt){
+    try{
+      var json=JSON.parse(txt.substring(txt.indexOf("{"),txt.lastIndexOf("}")+1));
+      var rows=json.table.rows||[];
+      // Find first row where col C (Active) = Yes
+      for(var i=0;i<rows.length;i++){
+        var c=rows[i].c||[];
+        var msg=c[0]&&c[0].v?String(c[0].v).trim():"";
+        var date=c[1]&&c[1].v?String(c[1].v).trim():"";
+        var active=c[2]&&c[2].v?String(c[2].v).trim().toLowerCase():"";
+        if(msg&&(active==="yes"||active==="y")){
+          _annMsg=msg; _annDate=date;
+          var dismissed=localStorage.getItem("rb_ann_dismissed");
+          if(dismissed!==msg){
+            document.getElementById("annMsg").textContent=msg;
+            document.getElementById("annDate").textContent=date;
+            document.getElementById("annBar").classList.add("show");
+          }
+          break;
+        }
+      }
+    }catch(e){}
+  }).catch(function(){});
+}
+function dismissAnn(){
+  document.getElementById("annBar").classList.remove("show");
+  if(_annMsg) localStorage.setItem("rb_ann_dismissed",_annMsg);
+}
+function sendBroadcast(){
+  var msg=_annMsg||"We've updated our live stock!";
+  var t=T[lang];
+  var text="*📢 Robotek Stock Update*\n\n"+msg+(_annDate?"\n\n📅 "+_annDate:"")+"\n\n🔗 Check latest stock: https://robotekstock.vercel.app\n\n_– Team Robotek_";
+  window.open("https://wa.me/?text="+encodeURIComponent(text),"_blank");
+}
+/* --- show admin bar if ?admin=1 --- */
+function initAdmin(){
+  var params=new URLSearchParams(window.location.search);
+  if(params.get("admin")==="1") document.getElementById("adminBar").classList.add("show");
+}
+
 /* ---------- QR SHARE ---------- */
 function openQR(){document.getElementById("qrOvl").classList.add("show");}
 function closeQR(){document.getElementById("qrOvl").classList.remove("show");}
@@ -1101,6 +1170,8 @@ function boot(){
   initSC();
   applyLang();
   refreshWho();
+  initAdmin();
+  loadAnnouncement();
   // scheme + alternative data comes from stock sheet cols H & I — no separate load needed
   if(!getCust().name)openName();
   else maybeShowInstallSheet();
