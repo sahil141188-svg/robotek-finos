@@ -1285,7 +1285,7 @@ function checkStockChanges(products){
   if(!products||!products.length) return;
   // Build current snapshot: {name: stockStatus}
   var current={};
-  products.forEach(function(p){ current[p.name]= p.stock?1:0; });
+  products.forEach(function(p){ current[p.name]={s:p.stock?1:0, sc:p.scheme?1:0}; });
   var snapRaw=localStorage.getItem(SNAP_KEY);
   // Save snapshot and exit on first ever load — no comparison possible
   if(!snapRaw){
@@ -1294,21 +1294,20 @@ function checkStockChanges(products){
   }
   try{
     var prev=JSON.parse(snapRaw);
-    var newLaunches=[];
-    var restocked=[];
+    var newLaunches=[], restocked=[], newSchemes=[];
     Object.keys(current).forEach(function(name){
-      if(!(name in prev)){
-        // Brand new product
+      var c=current[name], p=prev[name];
+      if(!p){
         newLaunches.push(name);
-      } else if(prev[name]===0 && current[name]===1){
-        // Was out of stock, now back in
-        restocked.push(name);
+      } else {
+        if(p.s===0 && c.s===1) restocked.push(name);
+        if(!p.sc && c.sc) newSchemes.push(name);
       }
     });
     // Save updated snapshot
     localStorage.setItem(SNAP_KEY,JSON.stringify(current));
     // Show alert if anything changed
-    if(!newLaunches.length&&!restocked.length) return;
+    if(!newLaunches.length&&!restocked.length&&!newSchemes.length) return;
     var t=T[lang];
     var lines=[];
     if(newLaunches.length){
@@ -1316,6 +1315,9 @@ function checkStockChanges(products){
     }
     if(restocked.length){
       lines.push((lang==="hi"?"🟢 वापस स्टॉक में:":"🟢 Back in Stock:")+" "+restocked.slice(0,5).join(", ")+(restocked.length>5?" + "+(restocked.length-5)+" more":""));
+    }
+    if(newSchemes.length){
+      lines.push((lang==="hi"?"🏷️ नई स्कीम:":"🏷️ New Scheme:")+" "+newSchemes.slice(0,5).join(", ")+(newSchemes.length>5?" + "+(newSchemes.length-5)+" more":""));
     }
     _annMsg=lines.join("\n");
     _annMsgHi=_annMsg;
