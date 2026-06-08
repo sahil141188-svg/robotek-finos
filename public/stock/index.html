@@ -684,6 +684,64 @@ function render(rows, isSample){
   document.getElementById("sinf").innerHTML="Showing <b>"+TOT+"</b> of "+TOT+" products";
   document.getElementById("loadbox").style.display="none";
   document.getElementById("stats").style.display="flex";
+  restoreCart();
+}
+
+/* ---------- PERSISTENT CART ---------- */
+var CART_KEY="rb_saved_cart";
+function saveCart(){
+  var sel=document.querySelectorAll(".chip.sel");
+  var enq=document.querySelectorAll(".chip.oos.enq-sel");
+  var cart=[];
+  for(var i=0;i<sel.length;i++){
+    cart.push({name:sel[i].getAttribute("data-name")||"",mode:sel[i].dataset.mode||"box",oq:parseInt(sel[i].dataset.oq,10)||1});
+  }
+  for(var j=0;j<enq.length;j++){
+    cart.push({name:enq[j].getAttribute("data-name")||"",mode:"enq",oq:1});
+  }
+  if(cart.length) localStorage.setItem(CART_KEY,JSON.stringify(cart));
+  else localStorage.removeItem(CART_KEY);
+}
+function restoreCart(){
+  var saved=localStorage.getItem(CART_KEY);
+  if(!saved) return;
+  try{
+    var cart=JSON.parse(saved);
+    if(!cart.length) return;
+    // Build name→chip map
+    var chips=document.querySelectorAll(".chip");
+    var chipMap={};
+    for(var i=0;i<chips.length;i++){
+      var n=(chips[i].getAttribute("data-name")||"").toLowerCase().trim();
+      chipMap[n]=chips[i];
+    }
+    var restored=0;
+    for(var j=0;j<cart.length;j++){
+      var item=cart[j];
+      var chip=chipMap[item.name.toLowerCase().trim()];
+      if(!chip) continue;
+      if(item.mode==="enq"){
+        chip.classList.add("enq-sel");
+        var eb=chip.querySelector(".enqbtn");if(eb)eb.textContent=T[lang].enqSel;
+      } else {
+        chip.classList.add("sel");
+        chip.dataset.mode=item.mode;
+        chip.dataset.oq=item.oq;
+        // Sync mode buttons
+        var ms=chip.querySelectorAll(".qm");
+        for(var k=0;k<ms.length;k++) ms[k].classList.toggle("on",ms[k].getAttribute("data-role")===item.mode);
+        // Sync qty input
+        var inp=chip.querySelector(".qnum");if(inp) inp.value=item.oq;
+        updateQlbl(chip);
+      }
+      restored++;
+    }
+    if(restored>0){
+      uB();
+      var t=T[lang];
+      toast("🛒 "+(lang==="hi"?restored+" आइटम सेव्ड कार्ट से वापस लाए":restored+" saved item"+(restored!==1?"s":"")+" restored"));
+    }
+  }catch(e){localStorage.removeItem(CART_KEY);}
 }
 
 /* ---------- INTERACTIONS ---------- */
@@ -831,6 +889,7 @@ function uB(){
   var enq=document.querySelectorAll(".chip.oos.enq-sel");
   var total=sel.length+enq.length;
   document.getElementById("bbar").classList.toggle("show",total>0);
+  saveCart();
   document.getElementById("bct").textContent=total;
   var t=T[lang];
   var orderTxt=sel.length+" item"+(sel.length!==1?"s":"");
@@ -897,6 +956,7 @@ function clearAll(){
   var t=T[lang];
   for(var i=0;i<enqs.length;i++){enqs[i].classList.remove("enq-sel");var eb=enqs[i].querySelector(".enqbtn");if(eb)eb.textContent=t.enq;}
   uB();bOpen=false;
+  localStorage.removeItem(CART_KEY);
   document.getElementById("bpnl").classList.remove("open");
   document.getElementById("barr").classList.remove("up");
 }
@@ -949,6 +1009,7 @@ function placeOrder(){
   for(var e=0;e<enq.length;e++) enqNames.push(enq[e].getAttribute("data-name")||"");
   logOrder({customer:cust.name,phone:cust.phone,date:ds,items:items,enquiries:enqNames});
   window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");
+  localStorage.removeItem(CART_KEY); // clear saved cart after order placed
 }
 function logOrder(payload){
   if(!CONFIG.ORDER_LOG_URL)return;
