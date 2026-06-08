@@ -691,6 +691,7 @@ function render(rows, isSample){
   document.getElementById("loadbox").style.display="none";
   document.getElementById("stats").style.display="flex";
   restoreCart();
+  checkStockChanges(products);
 }
 
 /* ---------- PERSISTENT CART ---------- */
@@ -1276,6 +1277,59 @@ function sendBroadcast(){
 function initAdmin(){
   var params=new URLSearchParams(window.location.search);
   if(params.get("admin")==="1") document.getElementById("adminBar").classList.add("show");
+}
+
+/* ---------- AUTO STOCK CHANGE DETECTION ---------- */
+var SNAP_KEY="rb_stock_snap";
+function checkStockChanges(products){
+  if(!products||!products.length) return;
+  // Build current snapshot: {name: stockStatus}
+  var current={};
+  products.forEach(function(p){ current[p.name]= p.stock?1:0; });
+  var snapRaw=localStorage.getItem(SNAP_KEY);
+  // Save snapshot and exit on first ever load — no comparison possible
+  if(!snapRaw){
+    localStorage.setItem(SNAP_KEY,JSON.stringify(current));
+    return;
+  }
+  try{
+    var prev=JSON.parse(snapRaw);
+    var newLaunches=[];
+    var restocked=[];
+    Object.keys(current).forEach(function(name){
+      if(!(name in prev)){
+        // Brand new product
+        newLaunches.push(name);
+      } else if(prev[name]===0 && current[name]===1){
+        // Was out of stock, now back in
+        restocked.push(name);
+      }
+    });
+    // Save updated snapshot
+    localStorage.setItem(SNAP_KEY,JSON.stringify(current));
+    // Show alert if anything changed
+    if(!newLaunches.length&&!restocked.length) return;
+    var t=T[lang];
+    var lines=[];
+    if(newLaunches.length){
+      lines.push((lang==="hi"?"✨ नई लॉन्च:":"✨ New Launch:")+" "+newLaunches.slice(0,5).join(", ")+(newLaunches.length>5?" + "+(newLaunches.length-5)+" more":""));
+    }
+    if(restocked.length){
+      lines.push((lang==="hi"?"🟢 वापस स्टॉक में:":"🟢 Back in Stock:")+" "+restocked.slice(0,5).join(", ")+(restocked.length>5?" + "+(restocked.length-5)+" more":""));
+    }
+    _annMsg=lines.join("\n");
+    _annMsgHi=_annMsg;
+    _annDate="";
+    document.getElementById("annMsg").style.whiteSpace="pre-line";
+    document.getElementById("annMsg").textContent=_annMsg;
+    document.getElementById("annDate").textContent="";
+    document.getElementById("annTitle").textContent=lang==="hi"?"Robotek स्टॉक अपडेट 🔔":"Robotek Stock Update 🔔";
+    document.getElementById("annOkBtn").textContent=lang==="hi"?"देख लिया 👍":"Got it 👍";
+    document.getElementById("annSkipBtn").textContent=lang==="hi"?"बाद में देखूंगा":"Remind me later";
+    document.getElementById("annOvl").classList.add("show");
+  }catch(e){
+    localStorage.removeItem(SNAP_KEY);
+  }
 }
 
 /* ---------- QR SHARE ---------- */
