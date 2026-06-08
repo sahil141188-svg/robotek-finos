@@ -558,9 +558,9 @@ function chipHtml(p){
   var scmAttr=p.scheme?' data-scm="1"':'';
   var wty=p.warranty?p.warranty.toLowerCase().trim():"";
   var wBadge="";
-  if(wty==="1 year"||wty==="1year"||wty==="1yr"||wty==="1 yr"){wBadge='<span class="wbdg w1y">🛡️ 1 Year</span>';}
-  else if(wty==="6 months"||wty==="6months"||wty==="6m"||wty==="6 m"||wty==="6month"){wBadge='<span class="wbdg w6m">🛡️ 6 Months</span>';}
-  else if(wty&&(wty==="no"||wty==="none"||wty==="no warranty"||wty==="non warranty")){wBadge='<span class="wbdg wno">No Warranty</span>';}
+  if(wty==="1 year"||wty==="1year"||wty==="1yr"||wty==="1 yr"){wBadge='<span class="wbdg w1y">🛡️ 1Y</span>';}
+  else if(wty==="6 months"||wty==="6months"||wty==="6m"||wty==="6 m"||wty==="6month"){wBadge='<span class="wbdg w6m">🛡️ 6M</span>';}
+  else if(wty&&(wty==="no"||wty==="none"||wty==="no warranty"||wty==="non warranty"||wty==="non")){wBadge='<span class="wbdg wno">NON</span>';}
   else if(wty){wBadge='<span class="wbdg w6m">🛡️ '+esc(p.warranty)+'</span>';}
   if(!p.stock){
     return '<span class="chip oos'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" onclick="tEnq(this)">'+
