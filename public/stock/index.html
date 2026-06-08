@@ -1119,30 +1119,37 @@ function showScheme(ev,name,scheme){
 var _annMsg="",_annDate="";
 function loadAnnouncement(){
   if(!CONFIG.SHEET_ID||CONFIG.SHEET_ID==="PASTE_YOUR_SHEET_ID_HERE") return;
-  var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json&sheet=Updates";
-  fetch(url).then(function(r){return r.text();}).then(function(txt){
-    try{
-      var json=JSON.parse(txt.substring(txt.indexOf("{"),txt.lastIndexOf("}")+1));
-      var rows=json.table.rows||[];
-      // Find first row where col C (Active) = Yes
-      for(var i=0;i<rows.length;i++){
-        var c=rows[i].c||[];
-        var msg=c[0]&&c[0].v?String(c[0].v).trim():"";
-        var date=c[1]&&c[1].v?String(c[1].v).trim():"";
-        var active=c[2]&&c[2].v?String(c[2].v).trim().toLowerCase():"";
-        if(msg&&(active==="yes"||active==="y")){
-          _annMsg=msg; _annDate=date;
-          var dismissed=localStorage.getItem("rb_ann_dismissed");
-          if(dismissed!==msg){
-            document.getElementById("annMsg").textContent=msg;
-            document.getElementById("annDate").textContent=date;
-            document.getElementById("annBar").classList.add("show");
+  // Try both common tab names
+  var tabNames=["Updates","Update","Announcements","News"];
+  function tryTab(idx){
+    if(idx>=tabNames.length) return;
+    var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json&sheet="+encodeURIComponent(tabNames[idx]);
+    fetch(url).then(function(r){return r.text();}).then(function(txt){
+      try{
+        var json=JSON.parse(txt.substring(txt.indexOf("{"),txt.lastIndexOf("}")+1));
+        var rows=json.table.rows||[];
+        if(!rows.length){tryTab(idx+1);return;}
+        for(var i=0;i<rows.length;i++){
+          var c=rows[i].c||[];
+          var msg=c[0]&&c[0].v?String(c[0].v).trim():"";
+          var date=c[1]&&c[1].v?String(c[1].v).trim():"";
+          // If no Active column, treat any row with a message as active
+          var activeCell=c[2]&&c[2].v?String(c[2].v).trim().toLowerCase():"yes";
+          if(msg&&(activeCell==="yes"||activeCell==="y"||activeCell==="")){
+            _annMsg=msg; _annDate=date;
+            var dismissed=localStorage.getItem("rb_ann_dismissed");
+            if(dismissed!==msg){
+              document.getElementById("annMsg").textContent=msg;
+              document.getElementById("annDate").textContent=date;
+              document.getElementById("annBar").classList.add("show");
+            }
+            break;
           }
-          break;
         }
-      }
-    }catch(e){}
-  }).catch(function(){});
+      }catch(e){tryTab(idx+1);}
+    }).catch(function(){tryTab(idx+1);});
+  }
+  tryTab(0);
 }
 function dismissAnn(){
   document.getElementById("annBar").classList.remove("show");
