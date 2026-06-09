@@ -242,9 +242,37 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .pord-q{font-size:12px;color:var(--muted);flex-shrink:0}
 .pord-reorder{display:block;width:calc(100% - 32px);margin:10px 16px 12px;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;padding:10px;border-radius:9px;cursor:pointer;text-align:center}
 .pord-reorder:active{opacity:.85}
-/* History button in header */
-.histbtn{background:none;border:none;font-size:17px;padding:0 3px;cursor:pointer;color:var(--muted);line-height:1;opacity:.7}
-.histbtn:active{opacity:1}
+/* My Orders Banner */
+.myord-bar{display:none;margin:0 0 12px;background:var(--black);border-radius:12px;padding:14px 16px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.myord-bar:active{opacity:.85}
+.myord-top{display:flex;align-items:center;gap:10px}
+.myord-icon{font-size:22px;flex-shrink:0}
+.myord-txt{flex:1}
+.myord-title{font-size:14px;font-weight:700;color:var(--yellow);line-height:1.2}
+.myord-sub{font-size:12px;color:#888;margin-top:3px}
+.myord-arrow{font-size:18px;color:#555;flex-shrink:0}
+/* Previous Orders Sheet — redesigned */
+.pord-order{margin-bottom:12px;border-radius:12px;overflow:hidden;border:1.5px solid var(--border);background:#fff}
+.pord-oh{background:var(--black);padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.pord-oh:active{opacity:.85}
+.pord-num{background:var(--yellow);color:var(--black);font-size:11px;font-weight:800;padding:3px 9px;border-radius:8px;flex-shrink:0}
+.pord-date{font-size:13px;font-weight:700;color:#fff;flex:1}
+.pord-cust{font-size:12px;color:#aaa}
+.pord-arr{font-size:13px;color:#666;transition:transform .2s;flex-shrink:0}
+.pord-arr.open{transform:rotate(180deg)}
+.pord-items{border-top:1px solid var(--border)}
+.pord-row{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);gap:8px}
+.pord-row:last-of-type{border-bottom:none}
+.pord-nm{font-size:13px;font-weight:500;color:var(--black);flex:1}
+.pord-q{font-size:12px;color:var(--muted);flex-shrink:0;text-align:right}
+.pord-qhi{color:var(--green);font-weight:700}
+.pord-enq-row{display:flex;align-items:center;padding:8px 16px;border-bottom:1px solid #fde68a;background:#fffbeb;gap:8px}
+.pord-enq-nm{flex:1;font-size:13px;font-weight:500;color:#92400e}
+.pord-foot{padding:10px 12px 12px;background:#fafafa;display:flex;gap:8px;border-top:1px solid var(--border)}
+.pord-reorder{flex:1;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;padding:10px;border-radius:9px;cursor:pointer}
+.pord-reorder:active{opacity:.85}
+.pord-wa{background:#25D366;color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;padding:10px 14px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:5px}
+.pord-wa:active{opacity:.85}
 </style>
 </head>
 <body>
@@ -269,8 +297,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
   </div>
   <div class="hmeta">
     <span class="live" id="t-live">Live Stock</span>
-    <span><span class="who" id="whoLbl" onclick="openName()">Set name</span> &nbsp;&middot;&nbsp; <span id="metaRight">Loading…</span> &nbsp;&middot;&nbsp; <button class="qrbtn" onclick="openQR()" title="Share QR">📲</button>
-      <button class="histbtn" onclick="showPrevOrders()" title="My Orders">📋</button></span>
+    <span><span class="who" id="whoLbl" onclick="openName()">Set name</span> &nbsp;&middot;&nbsp; <span id="metaRight">Loading…</span> &nbsp;&middot;&nbsp; <button class="qrbtn" onclick="openQR()" title="Share QR">📲</button></span>
   </div>
 </div>
 
@@ -311,6 +338,17 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
     <div class="stbox"><div class="stnum" id="stProducts">0</div><div class="stlbl" id="t-products">Products</div></div>
     <div class="stbox"><div class="stnum" id="stCats">0</div><div class="stlbl" id="t-categories">Categories</div></div>
     <div class="stbox"><div class="stnum" style="color:var(--green)">Live</div><div class="stlbl" id="stDate">Today</div></div>
+  </div>
+  <!-- My Orders banner — shown after first order placed -->
+  <div class="myord-bar" id="myOrdBar" onclick="showPrevOrders()">
+    <div class="myord-top">
+      <div class="myord-icon">&#128203;</div>
+      <div class="myord-txt">
+        <div class="myord-title" id="myOrdTitle">My Previous Orders</div>
+        <div class="myord-sub" id="myOrdSub">View &amp; reorder your last orders</div>
+      </div>
+      <div class="myord-arrow">&#8250;</div>
+    </div>
   </div>
   <div class="nores" id="nores">No products found.</div>
   <div class="loadbox" id="loadbox"><div class="spin"></div>Loading live stock…</div>
@@ -394,11 +432,15 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 <!-- Previous Orders Sheet -->
 <div class="pord-ovl" id="pordOvl">
   <div class="pord-card">
-    <div class="pord-head">
-      <div class="pord-htxt">My Previous Orders</div>
+    <div class="pord-head" style="background:var(--black);padding:16px 18px;display:flex;align-items:center;gap:10px">
+      <div style="font-size:22px">&#128203;</div>
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:700;color:var(--yellow)">My Orders</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Last 5 orders &middot; Tap to reorder</div>
+      </div>
       <button class="pord-close" onclick="closePrevOrders()">&#10005;</button>
     </div>
-    <div class="pord-body" id="pordBody"></div>
+    <div class="pord-body" id="pordBody" style="padding:12px 12px 24px"></div>
   </div>
 </div>
 
@@ -1525,44 +1567,79 @@ function saveOrderHistory(orderData){
     hist.unshift(orderData);
     if(hist.length>5) hist=hist.slice(0,5);
     localStorage.setItem(ORDERS_KEY,JSON.stringify(hist));
+    updateMyOrdersBanner();
   }catch(e){}
+}
+function updateMyOrdersBanner(){
+  var bar=document.getElementById("myOrdBar");
+  if(!bar) return;
+  try{
+    var hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");
+    if(!hist.length){bar.style.display="none";return;}
+    bar.style.display="block";
+    var last=hist[0];
+    var n=(last.items||[]).length;
+    document.getElementById("myOrdTitle").textContent=lang==="hi"?"मेरे पिछले ऑर्डर":"My Previous Orders";
+    document.getElementById("myOrdSub").textContent=
+      hist.length+" order"+(hist.length!==1?"s":"")+" saved"
+      +(last.date?" · Last: "+last.date:"");
+  }catch(e){bar.style.display="none";}
 }
 function showPrevOrders(){
   var hist=[];
   try{hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");}catch(e){}
   var html="";
   if(!hist.length){
-    html='<div class="pord-empty">No previous orders yet.<br><br>Place your first order to see<br>history here 📦</div>';
+    html='<div style="padding:48px 20px;text-align:center;color:var(--muted);font-size:14px;line-height:1.8">'+
+         '<div style="font-size:40px;margin-bottom:10px">&#128203;</div>'+
+         '<div style="font-weight:700;color:var(--black);font-size:15px;margin-bottom:6px">No orders yet</div>'+
+         'Place your first order to see<br>history here</div>';
   } else {
     for(var i=0;i<hist.length;i++){
       var o=hist[i];
-      var itemCount=(o.items||[]).length;
-      var enqCount=(o.enquiries||[]).length;
-      var sub=itemCount+" item"+(itemCount!==1?"s":"");
-      if(enqCount) sub+=" + "+enqCount+" enquiry";
-      html+='<div class="pord-order">'
-        +'<div class="pord-oh" onclick="togglePordItem(this)">'
-          +'<div><div class="pord-date">'+esc(o.date||"")+'</div><div class="pord-cust">'+esc(o.customer||"")+'</div></div>'
-          +'<span class="pord-badge">'+sub+'</span>'
-          +'<span class="pord-arr">&#9660;</span>'
-        +'</div>'
-        +'<div class="pord-items">';
-      (o.items||[]).forEach(function(it){
-        var totStr="";
+      var items=o.items||[];
+      var enqs=o.enquiries||[];
+      var orderNum="Order #"+(hist.length-i);
+      // Build items rows
+      var itemsHtml="";
+      for(var j=0;j<items.length;j++){
+        var it=items[j];
         var bx=parseFloat(it.boxSize)||0;
         var boxes=parseFloat(it.boxes)||0;
-        if(it.mode==="box"&&bx&&boxes) totStr=" = "+(boxes*bx)+" pcs";
-        else if(it.mode==="pcs"&&bx&&boxes) totStr=" = "+(boxes*bx)+" pcs";
-        html+='<div class="pord-row"><span class="pord-nm">'+esc(it.name||"")+'</span><span class="pord-q">'+esc(it.qty||"")+totStr+'</span></div>';
-      });
-      if(enqCount){
-        html+='<div style="padding:5px 18px 3px;font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.4px">&#128233; Enquiry</div>';
-        (o.enquiries||[]).forEach(function(enm){
-          html+='<div class="pord-row"><span class="pord-nm" style="color:#92400e">'+esc(enm)+'</span><span class="pord-q">Out of Stock</span></div>';
-        });
+        var totStr="";
+        if((it.mode==="box"||it.mode==="pcs")&&bx&&boxes) totStr="<span class='pord-qhi'> = "+(boxes*bx)+" pcs</span>";
+        itemsHtml+='<div class="pord-row">'
+          +'<span class="pord-nm">'+esc(it.name||"")+'</span>'
+          +'<span class="pord-q">'+esc(it.qty||"")+totStr+'</span>'
+          +'</div>';
       }
-      html+='<button class="pord-reorder" onclick="reorder('+i+')">&#128257; Reorder This</button>';
-      html+='</div></div>';
+      if(enqs.length){
+        itemsHtml+='<div style="padding:6px 16px 3px;font-size:11px;font-weight:700;color:#92400e;letter-spacing:.4px;background:#fffbeb;border-top:1px solid #fde68a">&#128233; ENQUIRY (OUT OF STOCK)</div>';
+        for(var k=0;k<enqs.length;k++){
+          itemsHtml+='<div class="pord-enq-row"><span class="pord-enq-nm">'+esc(enqs[k])+'</span><span style="font-size:11px;color:#b45309">OOS</span></div>';
+        }
+      }
+      html+='<div class="pord-order">'
+        // Header — always visible, click to expand/collapse
+        +'<div class="pord-oh" onclick="togglePordItem(this)">'
+          +'<span class="pord-num">'+orderNum+'</span>'
+          +'<div style="flex:1;margin-left:2px">'
+            +'<div class="pord-date">'+esc(o.date||"")+'</div>'
+            +(o.customer?'<div class="pord-cust">'+esc(o.customer)+'</div>':'')
+          +'</div>'
+          +'<span style="font-size:12px;color:#888;margin-right:6px">'+items.length+' items</span>'
+          +'<span class="pord-arr">&#9660;</span>'
+        +'</div>'
+        // Items — hidden by default, shown on tap
+        +'<div class="pord-items" style="display:'+(i===0?'block':'none')+'">'
+          +itemsHtml
+          +'<div class="pord-foot">'
+            +'<button class="pord-reorder" onclick="reorder('+i+')">&#128257; Reorder</button>'
+          +'</div>'
+        +'</div>'
+        +'</div>';
+      // Mark first order arrow as open
+      if(i===0) html=html.replace('class="pord-arr">&#9660;','class="pord-arr open">&#9660;');
     }
   }
   document.getElementById("pordBody").innerHTML=html;
@@ -1582,7 +1659,7 @@ function reorder(idx){
   var order=hist[idx];
   if(!order||!order.items) return;
   closePrevOrders();
-  var found=0;
+  var found=0,skip=0;
   (order.items||[]).forEach(function(it){
     var chips=document.querySelectorAll(".chip:not(.oos)");
     for(var i=0;i<chips.length;i++){
@@ -1596,12 +1673,15 @@ function reorder(idx){
           var inp=chips[i].querySelector(".qnum");if(inp) inp.value=it.boxes||1;
           updateQlbl(chips[i]);
         }
-        found++; break;
+        found++; return;
       }
     }
+    skip++;
   });
   uB();
-  toast(found>0?"&#128257; "+found+" item"+(found!==1?"s":"")+" added from previous order":"Items not in current stock");
+  var msg=found+" item"+(found!==1?"s":"")+" added to order";
+  if(skip) msg+=" ("+skip+" out of stock)";
+  toast("\u{1F501} "+msg);
 }
 
 /* ---------- QR SHARE ---------- */
@@ -1620,6 +1700,7 @@ function boot(){
   if(!getCust().name)openName();
   else maybeShowInstallSheet();
   loadStock();
+  updateMyOrdersBanner();
   if("serviceWorker" in navigator){navigator.serviceWorker.register("/stock/sw.js",{scope:"/stock/"}).catch(function(){});}
 }
 boot();
