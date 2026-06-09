@@ -191,6 +191,60 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .qrdesc{font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.6}
 .qrdl{width:100%;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:14px;font-weight:700;padding:12px;border-radius:9px;cursor:pointer;margin-bottom:8px}
 .qrcl{width:100%;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;padding:11px;border-radius:9px;cursor:pointer}
+/* ── Order Review Sheet ── */
+.rev-ovl{position:fixed;inset:0;z-index:850;background:rgba(0,0,0,.65);display:none;flex-direction:column;justify-content:flex-end}
+.rev-ovl.show{display:flex}
+.rev-card{background:#fff;border-radius:22px 22px 0 0;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+.rev-head{background:var(--black);padding:16px 18px;display:flex;align-items:center;gap:10px}
+.rev-htxt{font-size:16px;font-weight:700;color:#fff;flex:1}
+.rev-hcnt{background:var(--yellow);color:var(--black);font-size:12px;font-weight:800;padding:3px 10px;border-radius:10px;flex-shrink:0}
+.rev-list{flex:1;overflow-y:auto}
+.rev-item{display:flex;align-items:center;gap:9px;padding:11px 14px;border-bottom:1px solid var(--border)}
+.rev-info{flex:1;min-width:0}
+.rev-name{font-size:14px;font-weight:600;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rev-mode{font-size:11px;color:var(--muted);margin-top:2px}
+.rev-qw{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.rev-qs{background:var(--bg);border:1.5px solid var(--border);color:var(--black);border-radius:7px;width:32px;height:32px;font-size:20px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0}
+.rev-qs:active{background:var(--red);color:#fff;border-color:var(--red)}
+.rev-qn{width:44px;border:1.5px solid var(--border);border-radius:7px;padding:5px 2px;font-size:16px;font-weight:700;text-align:center;font-family:inherit;color:var(--black);-moz-appearance:textfield;outline:none}
+.rev-qn::-webkit-outer-spin-button,.rev-qn::-webkit-inner-spin-button{-webkit-appearance:none}
+.rev-tot{font-size:12px;color:var(--green);font-weight:700;min-width:52px;text-align:right;flex-shrink:0}
+.rev-rm{background:none;border:none;color:#ccc;font-size:20px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0}
+.rev-rm:active{color:var(--red)}
+.rev-enq-hdr{background:#fffbeb;padding:8px 16px;font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.5px;border-top:1px solid #fde68a;border-bottom:1px solid #fde68a}
+.rev-enq-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #fde68a;background:#fffbeb;gap:9px}
+.rev-enq-nm{flex:1;font-size:13px;font-weight:600;color:#92400e}
+.rev-enq-lbl{font-size:11px;color:#b45309;flex-shrink:0}
+.rev-foot{padding:12px 14px 26px;background:#fff;border-top:2px solid var(--border)}
+.rev-send{width:100%;background:#25D366;color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;padding:14px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
+.rev-send:active{opacity:.85}
+.rev-back{width:100%;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer}
+/* ── Previous Orders Sheet ── */
+.pord-ovl{position:fixed;inset:0;z-index:850;background:rgba(0,0,0,.65);display:none;flex-direction:column;justify-content:flex-end}
+.pord-ovl.show{display:flex}
+.pord-card{background:#fff;border-radius:22px 22px 0 0;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
+.pord-head{background:var(--black);padding:16px 18px;display:flex;align-items:center;gap:10px}
+.pord-htxt{font-size:16px;font-weight:700;color:#fff;flex:1}
+.pord-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;line-height:1;padding:0}
+.pord-body{flex:1;overflow-y:auto}
+.pord-empty{padding:44px 20px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
+.pord-order{border-bottom:2px solid var(--border)}
+.pord-oh{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;background:#fff;-webkit-tap-highlight-color:transparent}
+.pord-oh:active{background:var(--bg)}
+.pord-date{font-size:14px;font-weight:700;color:var(--black)}
+.pord-cust{font-size:12px;color:var(--muted);margin-top:2px}
+.pord-badge{background:var(--red);color:#fff;font-size:11px;font-weight:800;padding:3px 10px;border-radius:10px;flex-shrink:0}
+.pord-arr{font-size:13px;color:#ccc;transition:transform .2s;flex-shrink:0}
+.pord-arr.open{transform:rotate(180deg)}
+.pord-items{display:none;background:#fafafa;border-top:1px solid var(--border)}
+.pord-row{display:flex;justify-content:space-between;align-items:center;padding:9px 18px 9px 22px;border-bottom:1px solid var(--border);gap:8px}
+.pord-nm{font-size:13px;font-weight:500;color:var(--black);flex:1}
+.pord-q{font-size:12px;color:var(--muted);flex-shrink:0}
+.pord-reorder{display:block;width:calc(100% - 32px);margin:10px 16px 12px;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;padding:10px;border-radius:9px;cursor:pointer;text-align:center}
+.pord-reorder:active{opacity:.85}
+/* History button in header */
+.histbtn{background:none;border:none;font-size:17px;padding:0 3px;cursor:pointer;color:var(--muted);line-height:1;opacity:.7}
+.histbtn:active{opacity:1}
 </style>
 </head>
 <body>
@@ -215,7 +269,8 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
   </div>
   <div class="hmeta">
     <span class="live" id="t-live">Live Stock</span>
-    <span><span class="who" id="whoLbl" onclick="openName()">Set name</span> &nbsp;&middot;&nbsp; <span id="metaRight">Loading…</span> &nbsp;&middot;&nbsp; <button class="qrbtn" onclick="openQR()" title="Share QR">📲</button></span>
+    <span><span class="who" id="whoLbl" onclick="openName()">Set name</span> &nbsp;&middot;&nbsp; <span id="metaRight">Loading…</span> &nbsp;&middot;&nbsp; <button class="qrbtn" onclick="openQR()" title="Share QR">📲</button>
+      <button class="histbtn" onclick="showPrevOrders()" title="My Orders">📋</button></span>
   </div>
 </div>
 
@@ -318,6 +373,32 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
   <div class="alt-btns">
     <button class="alt-ok" id="alt-ok-btn" onclick="addAlt()">Add Alternative to Order</button>
     <button class="alt-skip" onclick="closeAlt()">Keep Enquiry</button>
+  </div>
+</div>
+
+<!-- Order Review Sheet -->
+<div class="rev-ovl" id="revOvl">
+  <div class="rev-card">
+    <div class="rev-head">
+      <div class="rev-htxt" id="t-revTitle">Review Your Order</div>
+      <span class="rev-hcnt" id="revCount">0 items</span>
+    </div>
+    <div class="rev-list" id="revList"></div>
+    <div class="rev-foot">
+      <button class="rev-send" onclick="confirmAndSend()">&#128172; Confirm &amp; Send on WhatsApp</button>
+      <button class="rev-back" onclick="closeReview()">&#8592; Edit Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- Previous Orders Sheet -->
+<div class="pord-ovl" id="pordOvl">
+  <div class="pord-card">
+    <div class="pord-head">
+      <div class="pord-htxt">My Previous Orders</div>
+      <button class="pord-close" onclick="closePrevOrders()">&#10005;</button>
+    </div>
+    <div class="pord-body" id="pordBody"></div>
   </div>
 </div>
 
@@ -805,7 +886,9 @@ function updateQlbl(chip){
   var mode=chip.dataset.mode||"box";
   var oq=parseInt(chip.dataset.oq,10)||1;
   var bx=parseFloat(chip.getAttribute("data-bx"))||0;
+  var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
   if(mode==="box"&&bx) lbl.textContent="= "+(oq*bx)+" pcs";
+  else if(mode==="pcs"&&inrNum) lbl.textContent="= "+(oq*inrNum)+" pcs";
   else lbl.textContent="";
 }
 function sA(ev,sec){
@@ -978,6 +1061,9 @@ function clearAll(){
 
 /* ---------- ORDER ---------- */
 function placeOrder(){
+  showReview();
+}
+function doSendOrder(){
   var sel=document.querySelectorAll(".chip.sel");
   var enq=document.querySelectorAll(".chip.oos.enq-sel");
   if(!sel.length&&!enq.length)return;
@@ -1023,8 +1109,9 @@ function placeOrder(){
   var enqNames=[];
   for(var e=0;e<enq.length;e++) enqNames.push(enq[e].getAttribute("data-name")||"");
   logOrder({customer:cust.name,phone:cust.phone,date:ds,items:items,enquiries:enqNames});
+  saveOrderHistory({date:ds,customer:cust.name,items:items,enquiries:enqNames});
   window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");
-  localStorage.removeItem(CART_KEY); // clear saved cart after order placed
+  clearAll();
 }
 function logOrder(payload){
   if(!CONFIG.ORDER_LOG_URL)return;
@@ -1332,6 +1419,189 @@ function checkStockChanges(products){
   }catch(e){
     localStorage.removeItem(SNAP_KEY);
   }
+}
+
+/* ---------- ORDER REVIEW ---------- */
+function showReview(){
+  var sel=document.querySelectorAll(".chip.sel");
+  var enq=document.querySelectorAll(".chip.oos.enq-sel");
+  if(!sel.length&&!enq.length) return;
+  var html="";
+  for(var i=0;i<sel.length;i++){
+    var chip=sel[i];
+    var nm=chip.getAttribute("data-name")||"";
+    var mode=chip.dataset.mode||"box";
+    var oq=parseInt(chip.dataset.oq,10)||1;
+    var bx=parseFloat(chip.getAttribute("data-bx"))||0;
+    var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
+    var modeLabel=mode==="box"?"Box":mode==="pcs"?"Inner Box":"Loose Pcs";
+    var total="";
+    if(mode==="box"&&bx) total="= "+(oq*bx)+" pcs";
+    else if(mode==="pcs"&&inrNum) total="= "+(oq*inrNum)+" pcs";
+    html+='<div class="rev-item" data-chip-name="'+esc(nm)+'">'
+      +'<div class="rev-info"><div class="rev-name">'+esc(nm)+'</div><div class="rev-mode">'+modeLabel+'</div></div>'
+      +'<div class="rev-qw">'
+        +'<button class="rev-qs" onclick="revStep(this,-1)">&#8722;</button>'
+        +'<input class="rev-qn" type="number" inputmode="numeric" min="1" value="'+oq+'" oninput="revSync(this)">'
+        +'<button class="rev-qs" onclick="revStep(this,1)">+</button>'
+      +'</div>'
+      +'<div class="rev-tot">'+total+'</div>'
+      +'<button class="rev-rm" data-n="'+esc(nm)+'" onclick="revRemove(this)">&#10005;</button>'
+      +'</div>';
+  }
+  if(enq.length){
+    html+='<div class="rev-enq-hdr">&#128233; Enquiry (Out of Stock)</div>';
+    for(var j=0;j<enq.length;j++){
+      var enm=enq[j].getAttribute("data-name")||"";
+      html+='<div class="rev-enq-row"><span class="rev-enq-nm">'+esc(enm)+'</span><span class="rev-enq-lbl">Out of Stock</span><button class="rev-rm" data-n="'+esc(enm)+'" onclick="revRemoveEnq(this)">&#10005;</button></div>';
+    }
+  }
+  var tot=sel.length+enq.length;
+  document.getElementById("revCount").textContent=tot+(tot===1?" item":" items");
+  document.getElementById("revList").innerHTML=html;
+  document.getElementById("revOvl").classList.add("show");
+}
+function revGetChip(name){
+  var chips=document.querySelectorAll(".chip");
+  for(var i=0;i<chips.length;i++){if(chips[i].getAttribute("data-name")===name)return chips[i];}
+  return null;
+}
+function revStep(btn,dir){
+  var row=btn.closest(".rev-item");
+  var inp=row.querySelector(".rev-qn");
+  var next=Math.max(1,(parseInt(inp.value,10)||1)+dir);
+  inp.value=next; revSync(inp);
+}
+function revSync(inp){
+  var row=inp.closest(".rev-item");
+  var nm=row.getAttribute("data-chip-name");
+  var oq=Math.max(1,parseInt(inp.value,10)||1);
+  inp.value=oq;
+  var chip=revGetChip(nm);
+  if(chip){chip.dataset.oq=String(oq);updateQlbl(chip);}
+  var totEl=row.querySelector(".rev-tot");
+  if(totEl&&chip){
+    var mode=chip.dataset.mode||"box";
+    var bx=parseFloat(chip.getAttribute("data-bx"))||0;
+    var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
+    if(mode==="box"&&bx) totEl.textContent="= "+(oq*bx)+" pcs";
+    else if(mode==="pcs"&&inrNum) totEl.textContent="= "+(oq*inrNum)+" pcs";
+    else totEl.textContent="";
+  }
+  uB();
+}
+function revRemove(btn){
+  var nm=btn.getAttribute("data-n");
+  var chips=document.querySelectorAll(".chip");
+  for(var i=0;i<chips.length;i++){if(chips[i].getAttribute("data-name")===nm){chips[i].classList.remove("sel");resetChip(chips[i]);}}
+  btn.closest(".rev-item").remove();
+  uB();
+  if(!document.querySelectorAll("#revList .rev-item").length) closeReview();
+}
+function revRemoveEnq(btn){
+  var nm=btn.getAttribute("data-n");
+  var chips=document.querySelectorAll(".chip.oos");
+  var t=T[lang];
+  for(var i=0;i<chips.length;i++){
+    if(chips[i].getAttribute("data-name")===nm){
+      chips[i].classList.remove("enq-sel");
+      var eb=chips[i].querySelector(".enqbtn");if(eb)eb.textContent=t.enq;
+    }
+  }
+  btn.closest(".rev-enq-row").remove();
+  uB();
+}
+function closeReview(){document.getElementById("revOvl").classList.remove("show");}
+function confirmAndSend(){
+  closeReview();
+  doSendOrder();
+}
+
+/* ---------- ORDER HISTORY ---------- */
+var ORDERS_KEY="rb_order_history";
+function saveOrderHistory(orderData){
+  try{
+    var hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");
+    hist.unshift(orderData);
+    if(hist.length>5) hist=hist.slice(0,5);
+    localStorage.setItem(ORDERS_KEY,JSON.stringify(hist));
+  }catch(e){}
+}
+function showPrevOrders(){
+  var hist=[];
+  try{hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");}catch(e){}
+  var html="";
+  if(!hist.length){
+    html='<div class="pord-empty">No previous orders yet.<br><br>Place your first order to see<br>history here 📦</div>';
+  } else {
+    for(var i=0;i<hist.length;i++){
+      var o=hist[i];
+      var itemCount=(o.items||[]).length;
+      var enqCount=(o.enquiries||[]).length;
+      var sub=itemCount+" item"+(itemCount!==1?"s":"");
+      if(enqCount) sub+=" + "+enqCount+" enquiry";
+      html+='<div class="pord-order">'
+        +'<div class="pord-oh" onclick="togglePordItem(this)">'
+          +'<div><div class="pord-date">'+esc(o.date||"")+'</div><div class="pord-cust">'+esc(o.customer||"")+'</div></div>'
+          +'<span class="pord-badge">'+sub+'</span>'
+          +'<span class="pord-arr">&#9660;</span>'
+        +'</div>'
+        +'<div class="pord-items">';
+      (o.items||[]).forEach(function(it){
+        var totStr="";
+        var bx=parseFloat(it.boxSize)||0;
+        var boxes=parseFloat(it.boxes)||0;
+        if(it.mode==="box"&&bx&&boxes) totStr=" = "+(boxes*bx)+" pcs";
+        else if(it.mode==="pcs"&&bx&&boxes) totStr=" = "+(boxes*bx)+" pcs";
+        html+='<div class="pord-row"><span class="pord-nm">'+esc(it.name||"")+'</span><span class="pord-q">'+esc(it.qty||"")+totStr+'</span></div>';
+      });
+      if(enqCount){
+        html+='<div style="padding:5px 18px 3px;font-size:11px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.4px">&#128233; Enquiry</div>';
+        (o.enquiries||[]).forEach(function(enm){
+          html+='<div class="pord-row"><span class="pord-nm" style="color:#92400e">'+esc(enm)+'</span><span class="pord-q">Out of Stock</span></div>';
+        });
+      }
+      html+='<button class="pord-reorder" onclick="reorder('+i+')">&#128257; Reorder This</button>';
+      html+='</div></div>';
+    }
+  }
+  document.getElementById("pordBody").innerHTML=html;
+  document.getElementById("pordOvl").classList.add("show");
+}
+function togglePordItem(hdr){
+  var items=hdr.nextElementSibling;
+  var arr=hdr.querySelector(".pord-arr");
+  var isOpen=items.style.display==="block";
+  items.style.display=isOpen?"none":"block";
+  arr.classList.toggle("open",!isOpen);
+}
+function closePrevOrders(){document.getElementById("pordOvl").classList.remove("show");}
+function reorder(idx){
+  var hist=[];
+  try{hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");}catch(e){}
+  var order=hist[idx];
+  if(!order||!order.items) return;
+  closePrevOrders();
+  var found=0;
+  (order.items||[]).forEach(function(it){
+    var chips=document.querySelectorAll(".chip:not(.oos)");
+    for(var i=0;i<chips.length;i++){
+      if(chips[i].getAttribute("data-name")===it.name){
+        if(!chips[i].classList.contains("sel")){
+          chips[i].classList.add("sel");
+          chips[i].dataset.oq=String(it.boxes||1);
+          chips[i].dataset.mode=it.mode||"box";
+          var ms=chips[i].querySelectorAll(".qm");
+          for(var k=0;k<ms.length;k++) ms[k].classList.toggle("on",ms[k].getAttribute("data-role")===(it.mode||"box"));
+          var inp=chips[i].querySelector(".qnum");if(inp) inp.value=it.boxes||1;
+          updateQlbl(chips[i]);
+        }
+        found++; break;
+      }
+    }
+  });
+  uB();
+  toast(found>0?"&#128257; "+found+" item"+(found!==1?"s":"")+" added from previous order":"Items not in current stock");
 }
 
 /* ---------- QR SHARE ---------- */
