@@ -27,7 +27,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .live::before{content:"";width:6px;height:6px;background:var(--green);border-radius:50%;animation:blnk 1.8s infinite}
 @keyframes blnk{0%,100%{opacity:1}50%{opacity:.25}}
 .hmeta .who{color:var(--red);font-weight:600;cursor:pointer}
-.srchw{background:var(--card);padding:11px 14px;border-bottom:1px solid var(--border)}
+.srchw{background:var(--card);padding:11px 14px;border-bottom:1px solid var(--border);position:sticky;top:var(--hdr-h,70px);z-index:99}
 .srchb{position:relative}
 .srchb input{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:9px;padding:11px 14px 11px 40px;font-family:inherit;font-size:15px;color:var(--text);outline:none;transition:border-color .2s}
 .srchb input:focus{border-color:var(--red);background:#fff}
@@ -35,7 +35,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .sico{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:17px;color:#bbb;pointer-events:none}
 .sinf{font-size:12px;color:var(--muted);text-align:right;margin-top:5px;font-weight:500}
 .sinf b{color:var(--red)}
-.tabsw{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--border)}
+.tabsw{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:var(--srch-bottom,128px);z-index:98;box-shadow:0 2px 6px rgba(0,0,0,.06)}
 .tabsw::-webkit-scrollbar{display:none}
 .tab{flex-shrink:0;font-family:inherit;font-size:13px;font-weight:600;white-space:nowrap;padding:7px 15px;border-radius:20px;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);cursor:pointer;transition:all .18s}
 .tab.active{background:var(--black);border-color:var(--black);color:var(--yellow)}
@@ -273,7 +273,30 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .pord-reorder:active{opacity:.85}
 .pord-wa{background:#25D366;color:#fff;border:none;font-family:inherit;font-size:13px;font-weight:700;padding:10px 14px;border-radius:9px;cursor:pointer;display:flex;align-items:center;gap:5px}
 .pord-wa:active{opacity:.85}
+
+/* Back to Top button */
+.bttbtn{position:fixed;right:16px;bottom:88px;z-index:190;background:var(--black);color:#fff;border:none;border-radius:22px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.3);display:none;align-items:center;gap:5px;font-family:inherit;transition:opacity .2s}
+.bttbtn.show{display:flex}
+.bttbtn:active{opacity:.8}
+/* Reordered badge on chips */
+.reordbdg{font-size:11px;font-weight:700;color:#16A34A;background:rgba(22,163,74,.1);border-radius:4px;padding:1px 5px;flex-shrink:0;line-height:1.4}
 </style>
+<script>
+// Calculate sticky offsets so srchw/tabsw sit exactly below the header
+(function(){
+  function setStickyVars(){
+    var hdr=document.querySelector('.hdr');
+    if(!hdr)return;
+    var hh=hdr.offsetHeight;
+    var srchw=document.querySelector('.srchw');
+    var sh=srchw?srchw.offsetHeight:57;
+    document.documentElement.style.setProperty('--hdr-h',hh+'px');
+    document.documentElement.style.setProperty('--srch-bottom',(hh+sh)+'px');
+  }
+  document.addEventListener('DOMContentLoaded',setStickyVars);
+  window.addEventListener('resize',setStickyVars);
+})();
+</script>
 </head>
 <body>
 
@@ -422,6 +445,9 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
       <span class="rev-hcnt" id="revCount">0 items</span>
     </div>
     <div class="rev-list" id="revList"></div>
+    <div style="padding:10px 14px 0">
+      <textarea id="orderNote" rows="2" placeholder="Add a note… e.g. Urgent dispatch, credit order" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;font-family:inherit;font-size:13px;color:var(--text);resize:none;outline:none;background:var(--bg)" onclick="event.stopPropagation()"></textarea>
+    </div>
     <div class="rev-foot">
       <button class="rev-send" onclick="confirmAndSend()">&#128172; Confirm &amp; Send on WhatsApp</button>
       <button class="rev-back" onclick="closeReview()">&#8592; Edit Order</button>
@@ -510,6 +536,9 @@ var TOT = 0;
 var bOpen = false;
 var lang = localStorage.getItem("rb_lang") || "en";
 var SCHEMES = {};  // {productName: {text, till}}
+var PREV_ORDERED = {};  // {productName: lastOrderDate}
+var _orderNote = "";  // temporary, not saved to localStorage
+var PROD_CAT = {};    // {productName: categoryName} — built in render()
 
 /* SC routing — short ref codes keep numbers private in URLs */
 var REFS = {
@@ -729,7 +758,7 @@ function qctrlHtml(showPcs){
     '</div>'+
     '<div class="qstep">'+
       '<button class="qs" onclick="stepQ(event,this,-1)">−</button>'+
-      '<input class="qnum" type="number" inputmode="numeric" min="1" value="1" oninput="syncQ(event,this)" onclick="event.stopPropagation()">'+
+      '<input class="qnum" type="number" inputmode="numeric" min="1" value="1" oninput="syncQ(event,this)" onclick="event.stopPropagation();this.select()">'+
       '<button class="qs" onclick="stepQ(event,this,1)">+</button>'+
       '<span class="qlbl"></span>'+
     '</div>'+
@@ -740,6 +769,7 @@ function chipHtml(p){
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
   var inr=p.inner?'<span class="cq" style="color:#1a56db;background:rgba(26,86,219,.08)">In:'+esc(p.inner)+'</span>':'';
   var hot=p.fast?'<span class="hotbdg">🔥 Hot</span>':'';
+  var prevOrd=PREV_ORDERED[p.name]?'<span class="reordbdg" title="Last ordered: '+PREV_ORDERED[p.name]+'">↩</span>':'';
   var scm=p.scheme?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\',\''+esc(p.scheme)+'\')">🏷️ Scheme</button>':'';
   var hotCls=p.fast?' hot':'';
   var scmAttr=p.scheme?' data-scm="1"':'';
@@ -751,7 +781,7 @@ function chipHtml(p){
   else if(wty){wBadge='<span class="wbdg w6m">🛡️ '+esc(p.warranty)+'</span>';}
   if(!p.stock){
     return '<span class="chip oos'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" onclick="tEnq(this)">'+
-      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+'<span class="oosl">'+t.out+'</span>'+scm+wBadge+'</span>'+
+      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+'<span class="oosl">'+t.out+'</span>'+scm+wBadge+prevOrd+'</span>'+
       '<button class="enqbtn">'+t.enq+'</button>'+
     '</span>';
   }
@@ -764,10 +794,16 @@ function sectionHtml(key,title,cls,icon,chips){
 }
 
 function render(rows, isSample){
+  // Build set of previously ordered product names (for #8 badge)
+  PREV_ORDERED={};
+  try{
+    var hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");
+    hist.forEach(function(o){(o.items||[]).forEach(function(it){if(it.name&&!PREV_ORDERED[it.name])PREV_ORDERED[it.name]=o.date||"";});});
+  }catch(e){}
   var products=rows.map(function(r){
     return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5]),inner:r[6]!==""&&r[6]!=null?r[6]:"",scheme:String(r[7]||"").trim(),alt:String(r[8]||"").trim(),warranty:String(r[9]||"").trim()};
   });
-  products.forEach(function(p){p.catKey=slug(p.cat);});
+  products.forEach(function(p){p.catKey=slug(p.cat); PROD_CAT[p.name]=p.cat;});
 
   // group by category, preserve order of first appearance
   var order=[],groups={};
@@ -797,7 +833,7 @@ function render(rows, isSample){
   order.forEach(function(k){
     var g=groups[k];
     // Sort: fast (hot) items first, then rest — preserves original order within each group
-    g.items.sort(function(a,b){return (b.fast?1:0)-(a.fast?1:0);});
+    g.items.sort(function(a,b){return (b.stock?1:0)-(a.stock?1:0)||(b.fast?1:0)-(a.fast?1:0);});
     html+=sectionHtml(g.key,g.name,"",catIcon(g.name),g.items.map(chipHtml));
   });
   document.getElementById("sections").innerHTML=html;
@@ -1026,7 +1062,16 @@ function uB(){
   saveCart();
   document.getElementById("bct").textContent=total;
   var t=T[lang];
-  var orderTxt=sel.length+" item"+(sel.length!==1?"s":"");
+  // Build category-grouped summary e.g. "6 items · 3 Data Cable · 2 Charger"
+  var catCounts={};
+  for(var ci=0;ci<sel.length;ci++){
+    var cn=PROD_CAT[sel[ci].getAttribute("data-name")]||"Other";
+    catCounts[cn]=(catCounts[cn]||0)+1;
+  }
+  var catKeys=Object.keys(catCounts).sort(function(a,b){return catCounts[b]-catCounts[a];});
+  var catParts=catKeys.slice(0,3).map(function(k){return catCounts[k]+" "+k;});
+  if(catKeys.length>3) catParts.push("+"+(catKeys.length-3)+" more");
+  var orderTxt=sel.length+" item"+(sel.length!==1?"s":"")+(catParts.length?" · "+catParts.join(" · "):"");
   var enqTxt=enq.length>0?" + "+enq.length+" enquiry":"";
   document.getElementById("blistsub").textContent=orderTxt+enqTxt;
   var list=document.getElementById("blist");list.innerHTML="";
@@ -1112,9 +1157,11 @@ function doSendOrder(){
   var cust=getCust();
   var d=new Date();var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var ds=d.getDate()+" "+mo[d.getMonth()]+" "+d.getFullYear();
+  // Generate client-side ref ID e.g. RB-KX7P2Q
+  var refId="RB-"+d.getTime().toString(36).toUpperCase().slice(-6);
   var items=[];
   var t=T[lang];
-  var msg=t.orderTitle+"\n";
+  var msg="🆔 Ref: "+refId+"\n"+t.orderTitle+"\n";
   if(cust.name)msg+=t.fromLbl+": "+cust.name+"\n";
   if(cust.phone)msg+=t.phoneLbl2+": "+cust.phone+"\n";
   msg+=t.dateLbl+": "+ds+"\n\n"+t.productsReq+"\n";
@@ -1147,12 +1194,16 @@ function doSendOrder(){
       msg+=(sel.length+k+1)+". "+enq[k].getAttribute("data-name")+" (Out of Stock)\n";
     }
   }
-  msg+="\n"+t.confirmTxt+"\n\n"+t.thanks;
+  msg+="\n"+t.confirmTxt;
+  if(_orderNote) msg+="\n\n📝 Note: "+_orderNote;
+  msg+="\n\n"+t.thanks;
+  _orderNote="";
   var enqNames=[];
   for(var e=0;e<enq.length;e++) enqNames.push(enq[e].getAttribute("data-name")||"");
   logOrder({customer:cust.name,phone:cust.phone,date:ds,items:items,enquiries:enqNames});
-  saveOrderHistory({date:ds,customer:cust.name,items:items,enquiries:enqNames});
+  saveOrderHistory({date:ds,customer:cust.name,refId:refId,items:items,enquiries:enqNames});
   window.open("https://wa.me/"+WA+"?text="+encodeURIComponent(msg),"_blank");
+  toast("✅ Order sent! Ref: "+refId);
   clearAll();
 }
 function logOrder(payload){
@@ -1555,6 +1606,9 @@ function revRemoveEnq(btn){
 }
 function closeReview(){document.getElementById("revOvl").classList.remove("show");}
 function confirmAndSend(){
+  var nf=document.getElementById("orderNote");
+  _orderNote=nf?nf.value.trim():"";
+  if(nf) nf.value="";
   closeReview();
   doSendOrder();
 }
@@ -1625,6 +1679,7 @@ function showPrevOrders(){
           +'<span class="pord-num">'+orderNum+'</span>'
           +'<div style="flex:1;margin-left:2px">'
             +'<div class="pord-date">'+esc(o.date||"")+'</div>'
+            +(o.refId?'<div class="pord-cust" style="color:var(--yellow);font-size:11px;letter-spacing:.3px;margin-top:1px">'+ esc(o.refId)+'</div>':'')
             +(o.customer?'<div class="pord-cust">'+esc(o.customer)+'</div>':'')
           +'</div>'
           +'<span style="font-size:12px;color:#888;margin-right:6px">'+items.length+' items</span>'
@@ -1702,8 +1757,14 @@ function boot(){
   loadStock();
   updateMyOrdersBanner();
   if("serviceWorker" in navigator){navigator.serviceWorker.register("/stock/sw.js",{scope:"/stock/"}).catch(function(){});}
+  // Back to Top button visibility
+  window.addEventListener("scroll",function(){
+    var btn=document.getElementById("bttBtn");
+    if(btn) btn.classList.toggle("show",window.scrollY>400);
+  });
 }
 boot();
 </script>
+<button class="bttbtn" id="bttBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8679; Top</button>
 </body>
 </html>
