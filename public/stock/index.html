@@ -1822,16 +1822,15 @@ function boot(){
   else maybeShowInstallSheet();
   loadStock();
   updateMyOrdersBanner();
-  // Service worker — check for updates immediately + reload when new SW activates
+  // Clean ?v=10 (or any ?v=N) from URL after SW-forced cache-bust reload
+  if(window.location.search && /[?&]v=\d+/.test(window.location.search)){
+    history.replaceState(null,"",window.location.pathname);
+  }
+  // Service worker — register so PWA install works; SW v10 self-destructs after clearing all caches
   if("serviceWorker" in navigator){
     navigator.serviceWorker.register("/stock/sw.js",{scope:"/stock/"})
-      .then(function(reg){
-        reg.update(); // ask SW to check for a newer version right now
-      }).catch(function(){});
-    // When SW sends SW_UPDATED (new version activated), hard-reload to get fresh files
-    navigator.serviceWorker.addEventListener("message",function(evt){
-      if(evt.data && evt.data.type==="SW_UPDATED") window.location.reload(true);
-    });
+      .then(function(reg){ reg.update(); })
+      .catch(function(){});
   }
 
   // Watchdog: if the loadbox is still visible after 12 seconds, the app is stuck

@@ -1,75 +1,40 @@
-/* Robotek Stock — service worker v9
- *
- * Key fix: on every new SW activation, calls client.navigate(url) on all
- * open tabs. This forces a hard reload FROM THE SW SIDE — it works even
- * when the old page has no JS listener for it. So any device running a
- * stale cached version will automatically get the new files the moment
- * the new SW activates, with zero action required from the user.
+/* Robotek Stock — service worker v10
+ * SELF-DESTRUCT: wipes all caches, unregisters itself, force-reloads all tabs.
+ * This guarantees every device gets fresh HTML from the network,
+ * even if the previously cached page had a JS crash.
  */
-var CACHE = "robotek-stock-v9";
-var SHELL = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png",
-  "./icons/apple-touch-icon.png"
-];
+var CACHE = "robotek-stock-v10";
 
 self.addEventListener("install", function(e){
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(SHELL); }));
 });
 
 self.addEventListener("activate", function(e){
   e.waitUntil(
-    // 1. Delete all old caches
+    // 1. Delete every cache entry
     caches.keys().then(function(keys){
-      return Promise.all(keys.map(function(k){ if(k!==CACHE) return caches.delete(k); }));
+      return Promise.all(keys.map(function(k){ return caches.delete(k); }));
     })
-    // 2. Take control of all open tabs immediately
+    // 2. Take control of all open tabs
     .then(function(){ return self.clients.claim(); })
-    // 3. Force-reload every open tab so they get fresh HTML — works on ALL
-    //    existing pages regardless of what JS version they're running.
+    // 3. Force every open tab to navigate to a cache-busted URL
+    //    The ?v=10 query param means the SW (if still active) won't find
+    //    a cache match and must fetch fresh from the network.
     .then(function(){
-      return self.clients.matchAll({type:"window",includeUncontrolled:true}).then(function(clients){
-        return Promise.all(clients.map(function(client){
-          return client.navigate(client.url);
-        }));
-      });
+      return self.clients.matchAll({type:"window", includeUncontrolled:true});
+    })
+    .then(function(clients){
+      return Promise.all(clients.map(function(client){
+        var url = client.url.split("?")[0] + "?v=10";
+        return client.navigate(url);
+      }));
+    })
+    // 4. Unregister this SW so future loads go straight to network — no more cache issues
+    .then(function(){
+      return self.registration.unregister();
     })
   );
 });
 
-self.addEventListener("fetch", function(e){
-  var url = e.request.url;
-  // Never intercept Google Sheets or Apps Script calls — always network.
-  if(url.indexOf("docs.google.com") !== -1 || url.indexOf("script.google.com") !== -1) return;
-
-  if(e.request.method === "GET" && url.indexOf(self.location.origin) === 0){
-    // HTML pages: network-first so new deploys reach users instantly.
-    var isHtml = !url.match(/\.(png|jpg|jpeg|svg|webp|webmanifest|js|css|ico|woff2?)(\?|$)/);
-    if(isHtml){
-      e.respondWith(
-        fetch(e.request).then(function(res){
-          var copy = res.clone();
-          caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
-          return res;
-        }).catch(function(){
-          return caches.match(e.request) || caches.match("./index.html");
-        })
-      );
-    } else {
-      // Static assets: cache-first (fast), falls back to network.
-      e.respondWith(
-        caches.match(e.request).then(function(hit){
-          return hit || fetch(e.request).then(function(res){
-            var copy = res.clone();
-            caches.open(CACHE).then(function(c){ c.put(e.request, copy); });
-            return res;
-          }).catch(function(){ return caches.match("./index.html"); });
-        })
-      );
-    }
-  }
-});
+// Fetch handler: pass everything through to the network — no caching at all
+self.addEventListener("fetch", function(){ /* passthrough */ });
