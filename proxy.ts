@@ -42,8 +42,10 @@ export async function proxy(request: NextRequest) {
   const isAuthPage = request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/auth");
   const isPublicPage = request.nextUrl.pathname === "/";
+  // Public API endpoints — authenticated by their own Bearer token, not session cookies
+  const isPublicApi = request.nextUrl.pathname.startsWith("/api/stock/");
 
-  if (!user && !isAuthPage && !isPublicPage) {
+  if (!user && !isAuthPage && !isPublicPage && !isPublicApi) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
