@@ -18,7 +18,7 @@ var FINOS_RESTOCK_SECRET = "7d_HfL-9zv2u_EQkL3J64FUQ97R0kIm9EzNubQbqU_s";
 
 var HEADER     = ["Timestamp","Order ID","Customer","Phone","Order Date",
                   "Product","Boxes","Box Size","Total Qty (pcs)"];
-var ENQ_HEADER = ["Timestamp","Order ID","Customer","Phone","Date","Product Enquired"];
+var ENQ_HEADER = ["Timestamp","Order ID","Customer","Phone","Date","Product Enquired","Source"];
 
 var SC_DIR = [
   { ref:"HO",    name:"Robotek Head Office",       wa:"918851403037", tag:"Orders"        },
@@ -143,13 +143,14 @@ function logEnquiries(ss, data, orderId, ts) {
     sheet.getRange(1, 1, 1, ENQ_HEADER.length)
       .setBackground("#1a237e").setFontColor("#F7DA11").setFontWeight("bold");
   }
+  var source = data.tag || "Orders"; // which CRM this customer belongs to
   var rows = enqs.map(function(p) {
-    return [ts, orderId, data.customer||"", "'"+(data.phone||""), data.date||"", p];
+    return [ts, orderId, data.customer||"", "'"+(data.phone||""), data.date||"", p, source];
   });
   sheet.getRange(sheet.getLastRow()+1, 1, rows.length, ENQ_HEADER.length).setValues(rows);
 }
 
-/* ── Restock notify — scan Enquiries tab, call FinOS API ───────────────────── */
+/* ── Restock notify — scan Enquiries tab, call FinOS API per CRM ───────────── */
 function handleRestockNotify(products) {
   if (!products || !products.length) return;
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -159,78 +160,84 @@ function handleRestockNotify(products) {
     return;
   }
 
-  // Read all enquiry rows: [Timestamp, OrderID, Customer, Phone, Date, Product]
-  var data = enqSheet.getRange(2, 1, enqSheet.getLastRow()-1, 6).getValues();
+  // Read all enquiry rows: [Timestamp, OrderID, Customer, Phone, Date, Product, Source]
+  // Col 7 (index 6) = Source tag — added in v6. Older rows without it default to "Orders" (HO).
+  var data = enqSheet.getRange(2, 1, enqSheet.getLastRow()-1, 7).getValues();
 
-  // Find customers who enquired about any of the restocked products
-  // De-duplicate: one notification per (customer phone + product)
-  var seen   = {};
-  var notify = [];
+  // Build a lookup: SC tag → SC_DIR entry  e.g. "Orders" → HO, "Store Orders" → Store
+  var scByTag = {};
+  SC_DIR.forEach(function(sc) { scByTag[sc.tag] = sc; });
+
+  // Group matching enquiries by their source CRM tag
+  // De-duplicate: one notification per (phone + product)
+  var seen    = {};
+  var byTag   = {}; // tag → [{customer, phone, product, enqDate}]
+
   for (var i = 0; i < data.length; i++) {
     var row      = data[i];
     var customer = String(row[2] || "").trim();
-    var phone    = String(row[3] || "").trim().replace(/^'/,""); // strip leading ' from number
+    var phone    = String(row[3] || "").trim().replace(/^'/, "");
     var enqDate  = String(row[4] || "").trim();
     var product  = String(row[5] || "").trim();
+    var source   = String(row[6] || "Orders").trim() || "Orders"; // default HO
 
     if (!phone || !product) continue;
 
-    // Check if this product is in the restocked list
-    var isRestocked = false;
-    for (var j = 0; j < products.length; j++) {
-      if (products[j].toLowerCase() === product.toLowerCase()) {
-        isRestocked = true;
-        break;
-      }
-    }
+    // Only process if product is in the restocked list
+    var isRestocked = products.some(function(p) {
+      return p.toLowerCase() === product.toLowerCase();
+    });
     if (!isRestocked) continue;
 
-    // De-duplicate by phone + product
     var key = phone + "|" + product;
     if (seen[key]) continue;
     seen[key] = true;
 
-    notify.push({ customer: customer, phone: phone, product: product, enqDate: enqDate });
+    if (!byTag[source]) byTag[source] = [];
+    byTag[source].push({ customer: customer, phone: phone, product: product, enqDate: enqDate });
   }
 
-  if (!notify.length) {
-    Logger.log("Restock notify: no matching enquiries for products: " + products.join(", "));
+  var tags = Object.keys(byTag);
+  if (!tags.length) {
+    Logger.log("Restock notify: no matching enquiries for: " + products.join(", "));
     return;
   }
 
-  Logger.log("Restock notify: calling FinOS for " + notify.length + " customer(s)");
+  // Send one FinOS API call per CRM group — each CRM only sees their own customers
+  tags.forEach(function(tag) {
+    var groupEnquiries = byTag[tag];
+    var sc = scByTag[tag];
 
-  // Build CRM recipients from SC_DIR (the team contacts in this script's config)
-  // Only include contacts that have a WhatsApp number
-  var crmRecipients = SC_DIR
-    .filter(function(sc) { return sc.wa; })
-    .map(function(sc) { return { name: sc.name, phone: sc.wa }; });
+    // crmRecipient: the one CRM for this group. If source tag not in SC_DIR, fall back to HO.
+    var crmContact = sc || scByTag["Orders"];
+    var crmRecipients = crmContact ? [{ name: crmContact.name, phone: crmContact.wa }] : [];
 
-  // Call FinOS API
-  try {
-    var payload = JSON.stringify({
-      products:       products,
-      enquiries:      notify,
-      crmRecipients:  crmRecipients   // team gets a summary after customers are notified
-    });
-    var response = UrlFetchApp.fetch(FINOS_RESTOCK_URL, {
-      method:      "post",
-      contentType: "application/json",
-      headers:     { "Authorization": "Bearer " + FINOS_RESTOCK_SECRET },
-      payload:     payload,
-      muteHttpExceptions: true
-    });
-    var code   = response.getResponseCode();
-    var result = response.getContentText();
-    Logger.log("FinOS response " + code + ": " + result);
+    Logger.log("Restock notify [" + tag + "]: " + groupEnquiries.length + " customer(s), CRM: " + (crmContact ? crmContact.name : "none"));
 
-    // Log to Restock Alerts tab in sheet for team visibility
-    logRestockAlert(ss, products, notify, code === 200 ? "sent" : "error:" + code);
+    try {
+      var payload = JSON.stringify({
+        products:      products,
+        enquiries:     groupEnquiries,
+        crmRecipients: crmRecipients
+      });
+      var response = UrlFetchApp.fetch(FINOS_RESTOCK_URL, {
+        method:      "post",
+        contentType: "application/json",
+        headers:     { "Authorization": "Bearer " + FINOS_RESTOCK_SECRET },
+        payload:     payload,
+        muteHttpExceptions: true
+      });
+      var code   = response.getResponseCode();
+      var result = response.getContentText();
+      Logger.log("FinOS [" + tag + "] response " + code + ": " + result);
 
-  } catch(err) {
-    Logger.log("Restock notify error: " + String(err));
-    logRestockAlert(ss, products, notify, "script_error");
-  }
+      logRestockAlert(ss, products, groupEnquiries, code === 200 ? "sent" : "error:" + code);
+
+    } catch(err) {
+      Logger.log("Restock notify [" + tag + "] error: " + String(err));
+      logRestockAlert(ss, products, groupEnquiries, "script_error");
+    }
+  });
 }
 
 /* ── Log restock alerts to a tab so sales team can see history ─────────────── */
