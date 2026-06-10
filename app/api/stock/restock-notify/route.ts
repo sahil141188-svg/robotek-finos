@@ -27,10 +27,9 @@
  *   { success: true, sent: number, skipped: number, errors: number, detail: [...] }
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { createClient }              from "@supabase/supabase-js";
-import { sendWhatsApp }              from "@/lib/whatsapp";
-import { getWhatsAppConfig, getBriefingSettings } from "@/app/actions/notification-settings";
+import { NextRequest, NextResponse }  from "next/server";
+import { createClient }               from "@supabase/supabase-js";
+import { sendWhatsApp, type WhatsAppConfig } from "@/lib/whatsapp";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -187,26 +186,54 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // 3. Load WhatsApp config.
-  //    CRM recipients come from the Apps Script payload (SC_DIR contacts).
-  //    Only fall back to FinOS briefing list if Apps Script didn't send any.
-  const waConfig = await getWhatsAppConfig();
+  // 3. Load WhatsApp config + briefing recipients directly via service role key.
+  //    This route is called server-to-server (no session cookie), so "use server"
+  //    actions that rely on cookie-based Supabase clients return empty/defaults.
+  //    Service role bypasses RLS and can always read app_settings.
+  const adminDb = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ) as any;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function getSetting(key: string): Promise<any> {
+    const { data } = await adminDb
+      .from("app_settings")
+      .select("value")
+      .eq("key", key)
+      .single();
+    return data?.value ?? null;
+  }
+
+  const rawWa  = await getSetting("whatsapp");
+  const waConfig: WhatsAppConfig = {
+    enabled:            false,
+    provider:           "meta",
+    meta_token:         "",
+    meta_phone_id:      "",
+    account_sid:        "",
+    auth_token:         "",
+    from_number:        "",
+    maytapi_product_id: "",
+    maytapi_phone_id:   "",
+    maytapi_token:      "",
+    ...(rawWa ?? {}),
+  };
+
+  // CRM list: prefer what Apps Script sent (already scoped per CRM),
+  // fall back to FinOS briefing recipients.
   let crmList: { name: string; phone: string }[];
   if (crmRecipients && crmRecipients.length > 0) {
     crmList = crmRecipients;
   } else {
-    const briefing = await getBriefingSettings();
-    crmList = briefing.recipients ?? [];
+    const rawBriefing = await getSetting("briefing");
+    crmList = rawBriefing?.recipients ?? [];
   }
 
-  // 4. Supabase client for logging
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase as any;
+  // 4. Reuse adminDb for notification logging
+  const db = adminDb;
 
   // 5. Send WhatsApp to each enquiring customer
   const results = { sent: 0, skipped: 0, errors: 0 };
