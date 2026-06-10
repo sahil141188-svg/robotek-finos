@@ -16,6 +16,10 @@ import { Plus, ArrowRight, Phone, Mail, X, Clock, CalendarPlus } from "lucide-re
 
 type SalesMember = { id: string; full_name: string };
 
+const LEAD_PRIORITY_COLORS: Record<string, string> = {
+  HOT: "bg-red-100 text-red-700", MEDIUM: "bg-amber-100 text-amber-700", COLD: "bg-blue-100 text-blue-700",
+};
+
 const STATUS_OPTIONS: CrmLeadStatus[] = ["new", "contacted", "qualified", "unqualified", "converted"];
 
 function fmtShort(iso: string): string {
@@ -209,6 +213,11 @@ export function LeadsClient({
                         {BAND_LABELS[band]} {score}
                       </span>
                     ); })()}
+                    {(l as { priority?: string | null }).priority && (
+                      <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-medium ${LEAD_PRIORITY_COLORS[(l as { priority?: string | null }).priority as string] ?? "bg-brand-gray-light text-brand-gray-mid"}`}>
+                        {(l as { priority?: string | null }).priority}
+                      </span>
+                    )}
                   </div>
                   <div className="text-[10px] text-brand-gray-mid">{LEAD_TYPE_LABELS[l.lead_type]}{l.company ? ` · ${l.company}` : ""}</div>
                   {nextFollowups[l.id] && (
