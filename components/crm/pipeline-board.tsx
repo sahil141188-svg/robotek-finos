@@ -147,7 +147,7 @@ export function PipelineBoard({
               <div className="p-2 space-y-2 flex-1">
                 {colDeals.map((d) => (
                   <div key={d.id} className="rounded-lg border border-border bg-white p-2.5 shadow-sm">
-                    <div className="text-xs font-medium text-brand-black leading-snug">{d.title}</div>
+                    <Link href={`/dashboard/sales-os/deals/${d.id}`} className="block text-xs font-medium text-brand-black leading-snug hover:text-brand-red">{d.title}</Link>
                     {d.account_name && (
                       <Link href={d.account_id ? `/dashboard/sales-os/accounts/${d.account_id}` : "#"} className="mt-1 flex items-center gap-1 text-[11px] text-brand-gray-mid hover:text-brand-red">
                         <Building2 className="w-3 h-3" />{d.account_name}

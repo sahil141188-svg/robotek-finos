@@ -862,6 +862,8 @@ export type Database = {
           owner_id: string | null;
           expected_close: string | null;
           lost_reason: string | null;
+          lost_reason_id: string | null;
+          priority: string | null;
           won_at: string | null;
           lost_at: string | null;
           source: string | null;
@@ -881,6 +883,8 @@ export type Database = {
           owner_id?: string | null;
           expected_close?: string | null;
           lost_reason?: string | null;
+          lost_reason_id?: string | null;
+          priority?: string | null;
           won_at?: string | null;
           lost_at?: string | null;
           source?: string | null;
@@ -897,12 +901,39 @@ export type Database = {
           owner_id?: string | null;
           expected_close?: string | null;
           lost_reason?: string | null;
+          lost_reason_id?: string | null;
+          priority?: string | null;
           won_at?: string | null;
           lost_at?: string | null;
           source?: string | null;
           notes?: string | null;
           updated_at?: string;
         };
+      };
+      crm_lost_reasons: {
+        Row: { id: string; name: string; is_active: boolean; sort_order: number; created_at: string };
+        Insert: { id?: string; name: string; is_active?: boolean; sort_order?: number };
+        Update: { name?: string; is_active?: boolean; sort_order?: number };
+      };
+      crm_messages: {
+        Row: {
+          id: string;
+          parent_type: string;
+          parent_id: string;
+          author_id: string | null;
+          kind: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          parent_type: string;
+          parent_id: string;
+          author_id?: string | null;
+          kind?: string;
+          body: string;
+        };
+        Update: { body?: string; kind?: string };
       };
       crm_activities: {
         Row: {

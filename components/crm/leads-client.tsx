@@ -2,6 +2,7 @@
 
 import { useState, useTransition, Fragment } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createLead, updateLeadStatus, convertLead, scheduleFollowup, startDrip, stopDrip, setLeadTags, distributeLeads } from "@/app/actions/crm";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, CRM_SOURCES } from "@/lib/crm/types";
 import { LEAD_TYPE_LABELS, DRIP_STATUS_LABELS, DRIP_STATUS_COLORS } from "@/lib/crm/drip";
@@ -202,7 +203,7 @@ export function LeadsClient({
               <tr className="border-b border-border last:border-0 hover:bg-brand-gray-light/30">
                 <td className="px-4 py-3">
                   <div className="font-medium text-brand-black flex items-center gap-2">
-                    {l.name}
+                    <Link href={`/dashboard/sales-os/leads/${l.id}`} className="hover:text-brand-red">{l.name}</Link>
                     {(() => { const { score, band } = scoreLead(l); return (
                       <span className={`text-[10px] rounded-full px-1.5 py-0.5 font-medium ${BAND_COLORS[band]}`} title={`Lead score ${score}/100`}>
                         {BAND_LABELS[band]} {score}
