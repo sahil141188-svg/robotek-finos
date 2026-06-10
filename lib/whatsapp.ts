@@ -79,7 +79,11 @@ export async function sendWhatsApp(
   }
 
   // Normalise number to E.164
-  const recipient = to.startsWith("+") ? to : `+91${to}`;
+  // Strip all non-digits first, then add + prefix.
+  // If already 12 digits starting with 91 (India) — it has the country code.
+  // If 10 digits — bare Indian mobile, prepend 91.
+  const digits = to.replace(/\D/g, "");
+  const recipient = digits.length >= 11 ? `+${digits}` : `+91${digits}`;
 
   try {
     if (config.provider === "meta")    return await sendViaMeta(config, recipient, body);
