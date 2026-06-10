@@ -1,5 +1,5 @@
 /* Robotek Stock — service worker (offline app shell, always-fresh stock) */
-var CACHE = "robotek-stock-v6";
+var CACHE = "robotek-stock-v7";
 var SHELL = [
   "./",
   "./index.html",

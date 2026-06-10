@@ -711,7 +711,9 @@ function loadStock(){
     return;
   }
   var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json"+(CONFIG.SHEET_NAME?"&sheet="+encodeURIComponent(CONFIG.SHEET_NAME):"");
-  fetch(url).then(function(r){return r.text();}).then(function(t){
+  var ctrl=new AbortController();
+  var timer=setTimeout(function(){ctrl.abort();},9000); // 9-sec hard timeout — never hang forever
+  fetch(url,{signal:ctrl.signal}).then(function(r){clearTimeout(timer);return r.text();}).then(function(t){
     var json=JSON.parse(t.substring(t.indexOf("{"),t.lastIndexOf("}")+1));
     var rows=json.table.rows||[];
     var data=[];
@@ -1379,7 +1381,8 @@ function addAlt(){
 function loadSchemes(){
   if(!CONFIG.SHEET_ID||CONFIG.SHEET_ID==="PASTE_YOUR_SHEET_ID_HERE") return;
   var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json&sheet=Schemes";
-  fetch(url).then(function(r){return r.text();}).then(function(txt){
+  var sCtrl=new AbortController();setTimeout(function(){sCtrl.abort();},8000);
+  fetch(url,{signal:sCtrl.signal}).then(function(r){return r.text();}).then(function(txt){
     try{
       var json=JSON.parse(txt.substring(txt.indexOf("{"),txt.lastIndexOf("}")+1));
       var rows=json.table.rows||[];
@@ -1411,7 +1414,8 @@ function loadAnnouncement(){
   if(!CONFIG.SHEET_ID||CONFIG.SHEET_ID==="PASTE_YOUR_SHEET_ID_HERE") return;
   var isAdmin=new URLSearchParams(window.location.search).get("admin")==="1";
   var url="https://docs.google.com/spreadsheets/d/"+CONFIG.SHEET_ID+"/gviz/tq?tqx=out:json&gid=1060563022";
-  fetch(url).then(function(r){return r.text();}).then(function(txt){
+  var aCtrl=new AbortController();setTimeout(function(){aCtrl.abort();},8000);
+  fetch(url,{signal:aCtrl.signal}).then(function(r){return r.text();}).then(function(txt){
     try{
       var json=JSON.parse(txt.substring(txt.indexOf("{"),txt.lastIndexOf("}")+1));
       var rows=json.table.rows||[];
