@@ -524,6 +524,86 @@ function logRestockAlert(ss, products, notify, status) {
 }
 
 // ============================================================
+// NEW PRODUCT NOTIFY — send WA to ALL past customers
+// ============================================================
+function handleNewProductNotify(products) {
+  if (!products || !products.length) return;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var tabToTag = {
+    "Orders":        "Orders",
+    "Store Orders":  "Store Orders",
+    "Dealer Demand": "Dealer Demand"
+  };
+
+  var scByTag = {};
+  SC_DIR.forEach(function(sc) { scByTag[sc.tag] = sc; });
+
+  var seen  = {};
+  var byTag = {};
+
+  Object.keys(tabToTag).forEach(function(tabName) {
+    var tag   = tabToTag[tabName];
+    var sheet = ss.getSheetByName(tabName);
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    // Read customer (col 3) and phone (col 4) only
+    var rows = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+    rows.forEach(function(row) {
+      var customer = String(row[2] || "").trim();
+      var phone    = String(row[3] || "").trim().replace(/^'/, "");
+      if (!phone) return;
+
+      var key = phone + "|" + tag;
+      if (seen[key]) return;
+      seen[key] = true;
+
+      if (!byTag[tag]) byTag[tag] = [];
+      products.forEach(function(product) {
+        byTag[tag].push({ customer: customer, phone: phone, product: product, enqDate: "" });
+      });
+    });
+  });
+
+  var tags = Object.keys(byTag);
+  if (!tags.length) {
+    Logger.log("New product notify: no past customers found");
+    return;
+  }
+
+  tags.forEach(function(tag) {
+    var groupEnquiries = byTag[tag];
+    var sc             = scByTag[tag];
+    var crmContact     = sc || scByTag["Orders"];
+    var crmRecipients  = crmContact ? [{ name: crmContact.name, phone: crmContact.wa }] : [];
+
+    Logger.log("New product notify [" + tag + "]: " + groupEnquiries.length + " notification(s)");
+
+    try {
+      var payload = JSON.stringify({
+        notifyType:    "new_product",
+        products:      products,
+        enquiries:     groupEnquiries,
+        crmRecipients: crmRecipients
+      });
+      var response = UrlFetchApp.fetch(FINOS_RESTOCK_URL, {
+        method:             "post",
+        contentType:        "application/json",
+        headers:            { "Authorization": "Bearer " + FINOS_RESTOCK_SECRET },
+        payload:            payload,
+        muteHttpExceptions: true
+      });
+      var code   = response.getResponseCode();
+      var result = response.getContentText();
+      Logger.log("FinOS new-product [" + tag + "] response " + code + ": " + result);
+      logRestockAlert(ss, products, groupEnquiries, code === 200 ? "new_product_sent" : "error:" + code);
+    } catch(err) {
+      Logger.log("New product notify [" + tag + "] error: " + String(err));
+    }
+  });
+}
+
+// ============================================================
 // doPost — main entry point for stock app orders
 // ============================================================
 function doPost(e) {
@@ -535,6 +615,12 @@ function doPost(e) {
     if (data.type === "restock_notify") {
       handleRestockNotify(data.products || []);
       return json({ ok: true, type: "restock_notify" });
+    }
+
+    // New product launch — notify all past customers
+    if (data.type === "new_product_notify") {
+      handleNewProductNotify(data.products || []);
+      return json({ ok: true, type: "new_product_notify" });
     }
 
     var tabName = (data.tag && data.tag.trim()) ? data.tag.trim() : "Orders";

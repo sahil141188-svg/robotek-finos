@@ -46,10 +46,12 @@ interface CrmRecipient {
 }
 
 interface RequestBody {
-  products:      string[];
-  enquiries:     EnquiryNotify[];
+  products:       string[];
+  enquiries:      EnquiryNotify[];
   /** CRM team contacts from Apps Script SC_DIR — gets a summary after customers are notified. */
   crmRecipients?: CrmRecipient[];
+  /** "restock" (default) or "new_product" — changes the customer message template */
+  notifyType?:    "restock" | "new_product";
 }
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
@@ -63,8 +65,26 @@ function isAuthorised(req: NextRequest): boolean {
 
 // ── WhatsApp message builders ─────────────────────────────────────────────────
 
-function buildCustomerMessage(customerName: string, product: string, enqDate: string): string {
+function buildCustomerMessage(
+  customerName: string,
+  product: string,
+  enqDate: string,
+  notifyType: "restock" | "new_product" = "restock",
+): string {
   const greeting = customerName ? `Hi *${customerName}*! 👋\n\n` : "Hi! 👋\n\n";
+
+  if (notifyType === "new_product") {
+    return (
+      greeting +
+      `Exciting news — we've just launched *${product}*! 🚀\n\n` +
+      `This brand new product is now available to order.\n` +
+      `Be among the first to stock it! 👇\n\n` +
+      `🛒 *Check it out & order:*\n` +
+      `https://robotekstock.vercel.app\n\n` +
+      `_— Team Robotek_`
+    );
+  }
+
   return (
     greeting +
     `Great news — *${product}* is back in stock! 🎉\n\n` +
@@ -176,7 +196,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { products = [], enquiries = [], crmRecipients } = body;
+  const { products = [], enquiries = [], crmRecipients, notifyType = "restock" } = body;
 
   if (!enquiries.length) {
     return NextResponse.json({
@@ -250,7 +270,7 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    const message = buildCustomerMessage(enq.customer, enq.product, enq.enqDate);
+    const message = buildCustomerMessage(enq.customer, enq.product, enq.enqDate, notifyType);
     const result  = await sendWhatsApp(waConfig, enq.phone.trim(), message);
 
     // Log to notification_log

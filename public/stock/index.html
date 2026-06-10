@@ -1550,6 +1550,16 @@ function checkStockChanges(products){
         });
       }catch(e){}
     }
+    // If new products launched — notify all past customers via WhatsApp
+    if(newLaunches.length && CONFIG.ORDER_LOG_URL){
+      try{
+        fetch(CONFIG.ORDER_LOG_URL,{
+          method:"POST",mode:"no-cors",
+          headers:{"Content-Type":"text/plain;charset=utf-8"},
+          body:JSON.stringify({type:"new_product_notify",products:newLaunches})
+        });
+      }catch(e){}
+    }
     // Also check if THIS user enquired about any restocked product
     notifyUserOwnEnquiry(restocked);
     // Show alert if anything changed
