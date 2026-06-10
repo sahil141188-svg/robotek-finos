@@ -1827,7 +1827,28 @@ function boot(){
   else maybeShowInstallSheet();
   loadStock();
   updateMyOrdersBanner();
-  if("serviceWorker" in navigator){navigator.serviceWorker.register("/stock/sw.js",{scope:"/stock/"}).catch(function(){});}
+  // Service worker — check for updates immediately + reload when new SW activates
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("/stock/sw.js",{scope:"/stock/"})
+      .then(function(reg){
+        reg.update(); // ask SW to check for a newer version right now
+      }).catch(function(){});
+    // When SW sends SW_UPDATED (new version activated), hard-reload to get fresh files
+    navigator.serviceWorker.addEventListener("message",function(evt){
+      if(evt.data && evt.data.type==="SW_UPDATED") window.location.reload(true);
+    });
+  }
+
+  // Watchdog: if the loadbox is still visible after 12 seconds, the app is stuck
+  // (old cached SW + slow/failed Sheet fetch). Force a hard reload to clear the cache.
+  setTimeout(function(){
+    var lb=document.getElementById("loadbox");
+    if(lb && lb.style.display!=="none"){
+      // Hard reload bypasses service worker cache
+      window.location.reload(true);
+    }
+  },12000);
+
   // Back to Top button visibility
   window.addEventListener("scroll",function(){
     var btn=document.getElementById("bttBtn");
