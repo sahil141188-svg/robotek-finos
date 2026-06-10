@@ -1,5 +1,12 @@
-/* Robotek Stock — service worker (offline app shell, always-fresh stock) */
-var CACHE = "robotek-stock-v8";
+/* Robotek Stock — service worker v9
+ *
+ * Key fix: on every new SW activation, calls client.navigate(url) on all
+ * open tabs. This forces a hard reload FROM THE SW SIDE — it works even
+ * when the old page has no JS listener for it. So any device running a
+ * stale cached version will automatically get the new files the moment
+ * the new SW activates, with zero action required from the user.
+ */
+var CACHE = "robotek-stock-v9";
 var SHELL = [
   "./",
   "./index.html",
@@ -16,15 +23,19 @@ self.addEventListener("install", function(e){
 
 self.addEventListener("activate", function(e){
   e.waitUntil(
+    // 1. Delete all old caches
     caches.keys().then(function(keys){
       return Promise.all(keys.map(function(k){ if(k!==CACHE) return caches.delete(k); }));
-    }).then(function(){
-      return self.clients.claim();
-    }).then(function(){
-      // Tell all open tabs to reload so they get the new cached version immediately.
-      // This is the key fix for "stuck on loading after deploy".
-      return self.clients.matchAll({type:"window"}).then(function(clients){
-        clients.forEach(function(client){ client.postMessage({type:"SW_UPDATED"}); });
+    })
+    // 2. Take control of all open tabs immediately
+    .then(function(){ return self.clients.claim(); })
+    // 3. Force-reload every open tab so they get fresh HTML — works on ALL
+    //    existing pages regardless of what JS version they're running.
+    .then(function(){
+      return self.clients.matchAll({type:"window",includeUncontrolled:true}).then(function(clients){
+        return Promise.all(clients.map(function(client){
+          return client.navigate(client.url);
+        }));
       });
     })
   );
@@ -32,14 +43,13 @@ self.addEventListener("activate", function(e){
 
 self.addEventListener("fetch", function(e){
   var url = e.request.url;
-  // Never cache the live stock data or order logging — always go to network.
+  // Never intercept Google Sheets or Apps Script calls — always network.
   if(url.indexOf("docs.google.com") !== -1 || url.indexOf("script.google.com") !== -1) return;
-  // Same-origin app shell: network-first for HTML (so updates deploy instantly),
-  // cache-first for other assets (JS, CSS, images).
+
   if(e.request.method === "GET" && url.indexOf(self.location.origin) === 0){
-    var isHtml = url.endsWith("/") || url.endsWith(".html") || url.indexOf("/stock") !== -1 && !url.match(/\.(png|jpg|svg|webmanifest|js|css)$/);
+    // HTML pages: network-first so new deploys reach users instantly.
+    var isHtml = !url.match(/\.(png|jpg|jpeg|svg|webp|webmanifest|js|css|ico|woff2?)(\?|$)/);
     if(isHtml){
-      // Network-first for HTML — always try to get latest, fall back to cache
       e.respondWith(
         fetch(e.request).then(function(res){
           var copy = res.clone();
@@ -50,7 +60,7 @@ self.addEventListener("fetch", function(e){
         })
       );
     } else {
-      // Cache-first for assets
+      // Static assets: cache-first (fast), falls back to network.
       e.respondWith(
         caches.match(e.request).then(function(hit){
           return hit || fetch(e.request).then(function(res){
