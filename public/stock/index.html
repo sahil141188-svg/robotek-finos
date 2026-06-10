@@ -1459,6 +1459,61 @@ function initAdmin(){
   if(params.get("admin")==="1") document.getElementById("adminBar").classList.add("show");
 }
 
+/* ---------- NOTIFY USER ABOUT THEIR OWN ENQUIRED ITEMS BACK IN STOCK -------- */
+function notifyUserOwnEnquiry(restockedNames){
+  if(!restockedNames||!restockedNames.length) return;
+  // Build set of products this user personally enquired about from their order history
+  var myEnquiries={};  // {productName: enqDate}
+  try{
+    var hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");
+    hist.forEach(function(o){
+      (o.enquiries||[]).forEach(function(name){
+        if(name&&!myEnquiries[name]) myEnquiries[name]=o.date||"";
+      });
+    });
+  }catch(e){}
+  // Find overlap: restocked AND this user enquired
+  var myMatches=restockedNames.filter(function(n){ return !!myEnquiries[n]; });
+  if(!myMatches.length) return;
+  // Build popup message
+  var isHi=lang==="hi";
+  var productList=myMatches.slice(0,5).join(", ")+(myMatches.length>5?" + "+(myMatches.length-5)+" more":"");
+  var msg=isHi
+    ? "🎉 खुशखबरी! "+productList+" — वापस स्टॉक में है!
+आपने पहले इसके बारे में पूछा था — अभी ऑर्डर करें!"
+    : "🎉 Back in stock for you!
+
+"+productList+"
+
+You had enquired about "+(myMatches.length===1?"this product":"these products")+". Order now before it sells out again!";
+  // Show using the existing announcement modal with special style
+  document.getElementById("annMsg").style.whiteSpace="pre-line";
+  document.getElementById("annMsg").textContent=msg;
+  document.getElementById("annDate").textContent="";
+  document.getElementById("annTitle").textContent=isHi?"आपके लिए खास अपडेट 🎁":"Back in Stock — Just for You! 🎁";
+  document.getElementById("annOkBtn").textContent=isHi?"कार्ट में जोड़ें 🛒":"Add to Cart 🛒";
+  document.getElementById("annSkipBtn").textContent=isHi?"बाद में देखूंगा":"Maybe later";
+  // Override the Got it button to add items to cart
+  document.getElementById("annOkBtn").onclick=function(){
+    dismissAnn();
+    // Select all restocked chips that this user previously enquired about
+    var added=0;
+    myMatches.forEach(function(nm){
+      var chips=document.querySelectorAll(".chip:not(.oos)");
+      for(var i=0;i<chips.length;i++){
+        if(chips[i].getAttribute("data-name")===nm&&!chips[i].classList.contains("sel")){
+          chips[i].classList.add("sel"); resetChip(chips[i]); added++; break;
+        }
+      }
+    });
+    if(added>0){ uB(); toast("🛒 "+added+" item"+(added!==1?"s":"")+" added to your order"); }
+    // Restore default onclick for next time
+    document.getElementById("annOkBtn").onclick=dismissAnn;
+  };
+  _annMsg=msg; _annMsgHi=msg; _annDate="";
+  document.getElementById("annOvl").classList.add("show");
+}
+
 /* ---------- AUTO STOCK CHANGE DETECTION ---------- */
 var SNAP_KEY="rb_stock_snap";
 function checkStockChanges(products){
@@ -1486,6 +1541,18 @@ function checkStockChanges(products){
     });
     // Save updated snapshot
     localStorage.setItem(SNAP_KEY,JSON.stringify(current));
+    // If products restocked — notify Apps Script so FinOS sends WA to enquiring customers
+    if(restocked.length && CONFIG.ORDER_LOG_URL){
+      try{
+        fetch(CONFIG.ORDER_LOG_URL,{
+          method:"POST",mode:"no-cors",
+          headers:{"Content-Type":"text/plain;charset=utf-8"},
+          body:JSON.stringify({type:"restock_notify",products:restocked})
+        });
+      }catch(e){}
+    }
+    // Also check if THIS user enquired about any restocked product
+    notifyUserOwnEnquiry(restocked);
     // Show alert if anything changed
     if(!newLaunches.length&&!restocked.length&&!newSchemes.length) return;
     var t=T[lang];

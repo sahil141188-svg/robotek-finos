@@ -1,14 +1,20 @@
 /**
- * ROBOTEK — Order Logger v4
+ * ROBOTEK — Order Logger v5
  * - Orders append-only (no auto-delete ever)
  * - Order sheets protected on creation (only owner can delete rows)
  * - setupDirectory / setupAnalytics run only once (not on every order)
+ * - Restock notify: when stock app detects restocked items, scans Enquiries
+ *   tab and calls FinOS API to send WhatsApp to each waiting customer
  *
  * TO UPDATE:
  * 1. Sheet → Extensions → Apps Script → select all → delete → paste → Save
  * 2. Deploy → Manage Deployments → ✎ Edit → Version: New version → Deploy
  *    (Same URL — no changes needed in the app)
  */
+
+// ── CONFIG — paste your values here ─────────────────────────────────────────
+var FINOS_RESTOCK_URL    = "https://robotek-project.vercel.app/api/stock/restock-notify";
+var FINOS_RESTOCK_SECRET = "7d_HfL-9zv2u_EQkL3J64FUQ97R0kIm9EzNubQbqU_s";
 
 var HEADER     = ["Timestamp","Order ID","Customer","Phone","Order Date",
                   "Product","Boxes","Box Size","Total Qty (pcs)"];
@@ -143,11 +149,111 @@ function logEnquiries(ss, data, orderId, ts) {
   sheet.getRange(sheet.getLastRow()+1, 1, rows.length, ENQ_HEADER.length).setValues(rows);
 }
 
+/* ── Restock notify — scan Enquiries tab, call FinOS API ───────────────────── */
+function handleRestockNotify(products) {
+  if (!products || !products.length) return;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var enqSheet = ss.getSheetByName("Enquiries");
+  if (!enqSheet || enqSheet.getLastRow() < 2) {
+    Logger.log("Restock notify: Enquiries tab empty — nothing to do");
+    return;
+  }
+
+  // Read all enquiry rows: [Timestamp, OrderID, Customer, Phone, Date, Product]
+  var data = enqSheet.getRange(2, 1, enqSheet.getLastRow()-1, 6).getValues();
+
+  // Find customers who enquired about any of the restocked products
+  // De-duplicate: one notification per (customer phone + product)
+  var seen   = {};
+  var notify = [];
+  for (var i = 0; i < data.length; i++) {
+    var row      = data[i];
+    var customer = String(row[2] || "").trim();
+    var phone    = String(row[3] || "").trim().replace(/^'/,""); // strip leading ' from number
+    var enqDate  = String(row[4] || "").trim();
+    var product  = String(row[5] || "").trim();
+
+    if (!phone || !product) continue;
+
+    // Check if this product is in the restocked list
+    var isRestocked = false;
+    for (var j = 0; j < products.length; j++) {
+      if (products[j].toLowerCase() === product.toLowerCase()) {
+        isRestocked = true;
+        break;
+      }
+    }
+    if (!isRestocked) continue;
+
+    // De-duplicate by phone + product
+    var key = phone + "|" + product;
+    if (seen[key]) continue;
+    seen[key] = true;
+
+    notify.push({ customer: customer, phone: phone, product: product, enqDate: enqDate });
+  }
+
+  if (!notify.length) {
+    Logger.log("Restock notify: no matching enquiries for products: " + products.join(", "));
+    return;
+  }
+
+  Logger.log("Restock notify: calling FinOS for " + notify.length + " customer(s)");
+
+  // Call FinOS API
+  try {
+    var payload = JSON.stringify({ products: products, enquiries: notify });
+    var response = UrlFetchApp.fetch(FINOS_RESTOCK_URL, {
+      method:      "post",
+      contentType: "application/json",
+      headers:     { "Authorization": "Bearer " + FINOS_RESTOCK_SECRET },
+      payload:     payload,
+      muteHttpExceptions: true
+    });
+    var code   = response.getResponseCode();
+    var result = response.getContentText();
+    Logger.log("FinOS response " + code + ": " + result);
+
+    // Log to Restock Alerts tab in sheet for team visibility
+    logRestockAlert(ss, products, notify, code === 200 ? "sent" : "error:" + code);
+
+  } catch(err) {
+    Logger.log("Restock notify error: " + String(err));
+    logRestockAlert(ss, products, notify, "script_error");
+  }
+}
+
+/* ── Log restock alerts to a tab so sales team can see history ─────────────── */
+function logRestockAlert(ss, products, notify, status) {
+  var tabName = "Restock Alerts";
+  var sheet   = ss.getSheetByName(tabName);
+  if (!sheet) {
+    sheet = ss.insertSheet(tabName);
+    var hdr = ["Timestamp","Product","Customer","Phone","Enquiry Date","WA Status"];
+    sheet.appendRow(hdr);
+    sheet.getRange(1, 1, 1, hdr.length)
+      .setBackground("#1F1B20").setFontColor("#F7DA11").setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  var ts = new Date();
+  for (var i = 0; i < notify.length; i++) {
+    var n = notify[i];
+    sheet.appendRow([ts, n.product, n.customer, n.phone, n.enqDate, status]);
+  }
+}
+
 /* ── Main: receive order POST ──────────────────────────────────────────────── */
 function doPost(e) {
   try {
     var data    = JSON.parse(e.postData.contents);
     var ss      = SpreadsheetApp.getActiveSpreadsheet();
+
+    // ── Handle restock notification (called by stock app checkStockChanges) ──
+    if (data.type === "restock_notify") {
+      handleRestockNotify(data.products || []);
+      return json({ ok: true, type: "restock_notify" });
+    }
+
     var tabName = (data.tag && data.tag.trim()) ? data.tag.trim() : "Orders";
     var sheet   = getSheet(ss, tabName);
 
