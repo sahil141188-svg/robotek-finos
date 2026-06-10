@@ -41,9 +41,16 @@ interface EnquiryNotify {
   enqDate:  string;
 }
 
+interface CrmRecipient {
+  name:  string;
+  phone: string;
+}
+
 interface RequestBody {
-  products:  string[];
-  enquiries: EnquiryNotify[];
+  products:      string[];
+  enquiries:     EnquiryNotify[];
+  /** CRM team contacts from Apps Script SC_DIR — gets a summary after customers are notified. */
+  crmRecipients?: CrmRecipient[];
 }
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
@@ -170,7 +177,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { products = [], enquiries = [] } = body;
+  const { products = [], enquiries = [], crmRecipients } = body;
 
   if (!enquiries.length) {
     return NextResponse.json({
@@ -180,11 +187,17 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // 3. Load WhatsApp config + CRM briefing recipients in parallel
-  const [waConfig, briefing] = await Promise.all([
-    getWhatsAppConfig(),
-    getBriefingSettings(),
-  ]);
+  // 3. Load WhatsApp config.
+  //    CRM recipients come from the Apps Script payload (SC_DIR contacts).
+  //    Only fall back to FinOS briefing list if Apps Script didn't send any.
+  const waConfig = await getWhatsAppConfig();
+  let crmList: { name: string; phone: string }[];
+  if (crmRecipients && crmRecipients.length > 0) {
+    crmList = crmRecipients;
+  } else {
+    const briefing = await getBriefingSettings();
+    crmList = briefing.recipients ?? [];
+  }
 
   // 4. Supabase client for logging
   const supabase = createClient(
@@ -243,12 +256,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 6. Send CRM summary to all briefing recipients (sales / management team)
+  // 6. Send CRM summary to all team contacts (names & numbers from Apps Script SC_DIR).
   //    This fires after all customer messages so the totals are final.
-  if (briefing.recipients && briefing.recipients.length > 0) {
+  if (crmList.length > 0) {
     const crmMessage = buildCrmSummary(products, detail);
 
-    for (const recipient of briefing.recipients) {
+    for (const recipient of crmList) {
       if (!recipient.phone) continue;
       try {
         const crmResult = await sendWhatsApp(waConfig, recipient.phone, crmMessage);

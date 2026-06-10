@@ -200,9 +200,19 @@ function handleRestockNotify(products) {
 
   Logger.log("Restock notify: calling FinOS for " + notify.length + " customer(s)");
 
+  // Build CRM recipients from SC_DIR (the team contacts in this script's config)
+  // Only include contacts that have a WhatsApp number
+  var crmRecipients = SC_DIR
+    .filter(function(sc) { return sc.wa; })
+    .map(function(sc) { return { name: sc.name, phone: sc.wa }; });
+
   // Call FinOS API
   try {
-    var payload = JSON.stringify({ products: products, enquiries: notify });
+    var payload = JSON.stringify({
+      products:       products,
+      enquiries:      notify,
+      crmRecipients:  crmRecipients   // team gets a summary after customers are notified
+    });
     var response = UrlFetchApp.fetch(FINOS_RESTOCK_URL, {
       method:      "post",
       contentType: "application/json",
