@@ -34,10 +34,11 @@ import { sendWhatsApp, type WhatsAppConfig } from "@/lib/whatsapp";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface EnquiryNotify {
-  customer: string;
-  phone:    string;
-  product:  string;
-  enqDate:  string;
+  customer:  string;
+  phone:     string;
+  product:   string;
+  enqDate:   string;
+  category?: string;  // e.g. "Data Cable", "Charger" — shown in WhatsApp message
 }
 
 interface CrmRecipient {
@@ -70,13 +71,15 @@ function buildCustomerMessage(
   product: string,
   enqDate: string,
   notifyType: "restock" | "new_product" = "restock",
+  category?: string,
 ): string {
-  const greeting = customerName ? `Hi *${customerName}*! 👋\n\n` : "Hi! 👋\n\n";
+  const greeting  = customerName ? `Hi *${customerName}*! 👋\n\n` : "Hi! 👋\n\n";
+  const catLabel  = category ? ` _(${category})_` : "";
 
   if (notifyType === "new_product") {
     return (
       greeting +
-      `Exciting news — we've just launched *${product}*! 🚀\n\n` +
+      `Exciting news — we've just launched *${product}*${catLabel}! 🚀\n\n` +
       `This brand new product is now available to order.\n` +
       `Be among the first to stock it! 👇\n\n` +
       `🛒 *Check it out & order:*\n` +
@@ -87,7 +90,7 @@ function buildCustomerMessage(
 
   return (
     greeting +
-    `Great news — *${product}* is back in stock! 🎉\n\n` +
+    `Great news — *${product}*${catLabel} is back in stock! 🎉\n\n` +
     `You had enquired about this product on ${enqDate || "a recent date"}.\n` +
     `It's available now — order before it sells out again! 👇\n\n` +
     `🛒 *Check stock & order:*\n` +
@@ -270,7 +273,7 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    const message = buildCustomerMessage(enq.customer, enq.product, enq.enqDate, notifyType);
+    const message = buildCustomerMessage(enq.customer, enq.product, enq.enqDate, notifyType, enq.category);
     const result  = await sendWhatsApp(waConfig, enq.phone.trim(), message);
 
     // Log to notification_log

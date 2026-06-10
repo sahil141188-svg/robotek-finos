@@ -437,6 +437,13 @@ function handleRestockNotify(products) {
   var scByTag = {};
   SC_DIR.forEach(function(sc) { scByTag[sc.tag] = sc; });
 
+  // Build category lookup — products can be strings (old) or {name, category} objects (new)
+  var catByName = {};
+  products.forEach(function(p) {
+    if (typeof p === "object") catByName[p.name] = p.category || "";
+    else catByName[p] = "";
+  });
+
   // Group matching enquiries by source CRM tag, de-duplicate per (phone + product)
   var seen  = {};
   var byTag = {};
@@ -452,7 +459,8 @@ function handleRestockNotify(products) {
     if (!phone || !product) continue;
 
     var isRestocked = products.some(function(p) {
-      return p.toLowerCase() === product.toLowerCase();
+      var pName = typeof p === "object" ? p.name : p;
+      return pName.toLowerCase() === product.toLowerCase();
     });
     if (!isRestocked) continue;
 
@@ -461,7 +469,7 @@ function handleRestockNotify(products) {
     seen[key] = true;
 
     if (!byTag[source]) byTag[source] = [];
-    byTag[source].push({ customer: customer, phone: phone, product: product, enqDate: enqDate });
+    byTag[source].push({ customer: customer, phone: phone, product: product, enqDate: enqDate, category: catByName[product] || "" });
   }
 
   var tags = Object.keys(byTag);
@@ -559,8 +567,10 @@ function handleNewProductNotify(products) {
       seen[key] = true;
 
       if (!byTag[tag]) byTag[tag] = [];
-      products.forEach(function(product) {
-        byTag[tag].push({ customer: customer, phone: phone, product: product, enqDate: "" });
+      products.forEach(function(p) {
+        var pName = typeof p === "object" ? p.name : p;
+        var pCat  = typeof p === "object" ? (p.category || "") : "";
+        byTag[tag].push({ customer: customer, phone: phone, product: pName, enqDate: "", category: pCat });
       });
     });
   });
