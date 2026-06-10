@@ -237,7 +237,9 @@ export async function POST(req: NextRequest) {
 
   // 5. Send WhatsApp to each enquiring customer
   const results = { sent: 0, skipped: 0, errors: 0 };
-  const detail: { customer: string; product: string; phone: string; status: string; error?: string }[] = [];
+  const detail: { customer: string; product: string; phone: string; status: string; error?: string; messageId?: string }[] = [];
+  // Debug: log which provider + enabled state so we can diagnose delivery issues
+  console.log("[restock-notify] WA config — provider:", waConfig.provider, "enabled:", waConfig.enabled);
 
   for (const enq of enquiries) {
 
@@ -273,7 +275,7 @@ export async function POST(req: NextRequest) {
 
     if (result.sent) {
       results.sent++;
-      detail.push({ customer: enq.customer, product: enq.product, phone: enq.phone.trim(), status: "sent" });
+      detail.push({ customer: enq.customer, product: enq.product, phone: enq.phone.trim(), status: "sent", messageId: result.messageId });
     } else if (result.skipped) {
       results.skipped++;
       detail.push({ customer: enq.customer, product: enq.product, phone: enq.phone.trim(), status: "skipped_wa_disabled" });
@@ -318,6 +320,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     products_restocked: products,
+    wa_provider: waConfig.provider,
+    wa_enabled:  waConfig.enabled,
     ...results,
     message: `Sent ${results.sent} restock notifications (${results.skipped} skipped, ${results.errors} errors)`,
     detail,
