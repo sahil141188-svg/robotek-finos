@@ -1483,13 +1483,8 @@ function notifyUserOwnEnquiry(restockedNames){
   var isHi=lang==="hi";
   var productList=myMatches.slice(0,5).join(", ")+(myMatches.length>5?" + "+(myMatches.length-5)+" more":"");
   var msg=isHi
-    ? "🎉 खुशखबरी! "+productList+" — वापस स्टॉक में है!
-आपने पहले इसके बारे में पूछा था — अभी ऑर्डर करें!"
-    : "🎉 Back in stock for you!
-
-"+productList+"
-
-You had enquired about "+(myMatches.length===1?"this product":"these products")+". Order now before it sells out again!";
+    ? "🎉 खुशखबरी! "+productList+" — वापस स्टॉक में है!\nआपने पहले इसके बारे में पूछा था — अभी ऑर्डर करें!"
+    : "🎉 Back in stock for you!\n\n"+productList+"\n\nYou had enquired about "+(myMatches.length===1?"this product":"these products")+". Order now before it sells out again!";
   // Show using the existing announcement modal with special style
   document.getElementById("annMsg").style.whiteSpace="pre-line";
   document.getElementById("annMsg").textContent=msg;
