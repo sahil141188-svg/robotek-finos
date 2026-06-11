@@ -29,8 +29,8 @@ var ENQ_HEADER = ["Timestamp","Order ID","Customer","Phone","Date","Product Enqu
 
 var SC_DIR = [
   { ref:"HO",    name:"Robotek Head Office",       wa:"918851403037", tag:"Orders"        },
-  { ref:"Store", name:"Robotek Experience Store",  wa:"917678596456", tag:"Store Orders"  },
-  { ref:"GKP",   name:"Robotek Gorakhpur",         wa:"919839454510", tag:"Dealer Demand" },
+  { ref:"Store", name:"Robotek Experience Store",  wa:"917678596456", tag:"Orders"        },
+  { ref:"GKP",   name:"Robotek Gorakhpur",         wa:"919839454510", tag:"Orders"        },
 ];
 var BASE_URL = "https://robotekstock.vercel.app/stock";
 
