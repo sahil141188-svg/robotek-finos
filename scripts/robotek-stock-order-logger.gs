@@ -20,13 +20,16 @@
 var FINOS_RESTOCK_URL    = "https://robotek-project.vercel.app/api/stock/restock-notify";
 var FINOS_RESTOCK_SECRET = "7d_HfL-9zv2u_EQkL3J64FUQ97R0kIm9EzNubQbqU_s";
 
+// Set to false to disable all WhatsApp stock alerts (restock + new product)
+var WA_ALERTS_ENABLED = false;
+
 var HEADER     = ["Timestamp","Order ID","Customer","Phone","Order Date",
-                  "Product","Boxes","Box Size","Total Qty (pcs)"];
+                  "Product","Total Qty (pcs)","Box Size","Boxes"];
 var ENQ_HEADER = ["Timestamp","Order ID","Customer","Phone","Date","Product Enquired","Source"];
 
 var SC_DIR = [
   { ref:"HO",    name:"Robotek Head Office",       wa:"918851403037", tag:"Orders"        },
-  { ref:"Store", name:"Robotek Experience Store",  wa:"917678596456", tag:"Store Orders"  },
+  { ref:"Store", name:"Robotek Experience Store",  wa:"917678596456", tag:"Orders"        },
   { ref:"GKP",   name:"Robotek Gorakhpur",         wa:"919839454510", tag:"Dealer Demand" },
 ];
 var BASE_URL = "https://robotekstock.vercel.app/stock";
@@ -79,7 +82,7 @@ function formatSheet(sheetName) {
   if (lastRow < 2) return;
 
   var COL_CUSTOMER = 3;
-  var COL_QTY      = 9;
+  var COL_QTY      = 7;   // col G = Total Qty (pcs)
   var COL_BUTTON   = 10;
 
   // Clear all formatting
@@ -177,6 +180,86 @@ function formatOrdersPartyWise() {
   SpreadsheetApp.getUi().alert('Done! All 3 sheets formatted.');
 }
 
+// ===== ONE-TIME FIX -- recalculate col I (Boxes) from Total Qty / Box Size =====
+// Run once from Apps Script editor. For rows where box size exists: Boxes = Total / BoxSize.
+function fixBoxesColumn() {
+  var ss       = SpreadsheetApp.getActiveSpreadsheet();
+  var tabNames = ['Orders', 'Store Orders', 'Dealer Demand'];
+  var count    = 0;
+
+  tabNames.forEach(function(tabName) {
+    var sheet = ss.getSheetByName(tabName);
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    var lastRow = sheet.getLastRow();
+    var data    = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+
+    for (var i = 0; i < data.length; i++) {
+      var custVal = data[i][2];
+      var isTotal = (typeof custVal === 'string' && custVal.indexOf('TOTAL') !== -1);
+      if (isTotal) continue;
+
+      var totalQty = data[i][6]; // col G = Total Qty
+      var boxSize  = data[i][7]; // col H = Box Size
+
+      var boxes = "";
+      if (boxSize && Number(boxSize) > 0 && totalQty) {
+        boxes = Math.round(Number(totalQty) / Number(boxSize));
+      }
+
+      sheet.getRange(i + 2, 9).setValue(boxes); // col I = Boxes
+      count++;
+    }
+
+    // Update col I header to "Boxes"
+    sheet.getRange(1, 9).setValue('Boxes')
+         .setFontWeight('bold').setBackground('#1F1B20').setFontColor('#F7DA11');
+  });
+
+  SpreadsheetApp.getUi().alert('Done! ' + count + ' rows updated. Col I now shows No. of Boxes.');
+}
+
+// ===== ONE-TIME MIGRATION -- swap col G (Boxes) and col I (Total Qty) in existing data =====
+// Run this ONCE from Apps Script editor after updating the script.
+// After running, delete or ignore this function.
+function migrateSwapGandI() {
+  var ss       = SpreadsheetApp.getActiveSpreadsheet();
+  var tabNames = ['Orders', 'Store Orders', 'Dealer Demand'];
+  var count    = 0;
+
+  tabNames.forEach(function(tabName) {
+    var sheet = ss.getSheetByName(tabName);
+    if (!sheet || sheet.getLastRow() < 2) return;
+
+    var lastRow = sheet.getLastRow();
+    var data    = sheet.getRange(2, 1, lastRow - 1, 9).getValues();
+    var updates = [];
+
+    for (var i = 0; i < data.length; i++) {
+      var custVal = data[i][2]; // col C
+      var isTotal = (typeof custVal === 'string' && custVal.indexOf('TOTAL') !== -1);
+      if (isTotal) continue;
+
+      var gVal = data[i][6]; // col G (currently Boxes)
+      var iVal = data[i][8]; // col I (currently Total Qty)
+
+      // Only swap if they look like old layout (G has small number = boxes, I has larger = total)
+      updates.push({ row: i + 2, g: iVal, i: gVal });
+    }
+
+    updates.forEach(function(u) {
+      sheet.getRange(u.row, 7).setValue(u.g); // col G = Total Qty
+      sheet.getRange(u.row, 9).setValue(u.i); // col I = Boxes
+      count++;
+    });
+  });
+
+  formatSheet('Orders');
+  formatSheet('Store Orders');
+  formatSheet('Dealer Demand');
+  SpreadsheetApp.getUi().alert('Migration done! ' + count + ' rows updated. G = Total Qty, I = Boxes.');
+}
+
 // ===== COPY SIDEBAR ===========================================================
 // Core function -- builds and shows the sidebar with Product + Total Qty only.
 // Called both from the menu (copySelectedParty) and from the click trigger.
@@ -197,7 +280,7 @@ function showCopySidebar(sheetName, partyName) {
     var isTotal = (typeof cust === 'string' && cust.indexOf('TOTAL') !== -1);
     if (!isTotal && String(cust).trim() === String(partyName).trim()) {
       var product = allData[i][5];  // col F = Product name
-      var qty     = allData[i][8];  // col I = Total Qty (pcs)
+      var qty     = allData[i][6];  // col G = Total Qty (pcs)
       if (product !== '' && product !== null && product !== undefined) {
         lines.push(product + '\t' + (qty || 0));
       }
@@ -497,6 +580,34 @@ function handleNewProductNotify(products) {
   if (!products || !products.length) return;
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
+  // --- Dedup: skip products already notified within the last 24 hours ---
+  // Prevents multiple devices triggering the same notification.
+  var dedupSheet = ss.getSheetByName("Restock Alerts");
+  var alreadySent = {};
+  if (dedupSheet && dedupSheet.getLastRow() > 1) {
+    var dedupData = dedupSheet.getRange(2, 1, dedupSheet.getLastRow() - 1, 6).getValues();
+    var now = new Date().getTime();
+    var H24 = 24 * 60 * 60 * 1000;
+    dedupData.forEach(function(row) {
+      var ts     = row[0]; // Timestamp col
+      var prod   = String(row[1] || "").trim();
+      var status = String(row[5] || "").trim();
+      if (status === "new_product_sent" && ts && (now - new Date(ts).getTime()) < H24) {
+        alreadySent[prod.toLowerCase()] = true;
+      }
+    });
+  }
+  var freshProducts = products.filter(function(p) {
+    var pName = typeof p === "object" ? p.name : p;
+    return !alreadySent[pName.toLowerCase()];
+  });
+  if (!freshProducts.length) {
+    Logger.log("New product notify: all products already notified in last 24h -- skipping");
+    return;
+  }
+  products = freshProducts;
+  // --- End dedup ---
+
   var tabToTag = {
     "Orders":        "Orders",
     "Store Orders":  "Store Orders",
@@ -520,7 +631,8 @@ function handleNewProductNotify(products) {
       var phone    = String(row[3] || "").trim().replace(/^'/, "");
       if (!phone) return;
 
-      var key = phone + "|" + tag;
+      // Global dedup by phone -- same customer across multiple sheets gets only ONE message
+      var key = phone;
       if (seen[key]) return;
       seen[key] = true;
 
@@ -578,13 +690,13 @@ function doPost(e) {
     var ss   = SpreadsheetApp.getActiveSpreadsheet();
 
     if (data.type === "restock_notify") {
-      handleRestockNotify(data.products || []);
-      return json({ ok: true, type: "restock_notify" });
+      if (WA_ALERTS_ENABLED) handleRestockNotify(data.products || []);
+      return json({ ok: true, type: "restock_notify", alerts_enabled: WA_ALERTS_ENABLED });
     }
 
     if (data.type === "new_product_notify") {
-      handleNewProductNotify(data.products || []);
-      return json({ ok: true, type: "new_product_notify" });
+      if (WA_ALERTS_ENABLED) handleNewProductNotify(data.products || []);
+      return json({ ok: true, type: "new_product_notify", alerts_enabled: WA_ALERTS_ENABLED });
     }
 
     var tabName = (data.tag && data.tag.trim()) ? data.tag.trim() : "Orders";
@@ -606,7 +718,7 @@ function doPost(e) {
       var boxSize = (it.boxSize===""||it.boxSize==null) ? "" : Number(it.boxSize);
       var total   = (boxSize && boxes) ? boxes*boxSize : (it.totalQty||"");
       return [ts, orderId, data.customer||"", "'"+(data.phone||""), data.date||"",
-              it.name||"", boxes, boxSize, total];
+              it.name||"", total, boxSize, boxes];  // G=Total Qty, H=Box Size, I=Boxes
     });
 
     if (rows.length > 0) {
