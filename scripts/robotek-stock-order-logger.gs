@@ -29,7 +29,7 @@ var ENQ_HEADER = ["Timestamp","Order ID","Customer","Phone","Date","Product Enqu
 
 var SC_DIR = [
   { ref:"HO",    name:"Robotek Head Office",       wa:"918851403037", tag:"Orders"        },
-  { ref:"Store", name:"Robotek Experience Store",  wa:"917678596456", tag:"Orders"        },
+  { ref:"Store", name:"Robotek Experience Store",  wa:"917678596456", tag:"Store Orders"  },
   { ref:"GKP",   name:"Robotek Gorakhpur",         wa:"919839454510", tag:"Dealer Demand" },
 ];
 var BASE_URL = "https://robotekstock.vercel.app/stock";
@@ -90,34 +90,57 @@ function formatSheet(sheetName) {
        .setBackground(null).setFontColor('#000000')
        .setFontWeight('normal').setFontSize(10);
 
-  // Remove old TOTAL rows (bottom to top)
+  // Remove old TOTAL / NEW ORDER rows (bottom to top)
   var allC = sheet.getRange(2, COL_CUSTOMER, lastRow - 1, 1).getValues();
   for (var r = allC.length - 1; r >= 0; r--) {
     var v = allC[r][0];
-    if (typeof v === 'string' && v.indexOf('TOTAL') !== -1) sheet.deleteRow(r + 2);
+    if (typeof v === 'string' && (v.indexOf('TOTAL') !== -1 || v.indexOf('NEW ORDER') !== -1)) {
+      sheet.deleteRow(r + 2);
+    }
   }
 
   lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
   var data = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
 
-  // Build party groups
+  // Build party groups -- one group per Order ID per customer (skip blank rows)
   var groups = [];
-  var curCustomer = null, curGroup = null;
+  var curGroupKey = null, curGroup = null;
   for (var i = 0; i < data.length; i++) {
-    var cust = data[i][COL_CUSTOMER - 1];
-    if (cust !== curCustomer) {
-      curGroup = { customer: cust, startRow: i + 2, count: 0 };
+    var cust    = data[i][COL_CUSTOMER - 1];
+    var orderId = data[i][1]; // col B = Order ID
+    if (!cust || String(cust).trim() === '') continue; // skip blank rows
+    var groupKey = String(cust).trim() + '|' + String(orderId).trim();
+    if (groupKey !== curGroupKey) {
+      curGroup = { customer: String(cust).trim(), orderId: String(orderId).trim(), startRow: i + 2, count: 0 };
       groups.push(curGroup);
-      curCustomer = cust;
+      curGroupKey = groupKey;
     }
     curGroup.count++;
   }
 
+  // Detect repeat orders: same customer + same date appearing more than once
+  var custDayCount = {};
+  for (var g2 = 0; g2 < groups.length; g2++) {
+    var grp     = groups[g2];
+    var dataIdx = grp.startRow - 2; // sheet row → data array index
+    var dateVal = (dataIdx >= 0 && dataIdx < data.length) ? data[dataIdx][4] : ""; // col E = index 4
+    var dateStr = "";
+    if (dateVal instanceof Date) {
+      dateStr = dateVal.getFullYear() + "-" + (dateVal.getMonth()+1) + "-" + dateVal.getDate();
+    } else {
+      dateStr = String(dateVal || "").substring(0, 10);
+    }
+    var cdKey = String(grp.customer).trim().toLowerCase() + "|" + dateStr;
+    custDayCount[cdKey] = (custDayCount[cdKey] || 0) + 1;
+    grp.occurrence = custDayCount[cdKey];
+  }
+
   // Insert TOTAL rows bottom to top
   for (var g = groups.length - 1; g >= 0; g--) {
-    var info     = groups[g];
-    var insertAt = info.startRow + info.count;
+    var info      = groups[g];
+    var insertAt  = info.startRow + info.count;
+    var isRepeat  = info.occurrence > 1; // 2nd, 3rd... order from same customer same day
     sheet.insertRowBefore(insertAt);
 
     var qtyVals  = sheet.getRange(info.startRow, COL_QTY, info.count, 1).getValues();
@@ -126,11 +149,17 @@ function formatSheet(sheetName) {
       if (typeof qtyVals[k][0] === 'number') totalQty += qtyVals[k][0];
     }
 
-    sheet.getRange(insertAt, COL_CUSTOMER).setValue('-- TOTAL: ' + info.customer + ' --');
+    var label    = isRepeat
+      ? '🆕 NEW ORDER -- TOTAL: ' + info.customer + ' --'
+      : '-- TOTAL: ' + info.customer + ' --';
+    var rowColor = isRepeat ? '#E65100' : '#FFF176'; // dark orange for repeat, yellow for first
+    var txtColor = isRepeat ? '#FFFFFF' : '#000000';
+
+    sheet.getRange(insertAt, COL_CUSTOMER).setValue(label);
     sheet.getRange(insertAt, COL_QTY).setValue(totalQty);
     sheet.getRange(insertAt, 1, 1, lastCol + 1)
-         .setBackground('#FFF176').setFontWeight('bold')
-         .setFontSize(10).setFontColor('#000000');
+         .setBackground(rowColor).setFontWeight('bold')
+         .setFontSize(10).setFontColor(txtColor);
     sheet.getRange(insertAt, COL_BUTTON)
          .setValue('COPY')
          .setBackground('#1565C0').setFontColor('#FFFFFF')
