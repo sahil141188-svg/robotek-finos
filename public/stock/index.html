@@ -555,12 +555,14 @@ function initSC(){
   if(ref && REFS[ref]){
     sc=REFS[ref].sc;
     tag=REFS[ref].tag;
+    // Always overwrite cached tag when a valid ref is in the URL
+    localStorage.setItem("rb_tag", tag);
   } else if(sc){
     sc=sc.replace(/\D/g,"");
     if(sc.length===10) sc="91"+sc;
   }
   if(sc) localStorage.setItem("rb_sc",sc);
-  if(tag) localStorage.setItem("rb_tag",tag);
+  if(!ref && tag) localStorage.setItem("rb_tag",tag); // legacy fallback only
   var saved=localStorage.getItem("rb_sc");
   if(saved) WA=saved;
 }
