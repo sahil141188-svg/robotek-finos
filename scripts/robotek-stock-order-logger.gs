@@ -67,9 +67,9 @@ function mapProductImages() {
 
   var data = sheet.getRange(2, 1, lastRow - 1, 2).getValues(); // cols A (category) + B (product name)
 
-  // Build map: normalised product name → thumbnail URL
+  // Build map: normalised folder name → pipe-separated list of ALL image URLs
   // Structure: Main Folder → Category Folders → Product Folders → Image files
-  var imageMap = {};
+  var imageMap = {}; // { "cc 104": "url1|url2|url3", ... }
   var mainFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
   var catFolders = mainFolder.getFolders();
 
@@ -79,25 +79,29 @@ function mapProductImages() {
     while (prodFolders.hasNext()) {
       var prodFolder = prodFolders.next();
       var prodKey    = prodFolder.getName().toLowerCase().trim();
-      var imgFile    = null;
+      var urls       = [];
 
-      // Try JPEG first, then PNG
+      // Collect ALL JPEG + PNG files in this product folder
+      var allFiles = [];
       var jpgs = prodFolder.getFilesByType(MimeType.JPEG);
-      if (jpgs.hasNext()) imgFile = jpgs.next();
-      if (!imgFile) {
-        var pngs = prodFolder.getFilesByType(MimeType.PNG);
-        if (pngs.hasNext()) imgFile = pngs.next();
+      while (jpgs.hasNext()) allFiles.push(jpgs.next());
+      var pngs = prodFolder.getFilesByType(MimeType.PNG);
+      while (pngs.hasNext()) allFiles.push(pngs.next());
+
+      for (var f = 0; f < allFiles.length; f++) {
+        var imgFile = allFiles[f];
+        // Make each file publicly accessible (no Google login needed)
+        try { imgFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
+        urls.push("https://lh3.googleusercontent.com/d/" + imgFile.getId() + "=w800");
       }
 
-      if (imgFile) {
-        // Make file publicly accessible so thumbnail works without Google login
-        try { imgFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
-        imageMap[prodKey] = "https://lh3.googleusercontent.com/d/" + imgFile.getId() + "=w400";
+      if (urls.length > 0) {
+        imageMap[prodKey] = urls.join("|");
       }
     }
   }
 
-  // Match each product row to an image
+  // Match each product row — EXACT match first, then fuzzy (longer key wins to avoid CC 104 stealing CC 104-C)
   var count   = 0;
   var noMatch = [];
 
@@ -106,20 +110,23 @@ function mapProductImages() {
     if (!prodName) continue;
 
     var key = prodName.toLowerCase().trim();
-    var url = imageMap[key];
+    var urls = imageMap[key]; // exact match
 
-    // Fuzzy match: check if Drive folder name contains product name or vice versa
-    if (!url) {
+    // Fuzzy match only if no exact match found — prefer longer folder key (more specific)
+    if (!urls) {
+      var bestKey = "";
       for (var k in imageMap) {
-        if (k.indexOf(key) !== -1 || key.indexOf(k) !== -1) {
-          url = imageMap[k];
-          break;
+        if (k === key) continue; // already checked exact
+        var isMatch = (k.indexOf(key) !== -1 || key.indexOf(k) !== -1);
+        if (isMatch && k.length > bestKey.length) {
+          bestKey = k;
         }
       }
+      if (bestKey) urls = imageMap[bestKey];
     }
 
-    if (url) {
-      sheet.getRange(i + 2, 11).setValue(url);
+    if (urls) {
+      sheet.getRange(i + 2, 11).setValue(urls); // pipe-separated URLs
       count++;
     } else {
       noMatch.push(prodName);
