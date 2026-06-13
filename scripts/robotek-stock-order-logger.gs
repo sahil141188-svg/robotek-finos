@@ -43,8 +43,65 @@ function onOpen() {
     .addSeparator()
     .addItem('Format All Sheets', 'formatOrdersPartyWise')
     .addSeparator()
-    .addItem('Map Product Images from Drive', 'mapProductImages')
+    .addItem('Step 1 — Rename Images in Drive (1.jpg, 2.jpg, 3.jpg)', 'renameProductImages')
+    .addItem('Step 2 — Map Product Images to Sheet', 'mapProductImages')
     .addToUi();
+}
+
+// ===== RENAME PRODUCT IMAGES IN DRIVE =========================================
+// Renames all image files in every product folder to 1.jpg, 2.jpg, 3.jpg...
+// in alphabetical order of their CURRENT name.
+// Run this ONCE before mapProductImages() to set the correct order.
+// To change priority: in Drive, rename the file you want FIRST to start with "1",
+// the second image to "2", third to "3", then run this again.
+function renameProductImages() {
+  var DRIVE_FOLDER_ID = "1cVvpk5xezTic9t2PXDLzLNHf0NXpSoGH";
+  var mainFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  var catFolders = mainFolder.getFolders();
+  var totalRenamed = 0;
+  var errors = [];
+
+  while (catFolders.hasNext()) {
+    var catFolder = catFolders.next();
+    var prodFolders = catFolder.getFolders();
+
+    while (prodFolders.hasNext()) {
+      var prodFolder = prodFolders.next();
+
+      // Collect all image files
+      var allFiles = [];
+      var jpgs = prodFolder.getFilesByType(MimeType.JPEG);
+      while (jpgs.hasNext()) allFiles.push(jpgs.next());
+      var pngs = prodFolder.getFilesByType(MimeType.PNG);
+      while (pngs.hasNext()) allFiles.push(pngs.next());
+
+      if (allFiles.length === 0) continue;
+
+      // Sort by current filename alphabetically
+      allFiles.sort(function(a, b) {
+        return a.getName().toLowerCase().localeCompare(b.getName().toLowerCase());
+      });
+
+      // Rename to 1.jpg, 2.jpg, 3.jpg ... (only first 5 max)
+      var limit = Math.min(allFiles.length, 5);
+      for (var i = 0; i < limit; i++) {
+        try {
+          var ext = allFiles[i].getMimeType() === MimeType.PNG ? ".png" : ".jpg";
+          var newName = (i + 1) + ext;
+          allFiles[i].setName(newName);
+          totalRenamed++;
+        } catch(e) {
+          errors.push(prodFolder.getName() + ": " + e.message);
+        }
+      }
+    }
+  }
+
+  var msg = "✅ Done! Renamed " + totalRenamed + " images across all product folders.\n\n";
+  msg += "Files are now: 1.jpg (first/main), 2.jpg, 3.jpg...\n\n";
+  msg += "Now run Step 2 — Map Product Images to Sheet.";
+  if (errors.length) msg += "\n\n⚠️ Errors (" + errors.length + "):\n" + errors.slice(0,5).join("\n");
+  SpreadsheetApp.getUi().alert(msg);
 }
 
 // ===== MAP PRODUCT IMAGES FROM DRIVE ==========================================
