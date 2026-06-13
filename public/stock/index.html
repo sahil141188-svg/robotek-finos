@@ -809,6 +809,14 @@ function qctrlHtml(showPcs){
     '</div>'+
   '</div>';
 }
+// DEMO: sample images for a few products to preview the feature
+// These will be replaced by col K values from the sheet once filled in
+var DEMO_IMAGES = {
+  "tws superbuddy": "1RI05ht7jY0R_1D0XX-7pdl4BaQVb-Eoc",
+  "tws air mute":   "1Tl9KdbH5AowEKLFyptPlaqw6ezBOHhp1",
+  "twsairmute":     "1Tl9KdbH5AowEKLFyptPlaqw6ezBOHhp1",
+};
+
 // Convert any Drive share/view URL to a thumbnail src
 function driveThumb(url){
   if(!url) return '';
@@ -822,7 +830,8 @@ function chipHtml(p){
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
   var inr=p.inner?'<span class="cq" style="color:#1a56db;background:rgba(26,86,219,.08)">In:'+esc(p.inner)+'</span>':'';
   var hot=p.fast?'<span class="hotbdg">🔥 Hot</span>':'';
-  var imgSrc=driveThumb(p.img);
+  var demoId=DEMO_IMAGES[p.name.toLowerCase().trim()]||DEMO_IMAGES[p.name.toLowerCase().replace(/\s/g,'')];
+  var imgSrc=driveThumb(p.img)||(demoId?'https://drive.google.com/thumbnail?id='+demoId+'&sz=w400':'');
   var imgBtn=imgSrc?'<button class="prodimgbtn" onclick="event.stopPropagation();showProductImage(\''+esc(p.name)+'\',\''+imgSrc+'\')">📷</button>':'';
   var prevOrd=PREV_ORDERED[p.name]?'<span class="reordbdg" title="Last ordered: '+PREV_ORDERED[p.name]+'">↩</span>':'';
   var scm=p.scheme?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\',\''+esc(p.scheme)+'\')">🏷️ Scheme</button>':'';
