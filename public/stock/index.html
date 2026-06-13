@@ -2069,23 +2069,6 @@ function closeProdImg(){
   document.body.style.overflow = "";
 }
 
-// ===== IMAGE GALLERY =====
-function openGallery(title, folderUrl){
-  // Convert Drive folder URL to embedded grid view
-  var folderId = folderUrl.match(/folders\/([^?]+)/);
-  if(!folderId) return;
-  var embedUrl = "https://drive.google.com/embeddedfolderview?id=" + folderId[1] + "#grid";
-  document.getElementById("imgGalleryTitle").textContent = "📸 " + title;
-  document.getElementById("imgGalleryFrame").src = embedUrl;
-  document.getElementById("imgGalleryOvl").classList.add("show");
-  document.body.style.overflow = "hidden";
-}
-function closeGallery(){
-  document.getElementById("imgGalleryOvl").classList.remove("show");
-  document.getElementById("imgGalleryFrame").src = "";
-  document.body.style.overflow = "";
-}
-
 boot();
 </script>
 <button class="bttbtn" id="bttBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8679; Top</button>
@@ -2103,17 +2086,5 @@ boot();
   </div>
 </div>
 
-<!-- ===== IMAGE GALLERY MODAL ===== -->
-<div class="ovl" id="imgGalleryOvl" onclick="if(event.target===this)closeGallery()">
-  <div class="img-gallery-modal">
-    <div class="img-gallery-hdr">
-      <span class="img-gallery-title" id="imgGalleryTitle">Images</span>
-      <button class="img-gallery-close" onclick="closeGallery()">✕</button>
-    </div>
-    <div class="img-gallery-body">
-      <iframe id="imgGalleryFrame" src="" frameborder="0" allowfullscreen></iframe>
-    </div>
-  </div>
-</div>
 </body>
 </html>
