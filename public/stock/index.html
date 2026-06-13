@@ -54,6 +54,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .cn{font-size:14px;font-weight:600;color:#fff;flex:1;letter-spacing:.5px;text-transform:uppercase}
 .cbdg{background:rgba(247,218,17,.15);color:var(--yellow);font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px;border:1px solid rgba(247,218,17,.3)}
 .sabt{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:inherit;font-size:11px;font-weight:500;padding:3px 9px;border-radius:12px;cursor:pointer;white-space:nowrap}
+.catimgbtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;text-decoration:none;white-space:nowrap;margin-left:4px}
 .cgrid{background:var(--card);padding:10px;display:flex;flex-wrap:wrap;gap:7px}
 .ecat{width:100%;padding:16px;text-align:center;font-size:12px;color:var(--muted);font-style:italic}
 .chip{display:inline-flex;flex-direction:column;align-items:flex-start;padding:9px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);font-family:inherit;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:background .15s,border-color .15s;user-select:none;line-height:1.3}
@@ -531,6 +532,20 @@ var SAMPLE = [
 var ICONS = {cable:"🔌",charger:"⚡",neck:"🎧",tws:"🎧",band:"🎧",power:"🔋",bank:"🔋",battery:"🔋",speaker:"🔊",glass:"📱",hands:"🎤",free:"🎤"};
 function catIcon(name){var n=name.toLowerCase();for(var k in ICONS){if(n.indexOf(k)!==-1)return ICONS[k];}return "📦";}
 
+// Category image folder links -- update per category as needed
+// Default points to main Robotek product images folder
+var CAT_LINKS_DEFAULT = "https://drive.google.com/drive/folders/1cVvpk5xezTic9t2PXDLzLNHf0NXpSoGH?usp=sharing";
+var CAT_LINKS = {
+  // Add category-specific subfolder links here when available, e.g.:
+  // "tws":      "https://drive.google.com/drive/folders/SUBFOLDER_ID",
+  // "charger":  "https://drive.google.com/drive/folders/SUBFOLDER_ID",
+};
+function catLink(name){
+  var n=name.toLowerCase();
+  for(var k in CAT_LINKS){ if(n.indexOf(k)!==-1) return CAT_LINKS[k]; }
+  return CAT_LINKS_DEFAULT;
+}
+
 var WA = CONFIG.WHATSAPP;
 var TOT = 0;
 var bOpen = false;
@@ -795,7 +810,9 @@ function chipHtml(p){
 }
 function sectionHtml(key,title,cls,icon,chips){
   var t=T[lang];
-  return '<div class="cs" data-cat="'+key+'"><div class="ch '+cls+'" onclick="tSec(this)"><span class="cico">'+icon+'</span><span class="cn">'+esc(title)+'</span><span class="cbdg">'+chips.length+' items</span><button class="sabt" onclick="sA(event,this.parentElement.parentElement)">'+t.selectAll+'</button></div><div class="cgrid">'+chips.join("")+'</div></div>';
+  var imgUrl=catLink(title);
+  var imgBtn=imgUrl?'<a class="catimgbtn" href="'+imgUrl+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">📸 View Images</a>':'';
+  return '<div class="cs" data-cat="'+key+'"><div class="ch '+cls+'" onclick="tSec(this)"><span class="cico">'+icon+'</span><span class="cn">'+esc(title)+'</span><span class="cbdg">'+chips.length+' items</span>'+imgBtn+'<button class="sabt" onclick="sA(event,this.parentElement.parentElement)">'+t.selectAll+'</button></div><div class="cgrid">'+chips.join("")+'</div></div>';
 }
 
 function render(rows, isSample){
