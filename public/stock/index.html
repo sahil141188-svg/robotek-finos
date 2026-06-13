@@ -1476,9 +1476,11 @@ function filterGallery(cat, el){
   renderGalleryGrid(cat);
 }
 
+var _galleryProds=[]; // indexed list for click handler
+
 function renderGalleryGrid(cat){
   var prods=cat==="all"?ALL_PRODUCTS:ALL_PRODUCTS.filter(function(p){return p.cat===cat;});
-  var total=prods.length;
+  _galleryProds=prods;
   var withImg=prods.filter(function(p){return getProductImgSrc(p);}).length;
   document.getElementById("galleryCount").textContent=withImg+" photo"+(withImg!==1?"s":"");
   if(!prods.length){
@@ -1488,15 +1490,15 @@ function renderGalleryGrid(cat){
   }
   document.getElementById("galleryEmpty").style.display="none";
   var html="";
-  prods.forEach(function(p){
+  prods.forEach(function(p,i){
     var imgSrc=getProductImgSrc(p);
     var stockDot='<span class="gallery-stock-dot" style="background:'+(p.stock?'var(--green)':'#bbb')+'"></span>';
     var stockLbl=p.stock?'In Stock':'Out of Stock';
+    var hasImg=imgSrc?'1':'0';
     var imgHtml=imgSrc
-      ?'<img src="'+imgSrc+'" alt="'+esc(p.name)+'" loading="lazy" onerror="this.parentElement.innerHTML=\'<span class=gallery-img-placeholder>'+catIcon(p.cat)+'</span>\'">'
+      ?'<img src="'+imgSrc+'" alt="" loading="lazy" data-gi="'+i+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'\'"><span class="gallery-img-placeholder" style="display:none">'+catIcon(p.cat)+'</span>'
       :'<span class="gallery-img-placeholder">'+catIcon(p.cat)+'</span>';
-    var clickFn=imgSrc?'showProductImage(\''+esc(p.name)+'\',\''+imgSrc+'\')':'';
-    html+='<div class="gallery-card" onclick="'+clickFn+'">'
+    html+='<div class="gallery-card" data-gi="'+i+'" data-has-img="'+hasImg+'" onclick="galleryCardTap(this)">'
       +'<div class="gallery-img-wrap">'+imgHtml+'</div>'
       +'<div class="gallery-card-body">'
         +'<div class="gallery-cat-tag">'+esc(p.cat)+'</div>'
@@ -1506,6 +1508,16 @@ function renderGalleryGrid(cat){
     +'</div>';
   });
   document.getElementById("galleryGrid").innerHTML=html;
+}
+
+function galleryCardTap(card){
+  var i=parseInt(card.getAttribute("data-gi"),10);
+  var hasImg=card.getAttribute("data-has-img")==="1";
+  if(!hasImg||isNaN(i)) return;
+  var p=_galleryProds[i];
+  if(!p) return;
+  var imgSrc=getProductImgSrc(p);
+  if(imgSrc) showProductImage(p.name, imgSrc);
 }
 
 function closeGallery(){
