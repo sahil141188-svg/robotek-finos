@@ -35,7 +35,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .live::before{content:"";width:6px;height:6px;background:var(--green);border-radius:50%;animation:blnk 1.8s infinite}
 @keyframes blnk{0%,100%{opacity:1}50%{opacity:.25}}
 .hmeta .who{color:var(--yellow);font-weight:700;cursor:pointer}
-.spill{background:rgba(247,218,17,.12);border-radius:8px;padding:5px 10px;text-align:right;border:1px solid rgba(247,218,17,.2)}
+.spill{display:none}
 .spnum{font-size:18px;font-weight:800;color:var(--yellow);line-height:1}
 .splbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.4)}
 .srchw{background:var(--card);padding:11px 14px;border-bottom:1px solid var(--border);position:sticky;top:var(--hdr-h,70px);z-index:99}
@@ -53,7 +53,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .tab.active{color:var(--red);font-weight:700}
 .tab.active::after{transform:scaleX(1)}
 .bodyw{padding:14px 14px 160px}
-.stats{display:flex;gap:9px;margin-bottom:14px}
+.stats{display:none!important}
 .stbox{flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 10px;text-align:center;box-shadow:var(--shadow-sm)}
 .stnum{font-size:22px;font-weight:800;color:var(--red);line-height:1}
 .stlbl{font-size:10px;color:var(--muted);margin-top:3px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
@@ -1135,8 +1135,8 @@ function render(rows, isSample){
   var d=new Date();var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var ds=d.getDate()+" "+mo[d.getMonth()]+" "+d.getFullYear();
   document.getElementById("stDate").textContent=ds;
-  document.getElementById("metaRight").textContent=ds+(isSample?" · SAMPLE":" · "+order.length+" Categories");
-  document.getElementById("sinf").innerHTML="Showing <b>"+TOT+"</b> of "+TOT+" products";
+  document.getElementById("metaRight").textContent=TOT+" products · "+inStockCount+" live · "+order.length+" cat"+(isSample?" · SAMPLE":"");
+  document.getElementById("sinf").style.display="none";
   document.getElementById("loadbox").style.display="none";
   document.getElementById("stats").style.display="flex";
   restoreCart();
@@ -1325,7 +1325,7 @@ function fC(cat,el){
     }
   }
   document.getElementById("nores").style.display="none";
-  document.getElementById("sinf").innerHTML="Showing <b>"+n+"</b> of "+TOT+" products";
+  document.getElementById("sinf").style.display="none";
 }
 function doSearch(){
   var q=document.getElementById("si").value.toLowerCase().trim();
@@ -1336,7 +1336,7 @@ function doSearch(){
     for(var i=0;i<secs.length;i++){secs[i].classList.remove("hidden");
       var chips=secs[i].querySelectorAll(".chip");for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");}
       var g=secs[i].querySelector(".cgrid");if(g)g.style.display="flex";}
-    document.getElementById("sinf").innerHTML="Showing <b>"+TOT+"</b> of "+TOT+" products";
+    document.getElementById("sinf").style.display="none";
     document.getElementById("nores").style.display="none";return;
   }
   var found=0;
@@ -1350,7 +1350,7 @@ function doSearch(){
     secs[i].classList.toggle("hidden",sf===0);
     var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"flex":"none";
   }
-  document.getElementById("sinf").innerHTML="Showing <b>"+found+"</b> of "+TOT+" products";
+  var sf=document.getElementById("sinf");sf.style.display="block";sf.innerHTML="Showing <b>"+found+"</b> of "+TOT+" products";
   document.getElementById("nores").style.display=found===0?"block":"none";
 }
 
