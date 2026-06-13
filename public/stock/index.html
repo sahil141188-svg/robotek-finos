@@ -857,12 +857,16 @@ var DEMO_IMAGES = {
   "twsairmute":     "1Tl9KdbH5AowEKLFyptPlaqw6ezBOHhp1",
 };
 
-// Convert any Drive share/view URL to a thumbnail src
+// Convert any Drive share/view/thumbnail URL to a public-friendly image src
 function driveThumb(url){
   if(!url) return '';
-  var m=url.match(/\/d\/([a-zA-Z0-9_-]{10,})/)||url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)||url.match(/^([a-zA-Z0-9_-]{25,})$/);
+  // Already a lh3 URL — use as-is
+  if(url.indexOf('lh3.googleusercontent.com')!==-1) return url;
+  // Extract file ID from any Drive URL format
+  var m=url.match(/\/d\/([a-zA-Z0-9_-]{25,})/)||url.match(/[?&]id=([a-zA-Z0-9_-]{25,})/)||url.match(/^([a-zA-Z0-9_-]{25,})$/);
   if(!m) return '';
-  return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w400';
+  // Use lh3 format — works without Google login for publicly shared files
+  return 'https://lh3.googleusercontent.com/d/'+m[1]+'=w400';
 }
 
 function chipHtml(p){
@@ -1449,17 +1453,14 @@ function getProductImgSrc(p){
 
 function openGallery(){
   _galleryCat="all";
-  // Build category list from products that have images
+  // Only include products that have an image
   var withImg=ALL_PRODUCTS.filter(function(p){return getProductImgSrc(p);});
-  var noImg=ALL_PRODUCTS.filter(function(p){return !getProductImgSrc(p);});
-  // Include products without images too (show placeholder)
-  var allProds=ALL_PRODUCTS;
-  // Category chips
+  // Build category chips from products WITH images only
   var cats=["all"];
-  ALL_PRODUCTS.forEach(function(p){if(cats.indexOf(p.cat)===-1)cats.push(p.cat);});
-  var catHtml='<div class="gcat active" onclick="filterGallery(\'all\',this)">All · '+allProds.length+'</div>';
+  withImg.forEach(function(p){if(cats.indexOf(p.cat)===-1)cats.push(p.cat);});
+  var catHtml='<div class="gcat active" onclick="filterGallery(\'all\',this)">All Photos · '+withImg.length+'</div>';
   cats.slice(1).forEach(function(c){
-    var cnt=allProds.filter(function(p){return p.cat===c;}).length;
+    var cnt=withImg.filter(function(p){return p.cat===c;}).length;
     catHtml+='<div class="gcat" onclick="filterGallery(\''+esc(c)+'\',this)">'+esc(c)+' · '+cnt+'</div>';
   });
   document.getElementById("galleryCats").innerHTML=catHtml;
@@ -1479,11 +1480,13 @@ function filterGallery(cat, el){
 var _galleryProds=[]; // indexed list for click handler
 
 function renderGalleryGrid(cat){
-  var prods=cat==="all"?ALL_PRODUCTS:ALL_PRODUCTS.filter(function(p){return p.cat===cat;});
+  // Only show products WITH images
+  var base=ALL_PRODUCTS.filter(function(p){return getProductImgSrc(p);});
+  var prods=cat==="all"?base:base.filter(function(p){return p.cat===cat;});
   _galleryProds=prods;
-  var withImg=prods.filter(function(p){return getProductImgSrc(p);}).length;
-  document.getElementById("galleryCount").textContent=withImg+" photo"+(withImg!==1?"s":"");
-  if(!prods.length){
+  var cnt=prods.length;
+  document.getElementById("galleryCount").textContent=cnt+" photo"+(cnt!==1?"s":"");
+  if(!cnt){
     document.getElementById("galleryGrid").innerHTML="";
     document.getElementById("galleryEmpty").style.display="block";
     return;
@@ -1494,12 +1497,10 @@ function renderGalleryGrid(cat){
     var imgSrc=getProductImgSrc(p);
     var stockDot='<span class="gallery-stock-dot" style="background:'+(p.stock?'var(--green)':'#bbb')+'"></span>';
     var stockLbl=p.stock?'In Stock':'Out of Stock';
-    var hasImg=imgSrc?'1':'0';
-    var imgHtml=imgSrc
-      ?'<img src="'+imgSrc+'" alt="" loading="lazy" data-gi="'+i+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'\'"><span class="gallery-img-placeholder" style="display:none">'+catIcon(p.cat)+'</span>'
-      :'<span class="gallery-img-placeholder">'+catIcon(p.cat)+'</span>';
-    html+='<div class="gallery-card" data-gi="'+i+'" data-has-img="'+hasImg+'" onclick="galleryCardTap(this)">'
-      +'<div class="gallery-img-wrap">'+imgHtml+'</div>'
+    html+='<div class="gallery-card" data-gi="'+i+'" onclick="galleryCardTap(this)">'
+      +'<div class="gallery-img-wrap">'
+        +'<img src="'+imgSrc+'" alt="" loading="lazy">'
+      +'</div>'
       +'<div class="gallery-card-body">'
         +'<div class="gallery-cat-tag">'+esc(p.cat)+'</div>'
         +'<div class="gallery-prod-name">'+esc(p.name)+'</div>'
@@ -1512,8 +1513,7 @@ function renderGalleryGrid(cat){
 
 function galleryCardTap(card){
   var i=parseInt(card.getAttribute("data-gi"),10);
-  var hasImg=card.getAttribute("data-has-img")==="1";
-  if(!hasImg||isNaN(i)) return;
+  if(isNaN(i)) return;
   var p=_galleryProds[i];
   if(!p) return;
   var imgSrc=getProductImgSrc(p);

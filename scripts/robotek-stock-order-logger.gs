@@ -90,7 +90,9 @@ function mapProductImages() {
       }
 
       if (imgFile) {
-        imageMap[prodKey] = "https://drive.google.com/thumbnail?id=" + imgFile.getId() + "&sz=w400";
+        // Make file publicly accessible so thumbnail works without Google login
+        try { imgFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
+        imageMap[prodKey] = "https://lh3.googleusercontent.com/d/" + imgFile.getId() + "=w400";
       }
     }
   }
