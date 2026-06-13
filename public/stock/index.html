@@ -198,11 +198,24 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .cartbtn{position:relative;background:var(--black);border:none;border-radius:10px;padding:6px 10px;font-size:18px;cursor:pointer;line-height:1;display:flex;align-items:center;gap:5px}
 .cart-count{background:var(--yellow);color:var(--black);font-size:12px;font-weight:800;border-radius:8px;padding:2px 7px;line-height:1.4;min-width:20px;text-align:center}
 .nores{display:none;text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
-.loadbox{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
+/* Skeleton loading — shimmer placeholder cards */
+.loadbox{padding:16px 12px;display:flex;flex-direction:column;gap:10px}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel{border-radius:10px;background:linear-gradient(90deg,#e8e6e7 25%,#f2f1f1 50%,#e8e6e7 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
+.skel-hdr{height:38px;border-radius:8px;margin-bottom:6px}
+.skel-row{height:62px;border-radius:10px}
+.skel-row+.skel-row{margin-top:6px}
 .spin{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;margin:0 auto 14px;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-#bbar{position:fixed;bottom:0;left:0;right:0;z-index:200;display:none;flex-direction:column}
-#bbar.show{display:flex}
+/* Old bottom bar — hidden, kept for JS compat */
+#bbar{display:none!important}
+/* Floating cart pill */
+#floatCart{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);z-index:400;display:flex;align-items:center;gap:10px;background:var(--black);color:#fff;border:none;border-radius:50px;padding:14px 22px 14px 16px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.28),0 2px 6px rgba(0,0,0,.16);transition:transform .3s var(--ease),opacity .3s;opacity:0;pointer-events:none;white-space:nowrap}
+#floatCart.show{transform:translateX(-50%) translateY(0);opacity:1;pointer-events:auto}
+#floatCart:active{transform:translateX(-50%) scale(.96)!important}
+.fc-badge{background:var(--red);color:#fff;font-size:13px;font-weight:800;min-width:26px;height:26px;border-radius:50px;display:flex;align-items:center;justify-content:center;padding:0 5px}
+.fc-lbl{font-size:13px;font-weight:600;color:rgba(255,255,255,.85)}
+.fc-arr{font-size:16px;margin-left:2px;color:rgba(255,255,255,.6)}
 .bpnl{background:var(--card);border-top:1px solid var(--border);max-height:0;overflow:hidden;transition:max-height .3s}
 .bpnl.open{max-height:280px;overflow-y:auto}
 .bitm{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);font-size:14px}
@@ -499,7 +512,19 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
     </div>
   </div>
   <div class="nores" id="nores">No products found.</div>
-  <div class="loadbox" id="loadbox"><div class="spin"></div>Loading live stock…</div>
+  <div class="loadbox" id="loadbox">
+    <div class="skel skel-hdr"></div>
+    <div class="skel skel-row"></div>
+    <div class="skel skel-row"></div>
+    <div class="skel skel-row"></div>
+    <div class="skel skel-hdr" style="margin-top:10px"></div>
+    <div class="skel skel-row"></div>
+    <div class="skel skel-row"></div>
+    <div class="skel skel-hdr" style="margin-top:10px"></div>
+    <div class="skel skel-row"></div>
+    <div class="skel skel-row"></div>
+    <div class="skel skel-row"></div>
+  </div>
   <div id="sections"></div>
 </div>
 
@@ -515,6 +540,12 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
     <button class="bwa" id="t-sendWA" onclick="placeOrder()">&#128172; Send Order on WhatsApp</button>
   </div>
 </div>
+
+<button id="floatCart" onclick="showReview()">
+  <span class="fc-badge" id="fcBadge">0</span>
+  <span class="fc-lbl" id="fcLbl">View Order</span>
+  <span class="fc-arr">›</span>
+</button>
 
 <div class="ovl" id="nameOvl">
   <div class="modal">
@@ -857,7 +888,7 @@ function applyLang(){
   document.getElementById("t-products").textContent=t.products;
   document.getElementById("t-categories").textContent=t.categories;
   document.getElementById("nores").textContent=t.noResults;
-  document.getElementById("loadbox").innerHTML='<div class="spin"></div>'+t.loading;
+  /* skeleton loadbox — do not overwrite */
   document.getElementById("t-yourOrder").textContent=t.yourOrder;
   document.getElementById("t-clear").textContent=t.clear;
   document.getElementById("t-sendWA").textContent=t.sendWA;
@@ -1062,12 +1093,12 @@ function render(rows, isSample){
 
   // tabs
   var t=T[lang];
-  var tabs='<div class="tab active" onclick="fC(\'all\',this)">'+t.all+' &middot; '+TOT+'</div>';
+  var tabs='<div class="tab active" onclick="fC(\'all\',this)">📦 '+t.all+' &middot; '+TOT+'</div>';
   if(fast.length)tabs+='<div class="tab" onclick="fC(\'fast\',this)">★ '+t.fast+' &middot; '+fast.length+'</div>';
   if(news.length)tabs+='<div class="tab" onclick="fC(\'newl\',this)">✨ '+t.newl+' &middot; '+news.length+'</div>';
   if(schms.length)tabs+='<div class="tab" onclick="fC(\'schm\',this)">🏷️ '+t.schm+' &middot; '+schms.length+'</div>';
   tabs+='<div class="tab" onclick="openGallery()" id="galleryTab">📷 Photos</div>';
-  order.forEach(function(k){tabs+='<div class="tab" onclick="fC(\''+k+'\',this)">'+esc(groups[k].name)+' &middot; '+groups[k].items.length+'</div>';});
+  order.forEach(function(k){var ic=catIcon(groups[k].name);tabs+='<div class="tab" onclick="fC(\''+k+'\',this)">'+ic+' '+esc(groups[k].name)+' &middot; '+groups[k].items.length+'</div>';});
   document.getElementById("tw").innerHTML=tabs;
 
   // sections
@@ -1330,6 +1361,17 @@ function uB(){
   var orderTxt=sel.length+" item"+(sel.length!==1?"s":"")+(catParts.length?" · "+catParts.join(" · "):"");
   var enqTxt=enq.length>0?" + "+enq.length+" enquiry":"";
   document.getElementById("blistsub").textContent=orderTxt+enqTxt;
+  // Floating cart pill
+  var fc=document.getElementById("floatCart");
+  if(fc){
+    fc.classList.toggle("show",total>0);
+    var fcB=document.getElementById("fcBadge");if(fcB)fcB.textContent=total;
+    var fcL=document.getElementById("fcLbl");
+    if(fcL){
+      if(total===0){fcL.textContent="View Order";}
+      else{var s=catParts[0]||"items";fcL.textContent=s;}
+    }
+  }
   var list=document.getElementById("blist");list.innerHTML="";
   // Order items
   for(var i=0;i<sel.length;i++){
