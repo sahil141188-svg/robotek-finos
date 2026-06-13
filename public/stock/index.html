@@ -532,17 +532,29 @@ var SAMPLE = [
 var ICONS = {cable:"🔌",charger:"⚡",neck:"🎧",tws:"🎧",band:"🎧",power:"🔋",bank:"🔋",battery:"🔋",speaker:"🔊",glass:"📱",hands:"🎤",free:"🎤"};
 function catIcon(name){var n=name.toLowerCase();for(var k in ICONS){if(n.indexOf(k)!==-1)return ICONS[k];}return "📦";}
 
-// Category image folder links -- update per category as needed
-// Default points to main Robotek product images folder
+// Category image folder links — one Drive subfolder per category
 var CAT_LINKS_DEFAULT = "https://drive.google.com/drive/folders/1cVvpk5xezTic9t2PXDLzLNHf0NXpSoGH?usp=sharing";
 var CAT_LINKS = {
-  // Add category-specific subfolder links here when available, e.g.:
-  // "tws":      "https://drive.google.com/drive/folders/SUBFOLDER_ID",
-  // "charger":  "https://drive.google.com/drive/folders/SUBFOLDER_ID",
+  "cable":          "https://drive.google.com/drive/folders/1xSzgm6QQi8vj9U5Fft1tdZSI60KWY01j",
+  "charger":        "https://drive.google.com/drive/folders/1je4BJs-GcHsZPzKpVJoGzb_bJFJpxdyr",
+  "neck":           "https://drive.google.com/drive/folders/1Va_5s3tG1jaOcOy7KFlXZdllAM0ZrtVy",
+  "tws":            "https://drive.google.com/drive/folders/1_42OqjcW5MltLKIAj7TOFJTeGU2-i9WV",
+  "hands":          "https://drive.google.com/drive/folders/1a2WfeHUOwcAKsx2XLw9mNGR7a5jRBrvc",
+  "speaker":        "https://drive.google.com/drive/folders/1HwtWcx0DF4A9s0G_JXNBpin6OGA5xTWV",
+  "power bank":     "https://drive.google.com/drive/folders/1La7zluy2qU8kr1HCht58iO8XXP7Ge4Uy",
+  "bank":           "https://drive.google.com/drive/folders/1La7zluy2qU8kr1HCht58iO8XXP7Ge4Uy",
+  "power series":   "https://drive.google.com/drive/folders/1K4w3fenvH6zFXlghBiea-rwCBqBW6GJP",
+  "ans polymer":    "https://drive.google.com/drive/folders/1GtU1ERgQtHBDonA7cvLvXnsMyx0AsXzW",
+  "polymer":        "https://drive.google.com/drive/folders/1AB9c6jki80UWUyLZF0p7PYewpQC187Ku",
+  "ans":            "https://drive.google.com/drive/folders/1j8Aub2hI_3QMdKaCQgBglyy-PnqJnrQ7",
+  "batter":         "https://drive.google.com/drive/folders/19BO1_pOrsd3IHBRFJn6nvQCdR-13Y5Xa",
+  "others":         "https://drive.google.com/drive/folders/1dwuaQPo9TEltZNdzC6PIK7JAjhJaWCzI",
 };
 function catLink(name){
   var n=name.toLowerCase();
-  for(var k in CAT_LINKS){ if(n.indexOf(k)!==-1) return CAT_LINKS[k]; }
+  // Check longer keys first to avoid partial matches (e.g. "power bank" before "bank")
+  var keys=Object.keys(CAT_LINKS).sort(function(a,b){return b.length-a.length;});
+  for(var i=0;i<keys.length;i++){ if(n.indexOf(keys[i])!==-1) return CAT_LINKS[keys[i]]; }
   return CAT_LINKS_DEFAULT;
 }
 
