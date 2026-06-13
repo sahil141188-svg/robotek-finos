@@ -162,7 +162,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .bct{background:var(--red);color:#fff;font-size:13px;font-weight:700;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .btxt{font-size:13px;font-weight:600}.bsub{font-size:10px;color:#888;margin-top:1px}
 .barr{font-size:18px;color:#888;transition:transform .25s}.barr.up{transform:rotate(180deg)}
-.ovl{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:22px}
+.ovl{position:fixed;inset:0;z-index:700;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:22px}
 .ovl.show{display:flex}
 .modal{background:#fff;border-radius:16px;width:100%;max-width:360px;padding:22px 20px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
 .modal h2{font-size:18px;color:var(--black);margin-bottom:4px}
@@ -294,6 +294,31 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .bttbtn:active{opacity:.8}
 /* Reordered badge on chips */
 .reordbdg{font-size:11px;font-weight:700;color:#16A34A;background:rgba(22,163,74,.1);border-radius:4px;padding:1px 5px;flex-shrink:0;line-height:1.4}
+/* ── Product Gallery ── */
+.gallery-ovl{position:fixed;inset:0;z-index:600;background:#F0EEEF;display:none;flex-direction:column;overflow:hidden}
+.gallery-ovl.show{display:flex}
+.gallery-hdr{background:var(--card);border-bottom:3px solid var(--red);padding:12px 14px;display:flex;align-items:center;gap:11px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.gallery-back{background:var(--bg);border:1.5px solid var(--border);color:var(--black);border-radius:9px;padding:7px 13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px}
+.gallery-back:active{opacity:.75}
+.gallery-title{font-size:17px;font-weight:800;color:var(--black);letter-spacing:.5px;flex:1}
+.gallery-count{font-size:12px;font-weight:600;color:var(--muted);background:var(--bg);border-radius:10px;padding:4px 10px;flex-shrink:0}
+.gallery-cats{display:flex;gap:7px;overflow-x:auto;scrollbar-width:none;padding:10px 14px 8px;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0}
+.gallery-cats::-webkit-scrollbar{display:none}
+.gcat{flex-shrink:0;font-family:inherit;font-size:12px;font-weight:600;white-space:nowrap;padding:6px 14px;border-radius:18px;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);cursor:pointer;transition:all .18s}
+.gcat.active{background:var(--black);border-color:var(--black);color:var(--yellow)}
+.gallery-body{flex:1;overflow-y:auto;padding:12px 12px 100px;-webkit-overflow-scrolling:touch}
+.gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.gallery-card{background:var(--card);border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.07);cursor:pointer;border:1.5px solid var(--border);transition:transform .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent}
+.gallery-card:active{transform:scale(.97);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.gallery-img-wrap{background:#f7f5f6;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.gallery-img-wrap img{width:100%;height:100%;object-fit:contain;padding:8px}
+.gallery-img-placeholder{font-size:40px;opacity:.25}
+.gallery-card-body{padding:9px 10px 11px}
+.gallery-cat-tag{font-size:10px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;opacity:.8}
+.gallery-prod-name{font-size:13px;font-weight:700;color:var(--black);line-height:1.3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.gallery-stock-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle;flex-shrink:0}
+.gallery-status{font-size:11px;color:var(--muted);margin-top:4px;display:flex;align-items:center}
+.gallery-empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px}
 </style>
 <script>
 // Calculate sticky offsets so srchw/tabsw sit exactly below the header
@@ -484,6 +509,20 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
   </div>
 </div>
 
+<!-- Product Gallery -->
+<div class="gallery-ovl" id="galleryOvl">
+  <div class="gallery-hdr">
+    <button class="gallery-back" onclick="closeGallery()">&#8592; Back</button>
+    <span class="gallery-title">📷 Product Gallery</span>
+    <span class="gallery-count" id="galleryCount">0 photos</span>
+  </div>
+  <div class="gallery-cats" id="galleryCats"></div>
+  <div class="gallery-body">
+    <div class="gallery-grid" id="galleryGrid"></div>
+    <div class="gallery-empty" id="galleryEmpty" style="display:none">No product images yet.<br><small>Run "Map Product Images" from the Google Sheet to add images.</small></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- Install / Add to Home Screen bottom sheet -->
@@ -579,6 +618,7 @@ var SCHEMES = {};  // {productName: {text, till}}
 var PREV_ORDERED = {};  // {productName: lastOrderDate}
 var _orderNote = "";  // temporary, not saved to localStorage
 var PROD_CAT = {};    // {productName: categoryName} — built in render()
+var ALL_PRODUCTS = []; // full product list — used by gallery
 
 /* SC routing — short ref codes keep numbers private in URLs */
 var REFS = {
@@ -869,6 +909,7 @@ function render(rows, isSample){
     return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5]),inner:r[6]!==""&&r[6]!=null?r[6]:"",scheme:String(r[7]||"").trim(),alt:String(r[8]||"").trim(),warranty:String(r[9]||"").trim(),img:String(r[10]||"").trim()};
   });
   products.forEach(function(p){p.catKey=slug(p.cat); PROD_CAT[p.name]=p.cat;});
+  ALL_PRODUCTS=products;
 
   // group by category, preserve order of first appearance
   var order=[],groups={};
@@ -888,6 +929,7 @@ function render(rows, isSample){
   if(fast.length)tabs+='<div class="tab" onclick="fC(\'fast\',this)">★ '+t.fast+' &middot; '+fast.length+'</div>';
   if(news.length)tabs+='<div class="tab" onclick="fC(\'newl\',this)">✨ '+t.newl+' &middot; '+news.length+'</div>';
   if(schms.length)tabs+='<div class="tab" onclick="fC(\'schm\',this)">🏷️ '+t.schm+' &middot; '+schms.length+'</div>';
+  tabs+='<div class="tab" onclick="openGallery()" id="galleryTab">📷 Photos</div>';
   order.forEach(function(k){tabs+='<div class="tab" onclick="fC(\''+k+'\',this)">'+esc(groups[k].name)+' &middot; '+groups[k].items.length+'</div>';});
   document.getElementById("tw").innerHTML=tabs;
 
@@ -1395,6 +1437,83 @@ function maybeShowInstallSheet(){
   if(dis&&Date.now()-dis<3*24*60*60*1000) return;            // dismissed < 3 days ago
   // show after 4s (let user see the app first)
   setTimeout(showInstallSheet, 4000);
+}
+
+/* ---------- PRODUCT GALLERY ---------- */
+var _galleryCat = "all";
+
+function getProductImgSrc(p){
+  var demoId=DEMO_IMAGES[(p.name||"").toLowerCase().trim()]||DEMO_IMAGES[(p.name||"").toLowerCase().replace(/\s/g,'')];
+  return driveThumb(p.img)||(demoId?'https://drive.google.com/thumbnail?id='+demoId+'&sz=w400':'');
+}
+
+function openGallery(){
+  _galleryCat="all";
+  // Build category list from products that have images
+  var withImg=ALL_PRODUCTS.filter(function(p){return getProductImgSrc(p);});
+  var noImg=ALL_PRODUCTS.filter(function(p){return !getProductImgSrc(p);});
+  // Include products without images too (show placeholder)
+  var allProds=ALL_PRODUCTS;
+  // Category chips
+  var cats=["all"];
+  ALL_PRODUCTS.forEach(function(p){if(cats.indexOf(p.cat)===-1)cats.push(p.cat);});
+  var catHtml='<div class="gcat active" onclick="filterGallery(\'all\',this)">All · '+allProds.length+'</div>';
+  cats.slice(1).forEach(function(c){
+    var cnt=allProds.filter(function(p){return p.cat===c;}).length;
+    catHtml+='<div class="gcat" onclick="filterGallery(\''+esc(c)+'\',this)">'+esc(c)+' · '+cnt+'</div>';
+  });
+  document.getElementById("galleryCats").innerHTML=catHtml;
+  renderGalleryGrid("all");
+  document.getElementById("galleryOvl").classList.add("show");
+  document.body.style.overflow="hidden";
+}
+
+function filterGallery(cat, el){
+  _galleryCat=cat;
+  document.querySelectorAll(".gcat").forEach(function(b){b.classList.remove("active");});
+  el.classList.add("active");
+  try{el.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"});}catch(e){}
+  renderGalleryGrid(cat);
+}
+
+function renderGalleryGrid(cat){
+  var prods=cat==="all"?ALL_PRODUCTS:ALL_PRODUCTS.filter(function(p){return p.cat===cat;});
+  var total=prods.length;
+  var withImg=prods.filter(function(p){return getProductImgSrc(p);}).length;
+  document.getElementById("galleryCount").textContent=withImg+" photo"+(withImg!==1?"s":"");
+  if(!prods.length){
+    document.getElementById("galleryGrid").innerHTML="";
+    document.getElementById("galleryEmpty").style.display="block";
+    return;
+  }
+  document.getElementById("galleryEmpty").style.display="none";
+  var html="";
+  prods.forEach(function(p){
+    var imgSrc=getProductImgSrc(p);
+    var stockDot='<span class="gallery-stock-dot" style="background:'+(p.stock?'var(--green)':'#bbb')+'"></span>';
+    var stockLbl=p.stock?'In Stock':'Out of Stock';
+    var imgHtml=imgSrc
+      ?'<img src="'+imgSrc+'" alt="'+esc(p.name)+'" loading="lazy" onerror="this.parentElement.innerHTML=\'<span class=gallery-img-placeholder>'+catIcon(p.cat)+'</span>\'">'
+      :'<span class="gallery-img-placeholder">'+catIcon(p.cat)+'</span>';
+    var clickFn=imgSrc?'showProductImage(\''+esc(p.name)+'\',\''+imgSrc+'\')':'';
+    html+='<div class="gallery-card" onclick="'+clickFn+'">'
+      +'<div class="gallery-img-wrap">'+imgHtml+'</div>'
+      +'<div class="gallery-card-body">'
+        +'<div class="gallery-cat-tag">'+esc(p.cat)+'</div>'
+        +'<div class="gallery-prod-name">'+esc(p.name)+'</div>'
+        +'<div class="gallery-status">'+stockDot+stockLbl+'</div>'
+      +'</div>'
+    +'</div>';
+  });
+  document.getElementById("galleryGrid").innerHTML=html;
+}
+
+function closeGallery(){
+  document.getElementById("galleryOvl").classList.remove("show");
+  document.body.style.overflow="";
+  // Deselect gallery tab
+  document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
+  var first=document.querySelector(".tab");if(first)first.classList.add("active");
 }
 
 /* ---------- ENQUIRY TOGGLE (OUT OF STOCK) ---------- */
