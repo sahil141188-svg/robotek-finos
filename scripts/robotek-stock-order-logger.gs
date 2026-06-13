@@ -112,17 +112,26 @@ function mapProductImages() {
     var key = prodName.toLowerCase().trim();
     var urls = imageMap[key]; // exact match
 
-    // Fuzzy match only if no exact match found — prefer longer folder key (more specific)
+    // Fuzzy match only if no exact match found
+    // Strategy: folder key must be a prefix/full match of product name (not the other way)
+    // e.g. "dc 101" folder matches "dc 101" product — but NOT "dc 101 super"
+    // Only fallback to contained match if absolutely no other option
     if (!urls) {
-      var bestKey = "";
+      var bestKey = "", bestScore = -1;
       for (var k in imageMap) {
-        if (k === key) continue; // already checked exact
-        var isMatch = (k.indexOf(key) !== -1 || key.indexOf(k) !== -1);
-        if (isMatch && k.length > bestKey.length) {
-          bestKey = k;
+        if (k === key) continue;
+        // Prefer: folder name is contained in product name AND is longer (more specific)
+        if (key.indexOf(k) === 0) {
+          // k is a prefix of the product key — only match if remaining chars are short (≤3)
+          var remaining = key.length - k.length;
+          var score = k.length - remaining * 10; // penalise short folder matching long product
+          if (score > bestScore) { bestScore = score; bestKey = k; }
         }
       }
-      if (bestKey) urls = imageMap[bestKey];
+      // Only use prefix match if penalty not too high (remaining chars ≤ 3)
+      if (bestKey && (key.length - bestKey.length) <= 3) {
+        urls = imageMap[bestKey];
+      }
     }
 
     if (urls) {
