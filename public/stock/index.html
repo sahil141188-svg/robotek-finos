@@ -854,8 +854,7 @@ function chipHtml(p){
 }
 function sectionHtml(key,title,cls,icon,chips){
   var t=T[lang];
-  var imgUrl=catLink(title);
-  var imgBtn=imgUrl?'<button class="catimgbtn" onclick="event.stopPropagation();openGallery(\''+esc(title)+'\',\''+imgUrl+'\')">📸 Images</button>':'';
+  var imgBtn='';
   return '<div class="cs" data-cat="'+key+'"><div class="ch '+cls+'" onclick="tSec(this)"><span class="cico">'+icon+'</span><span class="cn">'+esc(title)+'</span><span class="cbdg">'+chips.length+' items</span>'+imgBtn+'<button class="sabt" onclick="sA(event,this.parentElement.parentElement)">'+t.selectAll+'</button></div><div class="cgrid">'+chips.join("")+'</div></div>';
 }
 

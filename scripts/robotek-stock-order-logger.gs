@@ -42,7 +42,94 @@ function onOpen() {
     .addItem('Copy Selected Party Order', 'copySelectedParty')
     .addSeparator()
     .addItem('Format All Sheets', 'formatOrdersPartyWise')
+    .addSeparator()
+    .addItem('Map Product Images from Drive', 'mapProductImages')
     .addToUi();
+}
+
+// ===== MAP PRODUCT IMAGES FROM DRIVE ==========================================
+// Scans the Stock Images Drive folder, matches product names to image files,
+// and fills column K (Image URL) in the Stock List sheet automatically.
+// Run once from Robotek menu → Map Product Images from Drive.
+function mapProductImages() {
+  var ss         = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet      = ss.getSheetByName("Stock List");
+  if (!sheet) { SpreadsheetApp.getUi().alert("Stock List sheet not found."); return; }
+
+  var DRIVE_FOLDER_ID = "1cVvpk5xezTic9t2PXDLzLNHf0NXpSoGH";
+
+  // Ensure col K header
+  sheet.getRange(1, 11).setValue("Image URL")
+       .setBackground("#1F1B20").setFontColor("#F7DA11").setFontWeight("bold");
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) { SpreadsheetApp.getUi().alert("No products found in Stock List."); return; }
+
+  var data = sheet.getRange(2, 1, lastRow - 1, 2).getValues(); // cols A (category) + B (product name)
+
+  // Build map: normalised product name → thumbnail URL
+  // Structure: Main Folder → Category Folders → Product Folders → Image files
+  var imageMap = {};
+  var mainFolder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  var catFolders = mainFolder.getFolders();
+
+  while (catFolders.hasNext()) {
+    var catFolder = catFolders.next();
+    var prodFolders = catFolder.getFolders();
+    while (prodFolders.hasNext()) {
+      var prodFolder = prodFolders.next();
+      var prodKey    = prodFolder.getName().toLowerCase().trim();
+      var imgFile    = null;
+
+      // Try JPEG first, then PNG
+      var jpgs = prodFolder.getFilesByType(MimeType.JPEG);
+      if (jpgs.hasNext()) imgFile = jpgs.next();
+      if (!imgFile) {
+        var pngs = prodFolder.getFilesByType(MimeType.PNG);
+        if (pngs.hasNext()) imgFile = pngs.next();
+      }
+
+      if (imgFile) {
+        imageMap[prodKey] = "https://drive.google.com/thumbnail?id=" + imgFile.getId() + "&sz=w400";
+      }
+    }
+  }
+
+  // Match each product row to an image
+  var count   = 0;
+  var noMatch = [];
+
+  for (var i = 0; i < data.length; i++) {
+    var prodName = String(data[i][1] || "").trim();
+    if (!prodName) continue;
+
+    var key = prodName.toLowerCase().trim();
+    var url = imageMap[key];
+
+    // Fuzzy match: check if Drive folder name contains product name or vice versa
+    if (!url) {
+      for (var k in imageMap) {
+        if (k.indexOf(key) !== -1 || key.indexOf(k) !== -1) {
+          url = imageMap[k];
+          break;
+        }
+      }
+    }
+
+    if (url) {
+      sheet.getRange(i + 2, 11).setValue(url);
+      count++;
+    } else {
+      noMatch.push(prodName);
+    }
+  }
+
+  var msg = "✅ Done! " + count + " products mapped with images.\n";
+  if (noMatch.length) {
+    msg += "\n⚠️ No image found for " + noMatch.length + " products:\n" + noMatch.slice(0,15).join(", ");
+    if (noMatch.length > 15) msg += "... +" + (noMatch.length - 15) + " more";
+  }
+  SpreadsheetApp.getUi().alert(msg);
 }
 
 // ===== PROTECT SHEET =========================================================
