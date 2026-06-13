@@ -55,6 +55,13 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .cbdg{background:rgba(247,218,17,.15);color:var(--yellow);font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px;border:1px solid rgba(247,218,17,.3)}
 .sabt{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);font-family:inherit;font-size:11px;font-weight:500;padding:3px 9px;border-radius:12px;cursor:pointer;white-space:nowrap}
 .catimgbtn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;text-decoration:none;white-space:nowrap;margin-left:4px;cursor:pointer}
+.prodimgbtn{background:rgba(26,86,219,.1);border:1px solid rgba(26,86,219,.2);color:#1a56db;font-size:13px;padding:2px 7px;border-radius:8px;cursor:pointer;margin-left:4px;vertical-align:middle;line-height:1.4}
+.prod-img-modal{background:#fff;border-radius:16px;width:100%;max-width:360px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.prod-img-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--black)}
+.prod-img-hdr span{color:#fff;font-size:14px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+.prod-img-hdr button{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;width:30px;height:30px;border-radius:50%;cursor:pointer;flex-shrink:0}
+.prod-img-body{background:#f8f8f8;display:flex;align-items:center;justify-content:center;min-height:260px;padding:12px}
+.prod-img-body img{max-width:100%;max-height:320px;object-fit:contain;border-radius:8px}
 .img-gallery-modal{background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 .img-gallery-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:var(--black);border-radius:16px 16px 0 0}
 .img-gallery-title{color:#fff;font-size:16px;font-weight:700;letter-spacing:.5px}
@@ -802,11 +809,21 @@ function qctrlHtml(showPcs){
     '</div>'+
   '</div>';
 }
+// Convert any Drive share/view URL to a thumbnail src
+function driveThumb(url){
+  if(!url) return '';
+  var m=url.match(/\/d\/([a-zA-Z0-9_-]{10,})/)||url.match(/[?&]id=([a-zA-Z0-9_-]{10,})/)||url.match(/^([a-zA-Z0-9_-]{25,})$/);
+  if(!m) return '';
+  return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w400';
+}
+
 function chipHtml(p){
   var t=T[lang];
   var bx=p.box?'<span class="cq">Bx:'+esc(p.box)+'</span>':'';
   var inr=p.inner?'<span class="cq" style="color:#1a56db;background:rgba(26,86,219,.08)">In:'+esc(p.inner)+'</span>':'';
   var hot=p.fast?'<span class="hotbdg">🔥 Hot</span>':'';
+  var imgSrc=driveThumb(p.img);
+  var imgBtn=imgSrc?'<button class="prodimgbtn" onclick="event.stopPropagation();showProductImage(\''+esc(p.name)+'\',\''+imgSrc+'\')">📷</button>':'';
   var prevOrd=PREV_ORDERED[p.name]?'<span class="reordbdg" title="Last ordered: '+PREV_ORDERED[p.name]+'">↩</span>':'';
   var scm=p.scheme?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\',\''+esc(p.scheme)+'\')">🏷️ Scheme</button>':'';
   var hotCls=p.fast?' hot':'';
@@ -819,12 +836,12 @@ function chipHtml(p){
   else if(wty){wBadge='<span class="wbdg w6m">🛡️ '+esc(p.warranty)+'</span>';}
   if(!p.stock){
     return '<span class="chip oos'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" onclick="tEnq(this)">'+
-      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+'<span class="oosl">'+t.out+'</span>'+scm+wBadge+prevOrd+'</span>'+
+      '<span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+'<span class="oosl">'+t.out+'</span>'+scm+wBadge+prevOrd+imgBtn+'</span>'+
       '<button class="enqbtn">'+t.enq+'</button>'+
     '</span>';
   }
   var isPoly=p.catKey.indexOf("polymer")!==-1;
-  return '<span class="chip'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+wBadge+'</span>'+qctrlHtml(isPoly)+'</span>';
+  return '<span class="chip'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)"><span class="cr1"><span class="cdot"></span>'+esc(p.name)+hot+bx+inr+scm+wBadge+imgBtn+'</span>'+qctrlHtml(isPoly)+'</span>';
 }
 function sectionHtml(key,title,cls,icon,chips){
   var t=T[lang];
@@ -841,7 +858,7 @@ function render(rows, isSample){
     hist.forEach(function(o){(o.items||[]).forEach(function(it){if(it.name&&!PREV_ORDERED[it.name])PREV_ORDERED[it.name]=o.date||"";});});
   }catch(e){}
   var products=rows.map(function(r){
-    return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5]),inner:r[6]!==""&&r[6]!=null?r[6]:"",scheme:String(r[7]||"").trim(),alt:String(r[8]||"").trim(),warranty:String(r[9]||"").trim()};
+    return {cat:String(r[0]).trim()||"Other",name:String(r[1]).trim(),box:r[2]!==""&&r[2]!=null?r[2]:"",stock:inStock(r[3]),fast:truthy(r[4]),new:truthy(r[5]),inner:r[6]!==""&&r[6]!=null?r[6]:"",scheme:String(r[7]||"").trim(),alt:String(r[8]||"").trim(),warranty:String(r[9]||"").trim(),img:String(r[10]||"").trim()};
   });
   products.forEach(function(p){p.catKey=slug(p.cat); PROD_CAT[p.name]=p.cat;});
 
@@ -1900,6 +1917,19 @@ function boot(){
     if(btn) btn.classList.toggle("show",window.scrollY>400);
   });
 }
+// ===== PRODUCT IMAGE POPUP =====
+function showProductImage(name, imgSrc){
+  document.getElementById("prodImgTitle").textContent = name;
+  document.getElementById("prodImgEl").src = imgSrc;
+  document.getElementById("prodImgOvl").classList.add("show");
+  document.body.style.overflow = "hidden";
+}
+function closeProdImg(){
+  document.getElementById("prodImgOvl").classList.remove("show");
+  document.getElementById("prodImgEl").src = "";
+  document.body.style.overflow = "";
+}
+
 // ===== IMAGE GALLERY =====
 function openGallery(title, folderUrl){
   // Convert Drive folder URL to embedded grid view
@@ -1920,6 +1950,19 @@ function closeGallery(){
 boot();
 </script>
 <button class="bttbtn" id="bttBtn" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8679; Top</button>
+
+<!-- ===== PRODUCT IMAGE POPUP ===== -->
+<div class="ovl" id="prodImgOvl" onclick="if(event.target===this)closeProdImg()">
+  <div class="prod-img-modal">
+    <div class="prod-img-hdr">
+      <span id="prodImgTitle"></span>
+      <button onclick="closeProdImg()">✕</button>
+    </div>
+    <div class="prod-img-body">
+      <img id="prodImgEl" src="" alt="">
+    </div>
+  </div>
+</div>
 
 <!-- ===== IMAGE GALLERY MODAL ===== -->
 <div class="ovl" id="imgGalleryOvl" onclick="if(event.target===this)closeGallery()">
