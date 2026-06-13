@@ -158,7 +158,7 @@ function mapProductImages() {
         var imgFile = selected[f];
         // Make each file publicly accessible (no Google login needed)
         try { imgFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
-        urls.push("https://lh3.googleusercontent.com/d/" + imgFile.getId() + "=w800");
+        urls.push("https://drive.google.com/thumbnail?id=" + imgFile.getId() + "&sz=w800");
       }
 
       if (urls.length > 0) {

@@ -893,16 +893,16 @@ var DEMO_IMAGES = {
   "twsairmute":     "1Tl9KdbH5AowEKLFyptPlaqw6ezBOHhp1",
 };
 
-// Convert any Drive share/view/thumbnail URL to a public-friendly image src
+// Convert any Drive URL to a thumbnail URL — extracts file ID and uses thumbnail endpoint
 function driveThumb(url){
   if(!url) return '';
-  // Already a lh3 URL — use as-is
-  if(url.indexOf('lh3.googleusercontent.com')!==-1) return url;
-  // Extract file ID from any Drive URL format
-  var m=url.match(/\/d\/([a-zA-Z0-9_-]{25,})/)||url.match(/[?&]id=([a-zA-Z0-9_-]{25,})/)||url.match(/^([a-zA-Z0-9_-]{25,})$/);
+  // Extract file ID from any Drive URL format (thumbnail, share, lh3, or raw ID)
+  var m=url.match(/\/d\/([a-zA-Z0-9_-]{25,})/)||
+        url.match(/[?&]id=([a-zA-Z0-9_-]{25,})/)||
+        url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]{25,})/)||
+        url.match(/^([a-zA-Z0-9_-]{25,})$/);
   if(!m) return '';
-  // Use lh3 format — works without Google login for publicly shared files
-  return 'https://lh3.googleusercontent.com/d/'+m[1]+'=w400';
+  return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w800';
 }
 
 function chipHtml(p){
