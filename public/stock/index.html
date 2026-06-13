@@ -240,7 +240,17 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .fld label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
 .fld input{width:100%;border:1.5px solid var(--border);border-radius:9px;padding:11px 13px;font-family:inherit;font-size:14px;outline:none}
 .fld input:focus{border-color:var(--red)}
-.mbtn{width:100%;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer;margin-top:6px}
+.mbtn{width:100%;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;padding:15px;border-radius:12px;cursor:pointer;margin-top:8px;letter-spacing:.2px;transition:background .15s,transform .1s}
+.mbtn:active{transform:scale(.98);background:var(--maroon)}
+/* Onboarding branded header */
+.ob-hdr{margin:-24px -20px 20px;border-radius:20px 20px 0 0;background:linear-gradient(135deg,var(--black) 0%,#2d1f20 100%);padding:24px 20px 20px;text-align:center;border-bottom:3px solid var(--red)}
+.ob-logo{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px}
+.ob-logo span{color:var(--red)}
+.ob-tag{font-size:11px;color:rgba(255,255,255,.5);margin-top:3px;letter-spacing:.5px;text-transform:uppercase}
+.ob-icon{font-size:32px;margin-bottom:8px}
+/* Better no-results */
+.nores{display:none;text-align:center;padding:60px 24px;color:var(--muted);font-size:14px}
+.nores b{display:block;font-size:18px;color:var(--text);margin-bottom:6px}
 .toast{
   position:fixed;bottom:100px;left:50%;
   transform:translateX(-50%) translateY(16px);
@@ -511,7 +521,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
       <div class="myord-arrow">&#8250;</div>
     </div>
   </div>
-  <div class="nores" id="nores">No products found.</div>
+  <div class="nores" id="nores"><b>🔍 No results</b>Try a different product name or browse by category above.</div>
   <div class="loadbox" id="loadbox">
     <div class="skel skel-hdr"></div>
     <div class="skel skel-row"></div>
@@ -525,7 +535,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
     <div class="skel skel-row"></div>
     <div class="skel skel-row"></div>
   </div>
-  <div id="sections"></div>
+  <div id="sections" style="padding-bottom:100px"></div>
 </div>
 
 <div id="bbar">
@@ -549,11 +559,16 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 
 <div class="ovl" id="nameOvl">
   <div class="modal">
-    <h2 id="t-welcomeTitle">Welcome to Robotek</h2>
-    <p id="t-welcomeDesc">Quick intro so we know who's ordering. Saved on your device — you'll only do this once.</p>
+    <div class="ob-hdr">
+      <div class="ob-icon">📦</div>
+      <div class="ob-logo">ROBO<span>TEK</span></div>
+      <div class="ob-tag">Live Stock · Daily Updated</div>
+    </div>
+    <h2 id="t-welcomeTitle" style="font-size:16px;margin-bottom:3px">Tell us who's ordering</h2>
+    <p id="t-welcomeDesc" style="font-size:12px">Saved on your device — you'll only do this once.</p>
     <div class="fld"><label id="t-nameLbl">Your Name / Shop Name</label><input id="inName" type="text" placeholder="e.g. Sharma Mobile, Delhi"></div>
     <div class="fld"><label id="t-phoneLbl">WhatsApp Number (optional)</label><input id="inPhone" type="tel" inputmode="numeric" placeholder="10-digit number"></div>
-    <button class="mbtn" id="t-startBtn" onclick="saveName()">Start Browsing Stock →</button>
+    <button class="mbtn" id="t-startBtn" onclick="saveName()">Browse Live Stock →</button>
   </div>
 </div>
 
@@ -1269,7 +1284,8 @@ function tSec(hdr){
 }
 function fC(cat,el){
   var tabs=document.querySelectorAll(".tab");for(var i=0;i<tabs.length;i++){tabs[i].classList.remove("active");}
-  el.classList.add("active");try{el.scrollIntoView(false);}catch(e){}
+  el.classList.add("active");try{el.scrollIntoView({inline:"center",behavior:"smooth"});}catch(e){}
+  try{window.scrollTo({top:0,behavior:"smooth"});}catch(e){window.scrollTo(0,0);}
   document.getElementById("si").value="";
   var n=0,secs=document.querySelectorAll(".cs");
   if(cat==="fast"){

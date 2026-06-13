@@ -1,9 +1,9 @@
-/* Robotek Stock — service worker v12
+/* Robotek Stock — service worker v13
  * SELF-DESTRUCT: wipes all caches, unregisters itself, force-reloads all tabs.
  * This guarantees every device gets fresh HTML from the network,
  * even if the previously cached page had a JS crash.
  */
-var CACHE = "robotek-stock-v12";
+var CACHE = "robotek-stock-v13";
 
 self.addEventListener("install", function(e){
   self.skipWaiting();
