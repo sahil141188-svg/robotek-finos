@@ -81,15 +81,24 @@ function mapProductImages() {
       var prodKey    = prodFolder.getName().toLowerCase().trim();
       var urls       = [];
 
-      // Collect ALL JPEG + PNG files in this product folder
+      // Collect JPEG + PNG files — sort by filename so 1.jpg, 2.jpg, 3.jpg come first
+      var MAX_IMAGES = 3; // max images per product shown in carousel
       var allFiles = [];
       var jpgs = prodFolder.getFilesByType(MimeType.JPEG);
       while (jpgs.hasNext()) allFiles.push(jpgs.next());
       var pngs = prodFolder.getFilesByType(MimeType.PNG);
       while (pngs.hasNext()) allFiles.push(pngs.next());
 
-      for (var f = 0; f < allFiles.length; f++) {
-        var imgFile = allFiles[f];
+      // Sort alphabetically by filename — name files 1.jpg, 2.jpg, 3.jpg to control order
+      allFiles.sort(function(a, b) {
+        return a.getName().toLowerCase().localeCompare(b.getName().toLowerCase());
+      });
+
+      // Take only first MAX_IMAGES files
+      var selected = allFiles.slice(0, MAX_IMAGES);
+
+      for (var f = 0; f < selected.length; f++) {
+        var imgFile = selected[f];
         // Make each file publicly accessible (no Google login needed)
         try { imgFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
         urls.push("https://lh3.googleusercontent.com/d/" + imgFile.getId() + "=w800");
