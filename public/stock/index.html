@@ -302,33 +302,47 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .qrdl{width:100%;background:var(--red);color:#fff;border:none;font-family:inherit;font-size:14px;font-weight:700;padding:12px;border-radius:9px;cursor:pointer;margin-bottom:8px}
 .qrcl{width:100%;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;padding:11px;border-radius:9px;cursor:pointer}
 /* ── Order Review Sheet ── */
-.rev-ovl{position:fixed;inset:0;z-index:850;background:rgba(0,0,0,.65);display:none;flex-direction:column;justify-content:flex-end}
-.rev-ovl.show{display:flex}
-.rev-card{background:#fff;border-radius:22px 22px 0 0;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
-.rev-head{background:var(--black);padding:16px 18px;display:flex;align-items:center;gap:10px}
-.rev-htxt{font-size:16px;font-weight:700;color:#fff;flex:1}
-.rev-hcnt{background:var(--yellow);color:var(--black);font-size:12px;font-weight:800;padding:3px 10px;border-radius:10px;flex-shrink:0}
+/* Full-screen order review — slides in from right */
+.rev-ovl{position:fixed;inset:0;z-index:850;background:var(--bg);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1)}
+.rev-ovl.show{transform:translateX(0)}
+.rev-card{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.rev-head{background:var(--black);padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.rev-back-btn{background:rgba(255,255,255,.14);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rev-htxt{font-size:17px;font-weight:800;color:#fff;flex:1;letter-spacing:-.2px}
+.rev-hcnt{background:var(--red);color:#fff;font-size:12px;font-weight:800;padding:4px 12px;border-radius:20px;flex-shrink:0}
 .rev-list{flex:1;overflow-y:auto}
-.rev-item{display:flex;align-items:center;gap:9px;padding:11px 14px;border-bottom:1px solid var(--border)}
+/* Category group headers inside review */
+.rev-cat-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;background:var(--bg);position:sticky;top:0;z-index:2;border-bottom:1px solid var(--border)}
+.rev-cat-name{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.rev-cat-count{font-size:11px;font-weight:700;color:var(--red);background:rgba(229,45,49,.1);padding:2px 9px;border-radius:20px}
+.rev-item{display:flex;align-items:center;gap:10px;padding:13px 16px;background:#fff;border-bottom:1px solid var(--border)}
 .rev-info{flex:1;min-width:0}
-.rev-name{font-size:14px;font-weight:600;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rev-name{font-size:15px;font-weight:700;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rev-mode{font-size:11px;color:var(--muted);margin-top:2px}
 .rev-qw{display:flex;align-items:center;gap:4px;flex-shrink:0}
-.rev-qs{background:var(--bg);border:1.5px solid var(--border);color:var(--black);border-radius:7px;width:32px;height:32px;font-size:20px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0}
+.rev-qs{background:var(--bg);border:1.5px solid var(--border);color:var(--black);border-radius:8px;width:34px;height:34px;font-size:20px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0}
 .rev-qs:active{background:var(--red);color:#fff;border-color:var(--red)}
-.rev-qn{width:44px;border:1.5px solid var(--border);border-radius:7px;padding:5px 2px;font-size:16px;font-weight:700;text-align:center;font-family:inherit;color:var(--black);-moz-appearance:textfield;outline:none}
+.rev-qn{width:46px;border:1.5px solid var(--border);border-radius:8px;padding:5px 2px;font-size:16px;font-weight:700;text-align:center;font-family:inherit;color:var(--black);-moz-appearance:textfield;outline:none}
 .rev-qn::-webkit-outer-spin-button,.rev-qn::-webkit-inner-spin-button{-webkit-appearance:none}
-.rev-tot{font-size:12px;color:var(--green);font-weight:700;min-width:52px;text-align:right;flex-shrink:0}
-.rev-rm{background:none;border:none;color:#ccc;font-size:20px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0}
+.rev-tot{font-size:12px;color:var(--green);font-weight:700;min-width:58px;text-align:right;flex-shrink:0}
+.rev-rm{background:none;border:none;color:#d0cece;font-size:22px;cursor:pointer;padding:0 0 0 4px;line-height:1;flex-shrink:0}
 .rev-rm:active{color:var(--red)}
-.rev-enq-hdr{background:#fffbeb;padding:8px 16px;font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:.5px;border-top:1px solid #fde68a;border-bottom:1px solid #fde68a}
-.rev-enq-row{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #fde68a;background:#fffbeb;gap:9px}
-.rev-enq-nm{flex:1;font-size:13px;font-weight:600;color:#92400e}
+/* Enquiry section */
+.rev-enq-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;background:#fffbeb;position:sticky;top:0;z-index:2;border-top:2px solid #fde68a;border-bottom:1px solid #fde68a}
+.rev-enq-title{font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.8px}
+.rev-enq-row{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid #fde68a;background:#fffbeb;gap:10px}
+.rev-enq-nm{flex:1;font-size:14px;font-weight:600;color:#92400e}
 .rev-enq-lbl{font-size:11px;color:#b45309;flex-shrink:0}
-.rev-foot{padding:12px 14px 26px;background:#fff;border-top:2px solid var(--border)}
-.rev-send{width:100%;background:#25D366;color:#fff;border:none;font-family:inherit;font-size:15px;font-weight:700;padding:14px;border-radius:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
+/* Note + footer */
+.rev-note{padding:12px 16px;background:var(--bg);border-top:1px solid var(--border);flex-shrink:0}
+.rev-note textarea{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;font-family:inherit;font-size:13px;color:var(--text);resize:none;outline:none;background:#fff;box-sizing:border-box}
+.rev-note textarea:focus{border-color:var(--red)}
+.rev-foot{padding:14px 16px 32px;background:#fff;border-top:2px solid var(--border);flex-shrink:0}
+.rev-summary{font-size:13px;color:var(--muted);text-align:center;margin-bottom:12px;font-weight:500}
+.rev-summary b{color:var(--black)}
+.rev-send{width:100%;background:#25D366;color:#fff;border:none;font-family:inherit;font-size:16px;font-weight:800;padding:16px;border-radius:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px}
 .rev-send:active{opacity:.85}
-.rev-back{width:100%;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;padding:11px;border-radius:10px;cursor:pointer}
+.rev-cancel{width:100%;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;padding:12px;border-radius:11px;cursor:pointer}
 /* ── Previous Orders Sheet ── */
 .pord-ovl{position:fixed;inset:0;z-index:850;background:rgba(0,0,0,.65);display:none;flex-direction:column;justify-content:flex-end}
 .pord-ovl.show{display:flex}
@@ -616,20 +630,22 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
   </div>
 </div>
 
-<!-- Order Review Sheet -->
+<!-- Order Review — Full Screen Page -->
 <div class="rev-ovl" id="revOvl">
   <div class="rev-card">
     <div class="rev-head">
-      <div class="rev-htxt" id="t-revTitle">Review Your Order</div>
+      <button class="rev-back-btn" onclick="closeReview()">&#8592;</button>
+      <div class="rev-htxt">Your Order</div>
       <span class="rev-hcnt" id="revCount">0 items</span>
     </div>
     <div class="rev-list" id="revList"></div>
-    <div style="padding:10px 14px 0">
-      <textarea id="orderNote" rows="2" placeholder="Add a note… e.g. Urgent dispatch, credit order" style="width:100%;border:1.5px solid var(--border);border-radius:9px;padding:10px 12px;font-family:inherit;font-size:13px;color:var(--text);resize:none;outline:none;background:var(--bg)" onclick="event.stopPropagation()"></textarea>
+    <div class="rev-note">
+      <textarea id="orderNote" rows="2" placeholder="Add a note… e.g. Urgent dispatch, credit order" onclick="event.stopPropagation()"></textarea>
     </div>
     <div class="rev-foot">
+      <div class="rev-summary" id="revSummary"></div>
       <button class="rev-send" onclick="confirmAndSend()">&#128172; Confirm &amp; Send on WhatsApp</button>
-      <button class="rev-back" onclick="closeReview()">&#8592; Edit Order</button>
+      <button class="rev-cancel" onclick="closeReview()">&#8592; Continue Browsing</button>
     </div>
   </div>
 </div>
@@ -2070,40 +2086,60 @@ function showReview(){
   var sel=document.querySelectorAll(".chip.sel");
   var enq=document.querySelectorAll(".chip.oos.enq-sel");
   if(!sel.length&&!enq.length) return;
-  var html="";
+
+  // Group selected items by category
+  var catOrder=[],catItems={};
   for(var i=0;i<sel.length;i++){
     var chip=sel[i];
     var nm=chip.getAttribute("data-name")||"";
-    var mode=chip.dataset.mode||"box";
-    var oq=parseInt(chip.dataset.oq,10)||1;
-    var bx=parseFloat(chip.getAttribute("data-bx"))||0;
-    var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
-    var modeLabel=mode==="box"?"Box":mode==="pcs"?"Inner Box":"Loose Pcs";
-    var total="";
-    if(mode==="box"&&bx) total="= "+(oq*bx)+" pcs";
-    else if(mode==="pcs"&&inrNum) total="= "+(oq*inrNum)+" pcs";
-    html+='<div class="rev-item" data-chip-name="'+esc(nm)+'">'
-      +'<div class="rev-info"><div class="rev-name">'+esc(nm)+'</div><div class="rev-mode">'+modeLabel+'</div></div>'
-      +'<div class="rev-qw">'
-        +'<button class="rev-qs" onclick="revStep(this,-1)">&#8722;</button>'
-        +'<input class="rev-qn" type="number" inputmode="numeric" min="1" value="'+oq+'" oninput="revSync(this)">'
-        +'<button class="rev-qs" onclick="revStep(this,1)">+</button>'
-      +'</div>'
-      +'<div class="rev-tot">'+total+'</div>'
-      +'<button class="rev-rm" data-n="'+esc(nm)+'" onclick="revRemove(this)">&#10005;</button>'
-      +'</div>';
+    var cat=PROD_CAT[nm]||"Other";
+    if(!catItems[cat]){catItems[cat]=[];catOrder.push(cat);}
+    catItems[cat].push(chip);
   }
+
+  var html="";
+  catOrder.forEach(function(cat){
+    var items=catItems[cat];
+    html+='<div class="rev-cat-hdr"><span class="rev-cat-name">'+esc(cat)+'</span><span class="rev-cat-count">'+items.length+'</span></div>';
+    items.forEach(function(chip){
+      var nm=chip.getAttribute("data-name")||"";
+      var mode=chip.dataset.mode||"box";
+      var oq=parseInt(chip.dataset.oq,10)||1;
+      var bx=parseFloat(chip.getAttribute("data-bx"))||0;
+      var inrNum=parseFloat(chip.getAttribute("data-in"))||0;
+      var modeLabel=mode==="box"?"Box":mode==="pcs"?"Inner Box":"Loose Pcs";
+      var total="";
+      if(mode==="box"&&bx) total="= "+(oq*bx)+" pcs";
+      else if(mode==="pcs"&&inrNum) total="= "+(oq*inrNum)+" pcs";
+      html+='<div class="rev-item" data-chip-name="'+esc(nm)+'">'
+        +'<div class="rev-info"><div class="rev-name">'+esc(nm)+'</div><div class="rev-mode">'+modeLabel+'</div></div>'
+        +'<div class="rev-qw">'
+          +'<button class="rev-qs" onclick="revStep(this,-1)">&#8722;</button>'
+          +'<input class="rev-qn" type="number" inputmode="numeric" min="1" value="'+oq+'" oninput="revSync(this)">'
+          +'<button class="rev-qs" onclick="revStep(this,1)">+</button>'
+        +'</div>'
+        +'<div class="rev-tot">'+total+'</div>'
+        +'<button class="rev-rm" data-n="'+esc(nm)+'" onclick="revRemove(this)">&#10005;</button>'
+        +'</div>';
+    });
+  });
+
   if(enq.length){
-    html+='<div class="rev-enq-hdr">&#128233; Enquiry (Out of Stock)</div>';
+    html+='<div class="rev-enq-hdr"><span class="rev-enq-title">&#128233; Enquiries</span><span class="rev-cat-count">'+enq.length+'</span></div>';
     for(var j=0;j<enq.length;j++){
       var enm=enq[j].getAttribute("data-name")||"";
       html+='<div class="rev-enq-row"><span class="rev-enq-nm">'+esc(enm)+'</span><span class="rev-enq-lbl">Out of Stock</span><button class="rev-rm" data-n="'+esc(enm)+'" onclick="revRemoveEnq(this)">&#10005;</button></div>';
     }
   }
+
   var tot=sel.length+enq.length;
   document.getElementById("revCount").textContent=tot+(tot===1?" item":" items");
+  var sumParts="<b>"+sel.length+" item"+(sel.length!==1?"s":"")+"</b> across <b>"+catOrder.length+" categor"+(catOrder.length===1?"y":"ies")+"</b>";
+  if(enq.length) sumParts+=" &nbsp;+&nbsp; <b>"+enq.length+" enquir"+(enq.length===1?"y":"ies")+"</b>";
+  document.getElementById("revSummary").innerHTML=sumParts;
   document.getElementById("revList").innerHTML=html;
   document.getElementById("revOvl").classList.add("show");
+  document.getElementById("revList").scrollTop=0;
 }
 function revGetChip(name){
   var chips=document.querySelectorAll(".chip");
