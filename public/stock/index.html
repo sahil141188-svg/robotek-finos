@@ -28,13 +28,13 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .spill{background:var(--black);color:var(--yellow);border-radius:8px;padding:7px 13px;text-align:right}
 .spnum{font-size:20px;font-weight:700;line-height:1}
 .splbl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#888}
-.hmeta{background:var(--black);border-top:none;padding:8px 16px;display:flex;justify-content:space-between;align-items:center;font-size:12px;color:rgba(255,255,255,.5)}
+.hmeta{background:var(--bg);border-top:1px solid var(--border);padding:6px 16px;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted)}
 .hmeta .live{color:var(--green)}
 .hmeta .live::before{background:var(--green)}
-.live{display:inline-flex;align-items:center;gap:5px;color:var(--green);font-weight:500}
+.live{display:inline-flex;align-items:center;gap:5px;color:var(--green);font-weight:600}
 .live::before{content:"";width:6px;height:6px;background:var(--green);border-radius:50%;animation:blnk 1.8s infinite}
 @keyframes blnk{0%,100%{opacity:1}50%{opacity:.25}}
-.hmeta .who{color:var(--yellow);font-weight:700;cursor:pointer}
+.hmeta .who{color:var(--red);font-weight:700;cursor:pointer}
 .spill{display:none}
 .spnum{font-size:18px;font-weight:800;color:var(--yellow);line-height:1}
 .splbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.4)}
