@@ -28,13 +28,15 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
 .spill{background:var(--black);color:var(--yellow);border-radius:8px;padding:7px 13px;text-align:right}
 .spnum{font-size:20px;font-weight:700;line-height:1}
 .splbl{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#888}
-.hmeta{background:var(--bg);border-top:1px solid var(--border);padding:6px 16px;display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--muted)}
+.hmeta{display:none}
 .hmeta .live{color:var(--green)}
 .hmeta .live::before{background:var(--green)}
 .live{display:inline-flex;align-items:center;gap:5px;color:var(--green);font-weight:600}
 .live::before{content:"";width:6px;height:6px;background:var(--green);border-radius:50%;animation:blnk 1.8s infinite}
 @keyframes blnk{0%,100%{opacity:1}50%{opacity:.25}}
 .hmeta .who{color:var(--red);font-weight:700;cursor:pointer}
+.who-hdr{font-size:12px;font-weight:700;color:var(--red);margin-top:4px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.who-hdr::before{content:"👤";font-size:11px}
 .spill{display:none}
 .spnum{font-size:18px;font-weight:800;color:var(--yellow);line-height:1}
 .splbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.4)}
@@ -457,6 +459,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
     <div>
       <div class="bname">ROBO<em>TEK</em></div>
       <div class="bline"><span id="t-tagline">Name of Confidence</span> &nbsp;&middot;&nbsp; <span id="t-since">Since 2004</span></div>
+      <div class="who-hdr" id="whoLbl" onclick="openName()">Set name</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px">
       <div class="ltog">
@@ -467,6 +470,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
         🛒<span class="cart-count" id="cartCount">0</span>
       </button>
       <div class="spill"><div class="spnum" id="stockNum">—</div><div class="splbl" id="t-instock">IN STOCK</div></div>
+      <button class="qrbtn" onclick="openQR()" title="Share QR">📲</button>
       <button id="installBtn" onclick="doInstall()">⤓ Install</button>
     </div>
   </div>
@@ -512,7 +516,7 @@ body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;backgr
   <div class="stats" id="stats" style="display:none">
     <div class="stbox"><div class="stnum" id="stProducts">0</div><div class="stlbl" id="t-products">Products</div></div>
     <div class="stbox"><div class="stnum" id="stCats">0</div><div class="stlbl" id="t-categories">Categories</div></div>
-    <div class="stbox"><div class="stnum" style="color:var(--green)">Live</div><div class="stlbl" id="stDate">Today</div></div>
+    <div class="stbox"><div class="stnum" style="color:var(--green)" id="stLive">0</div><div class="stlbl">Live Today</div></div>
   </div>
   <!-- My Orders banner — shown after first order placed -->
   <div class="myord-bar" id="myOrdBar" onclick="showPrevOrders()">
@@ -1136,6 +1140,7 @@ function render(rows, isSample){
   document.getElementById("stockNum").textContent=inStockCount;
   document.getElementById("stProducts").textContent=TOT;
   document.getElementById("stCats").textContent=order.length;
+  document.getElementById("stLive").textContent=inStockCount;
   var d=new Date();var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var ds=d.getDate()+" "+mo[d.getMonth()]+" "+d.getFullYear();
   document.getElementById("stDate").textContent=ds;
