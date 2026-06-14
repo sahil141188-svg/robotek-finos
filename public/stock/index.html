@@ -1143,7 +1143,7 @@ function render(rows, isSample){
   document.getElementById("stLive").textContent=inStockCount;
   var d=new Date();var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   var ds=d.getDate()+" "+mo[d.getMonth()]+" "+d.getFullYear();
-  document.getElementById("stDate").textContent=ds;
+  var sd=document.getElementById("stDate");if(sd)sd.textContent=ds;
   document.getElementById("metaRight").textContent=TOT+" products · "+inStockCount+" live · "+order.length+" cat"+(isSample?" · SAMPLE":"");
   document.getElementById("sinf").style.display="none";
   document.getElementById("loadbox").style.display="none";
