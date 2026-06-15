@@ -2189,7 +2189,7 @@ function showReview(){
   document.getElementById("piTotItems").textContent=selNames.length+" item"+(selNames.length===1?"":"s");
   document.getElementById("piTotBoxes").textContent=totalBoxes>0?totalBoxes+" boxes":"";
   document.getElementById("piTotPcs").textContent=totalPcs>0?totalPcs+" pcs":"";
-  document.getElementById("piTotalRow").style.display=sel.length>0?"flex":"none";
+  document.getElementById("piTotalRow").style.display=selNames.length>0?"flex":"none";
 
   document.getElementById("revList").innerHTML=html;
   document.getElementById("revOvl").classList.add("show");
