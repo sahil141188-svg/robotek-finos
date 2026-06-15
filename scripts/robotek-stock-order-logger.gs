@@ -284,10 +284,11 @@ function formatSheet(sheetName) {
     if (!cust || String(cust).trim() === '') continue; // skip blank rows
     var groupKey = String(cust).trim() + '|' + String(orderId).trim();
     if (groupKey !== curGroupKey) {
-      curGroup = { customer: String(cust).trim(), orderId: String(orderId).trim(), startRow: i + 2, count: 0 };
+      curGroup = { customer: String(cust).trim(), orderId: String(orderId).trim(), startRow: i + 2, lastRow: i + 2, count: 0 };
       groups.push(curGroup);
       curGroupKey = groupKey;
     }
+    curGroup.lastRow = i + 2; // track actual last sheet row, handles blank rows within group
     curGroup.count++;
   }
 
@@ -311,11 +312,12 @@ function formatSheet(sheetName) {
   // Insert TOTAL rows bottom to top
   for (var g = groups.length - 1; g >= 0; g--) {
     var info      = groups[g];
-    var insertAt  = info.startRow + info.count;
+    var insertAt  = info.lastRow + 1; // insert immediately after the actual last row of this group
     var isRepeat  = info.occurrence > 1; // 2nd, 3rd... order from same customer same day
     sheet.insertRowBefore(insertAt);
 
-    var qtyVals  = sheet.getRange(info.startRow, COL_QTY, info.count, 1).getValues();
+    var spanRows = info.lastRow - info.startRow + 1;
+    var qtyVals  = sheet.getRange(info.startRow, COL_QTY, spanRows, 1).getValues();
     var totalQty = 0;
     for (var k = 0; k < qtyVals.length; k++) {
       if (typeof qtyVals[k][0] === 'number') totalQty += qtyVals[k][0];
