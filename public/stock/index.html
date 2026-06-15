@@ -1359,8 +1359,16 @@ function sA(ev,sec){
   var chips=sec.querySelectorAll(".chip:not(.oos)");var allSel=true;
   for(var i=0;i<chips.length;i++){if(!chips[i].classList.contains("sel"))allSel=false;}
   for(var i=0;i<chips.length;i++){
-    if(!allSel){chips[i].classList.add("sel");resetChip(chips[i]);}
-    else{chips[i].classList.remove("sel");}
+    var sanm=chips[i].getAttribute("data-name")||"";
+    if(!allSel){
+      chips[i].classList.add("sel");resetChip(chips[i]);
+      var saca=chips[i].querySelector(".chip-add");if(saca)saca.textContent="✓";
+      CART_MAP[sanm]={mode:chips[i].dataset.mode||"box",oq:parseInt(chips[i].dataset.oq,10)||1};
+    }else{
+      chips[i].classList.remove("sel");
+      var saca2=chips[i].querySelector(".chip-add");if(saca2)saca2.textContent="+";
+      delete CART_MAP[sanm];
+    }
   }
   uB();
 }
@@ -2022,7 +2030,10 @@ function notifyUserOwnEnquiry(restockedNames){
       var chips=document.querySelectorAll(".chip:not(.oos)");
       for(var i=0;i<chips.length;i++){
         if(chips[i].getAttribute("data-name")===nm&&!chips[i].classList.contains("sel")){
-          chips[i].classList.add("sel"); resetChip(chips[i]); added++; break;
+          chips[i].classList.add("sel"); resetChip(chips[i]);
+          var rca=chips[i].querySelector(".chip-add");if(rca)rca.textContent="✓";
+          CART_MAP[nm]={mode:chips[i].dataset.mode||"box",oq:parseInt(chips[i].dataset.oq,10)||1};
+          added++; break;
         }
       }
     });
@@ -2220,6 +2231,7 @@ function revSync(inp){
   inp.value=oq;
   var chip=revGetChip(nm);
   if(chip){chip.dataset.oq=String(oq);updateQlbl(chip);}
+  if(CART_MAP[nm])CART_MAP[nm].oq=oq;
   var totEl=row.querySelector(".rev-tot");
   if(totEl&&chip){
     var mode=chip.dataset.mode||"box";
@@ -2380,6 +2392,8 @@ function reorder(idx){
           for(var k=0;k<ms.length;k++) ms[k].classList.toggle("on",ms[k].getAttribute("data-role")===(it.mode||"box"));
           var inp=chips[i].querySelector(".qnum");if(inp) inp.value=it.boxes||1;
           updateQlbl(chips[i]);
+          var rca=chips[i].querySelector(".chip-add");if(rca)rca.textContent="✓";
+          CART_MAP[it.name]={mode:it.mode||"box",oq:it.boxes||1};
         }
         found++; return;
       }
