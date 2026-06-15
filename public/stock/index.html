@@ -21,11 +21,12 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;touch-action:pan-y}
 /* ── Performance: GPU compositing + touch response ── */
-button,.chip,.tab,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back-btn,.rev-cancel,.rev-send,.mbtn,.bcl,.bwa,.ann-ok,.ann-skip{touch-action:manipulation}
+button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back-btn,.rev-cancel,.rev-send,.mbtn,.bcl,.bwa,.ann-ok,.ann-skip{touch-action:manipulation}
 .rev-ovl{pointer-events:none;will-change:transform}
 .rev-ovl.show{pointer-events:auto}
 .rev-list{-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;touch-action:pan-y}
-.tabsw{-webkit-overflow-scrolling:touch}
+.tabsw{-webkit-overflow-scrolling:touch;touch-action:pan-x}
+.tab{touch-action:manipulation}
 .pord-body{-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 .gallery-body{overscroll-behavior-y:contain}
 #floatCart{will-change:transform}
@@ -375,14 +376,14 @@ button,.chip,.tab,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev
 .rev-send{width:100%;background:#25D366;color:#fff;border:none;font-family:inherit;font-size:16px;font-weight:800;padding:15px;border-radius:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:9px;margin-bottom:10px}
 .rev-send:active{opacity:.85}
 .rev-cancel{width:100%;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);font-family:inherit;font-size:13px;font-weight:600;padding:12px;border-radius:11px;cursor:pointer}
-/* ── Previous Orders Sheet ── */
-.pord-ovl{position:fixed;inset:0;z-index:850;background:rgba(0,0,0,.65);display:none;flex-direction:column;justify-content:flex-end}
-.pord-ovl.show{display:flex}
-.pord-card{background:#fff;border-radius:22px 22px 0 0;max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
-.pord-head{background:var(--black);padding:16px 18px;display:flex;align-items:center;gap:10px}
+/* ── Previous Orders Full-Screen Page ── */
+.pord-ovl{position:fixed;inset:0;z-index:850;background:#fff;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s var(--ease);pointer-events:none;will-change:transform}
+.pord-ovl.show{transform:translateX(0);pointer-events:auto}
+.pord-card{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.pord-head{background:var(--black);padding:16px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0}
 .pord-htxt{font-size:16px;font-weight:700;color:#fff;flex:1}
-.pord-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer;line-height:1;padding:0}
-.pord-body{flex:1;overflow-y:auto}
+.pord-close{background:none;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;touch-action:manipulation}
+.pord-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 .pord-empty{padding:44px 20px;text-align:center;color:var(--muted);font-size:14px;line-height:1.7}
 .pord-order{border-bottom:2px solid var(--border)}
 .pord-oh{display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;background:#fff;-webkit-tap-highlight-color:transparent}
@@ -700,16 +701,15 @@ button,.chip,.tab,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev
   </div>
 </div>
 
-<!-- Previous Orders Sheet -->
+<!-- Previous Orders Full-Screen Page -->
 <div class="pord-ovl" id="pordOvl">
   <div class="pord-card">
-    <div class="pord-head" style="background:var(--black);padding:16px 18px;display:flex;align-items:center;gap:10px">
-      <div style="font-size:22px">&#128203;</div>
+    <div class="pord-head">
+      <button class="rev-back-btn" onclick="closePrevOrders()">&#8592;</button>
       <div style="flex:1">
-        <div style="font-size:16px;font-weight:700;color:var(--yellow)">My Orders</div>
+        <div style="font-size:16px;font-weight:700;color:var(--yellow)">&#128203; My Orders</div>
         <div style="font-size:11px;color:#888;margin-top:2px">Last 5 orders &middot; Tap to reorder</div>
       </div>
-      <button class="pord-close" onclick="closePrevOrders()">&#10005;</button>
     </div>
     <div class="pord-body" id="pordBody" style="padding:12px 12px 24px"></div>
   </div>
@@ -2184,9 +2184,9 @@ function showReview(){
   document.getElementById("piDate").textContent=d.getDate()+" "+mo[d.getMonth()]+" "+d.getFullYear();
 
   // Grand total row
-  var tot=sel.length+enq.length;
+  var tot=selNames.length+enqNames.length;
   document.getElementById("revCount").textContent=tot+" item"+(tot===1?"":"s");
-  document.getElementById("piTotItems").textContent=sel.length+" item"+(sel.length===1?"":"s");
+  document.getElementById("piTotItems").textContent=selNames.length+" item"+(selNames.length===1?"":"s");
   document.getElementById("piTotBoxes").textContent=totalBoxes>0?totalBoxes+" boxes":"";
   document.getElementById("piTotPcs").textContent=totalPcs>0?totalPcs+" pcs":"";
   document.getElementById("piTotalRow").style.display=sel.length>0?"flex":"none";
