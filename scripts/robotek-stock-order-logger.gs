@@ -263,10 +263,15 @@ function formatSheet(sheetName) {
        .setFontWeight('normal').setFontSize(10);
 
   // Remove old TOTAL / NEW ORDER rows (bottom to top)
+  // Safety: only delete rows where col B (Order ID) is blank — real orders always have "ORD-..." in col B
   var allC = sheet.getRange(2, COL_CUSTOMER, lastRow - 1, 1).getValues();
+  var allB = sheet.getRange(2, 2, lastRow - 1, 1).getValues(); // col B = Order ID
   for (var r = allC.length - 1; r >= 0; r--) {
-    var v = allC[r][0];
-    if (typeof v === 'string' && (v.indexOf('TOTAL') !== -1 || v.indexOf('NEW ORDER') !== -1)) {
+    var v       = allC[r][0];
+    var orderId = String(allB[r][0] || '').trim();
+    var looksLikeTotal = typeof v === 'string' && (v.indexOf('TOTAL') !== -1 || v.indexOf('NEW ORDER') !== -1);
+    var noOrderId = orderId === '' || orderId === null;
+    if (looksLikeTotal && noOrderId) {
       sheet.deleteRow(r + 2);
     }
   }
