@@ -1037,8 +1037,14 @@ function loadStock(){
         var annMsg=String(cell(1)||"").trim();
         var annDate=String(cell(2)||"").trim();
         if(annMsg){
+          // Auto-expire announcements older than 7 days
+          var annExpired=false;
+          if(annDate){
+            var annTs=new Date(annDate).getTime();
+            if(!isNaN(annTs) && (Date.now()-annTs)>7*24*60*60*1000) annExpired=true;
+          }
           var dismissed=localStorage.getItem("rb_ann_dismissed");
-          if(dismissed!==annMsg){
+          if(!annExpired && dismissed!==annMsg){
             _annMsg=annMsg; _annDate=annDate;
             document.getElementById("annMsg").textContent=annMsg;
             document.getElementById("annDate").textContent=annDate;
@@ -1957,8 +1963,14 @@ function loadAnnouncement(){
         var activeCell=c[3]&&c[3].v?String(c[3].v).trim().toLowerCase():"yes";
         if(msgEn&&(activeCell==="yes"||activeCell==="y")){
           _annMsg=msgEn; _annMsgHi=msgHi||msgEn; _annDate=date;
+          // Auto-expire announcements older than 7 days
+          var annExpired2=false;
+          if(date){
+            var annTs2=new Date(date).getTime();
+            if(!isNaN(annTs2)&&(Date.now()-annTs2)>7*24*60*60*1000) annExpired2=true;
+          }
           var dismissed=localStorage.getItem("rb_ann_dismissed");
-          if(isAdmin||dismissed!==msgEn){
+          if(isAdmin||(dismissed!==msgEn&&!annExpired2)){
             showAnnModal();
           }
           break;
