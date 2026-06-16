@@ -16,6 +16,7 @@ import {
   Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
   Briefcase, GitBranch, UserPlus, ListChecks, Sparkles, BarChart3, Package, Mail, CalendarDays,
   ChevronDown, ChevronRight, Coins, ClipboardCheck, Database as DatabaseIcon, CalendarClock, Trophy,
+  Tag,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -122,9 +123,10 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Data",
     icon:  DatabaseIcon,
     items: [
-      { href: "/dashboard/import",   label: "Import Data",   icon: Upload,     permKey: "import_data" },
-      { href: "/dashboard/imports",  label: "Imported Data", icon: FolderOpen, permKey: "import_data" },
-      { href: "/dashboard/contacts", label: "Contacts",       icon: Users,      permKey: "view_dashboard" },
+      { href: "/dashboard/import",      label: "Import Data",   icon: Upload,     permKey: "import_data" },
+      { href: "/dashboard/imports",     label: "Imported Data", icon: FolderOpen, permKey: "import_data" },
+      { href: "/dashboard/contacts",    label: "Contacts",      icon: Users,      permKey: "view_dashboard" },
+      { href: "/dashboard/price-list",  label: "Price List",    icon: Tag,        permKey: null },
     ],
   },
 ];

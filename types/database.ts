@@ -26,6 +26,9 @@ export type CrmMeetingMode   = "physical" | "zoom" | "phone";
 export type CrmMeetingStatus = "scheduled" | "done" | "cancelled" | "no_show";
 export type CrmShareType     = "fsr" | "sales_expert" | "ss" | "other";
 
+/** Customer price tier — controls which column of the price list a user sees */
+export type PriceTier = "ss" | "dd" | "dealer";
+
 /** All granular module permissions — stored as JSONB on each user row */
 export type UserPermissions = {
   view_dashboard:  boolean;
@@ -58,6 +61,7 @@ export type Database = {
           notify_email: boolean;
           crm_department: CrmDepartment | null;
           crm_team_role: CrmTeamRole | null;
+          price_tier: PriceTier | null;
           created_at: string;
           updated_at: string;
         };
@@ -73,6 +77,7 @@ export type Database = {
           notify_email?: boolean;
           crm_department?: CrmDepartment | null;
           crm_team_role?: CrmTeamRole | null;
+          price_tier?: PriceTier | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -88,6 +93,7 @@ export type Database = {
           notify_email?: boolean;
           crm_department?: CrmDepartment | null;
           crm_team_role?: CrmTeamRole | null;
+          price_tier?: PriceTier | null;
           updated_at?: string;
         };
       };
