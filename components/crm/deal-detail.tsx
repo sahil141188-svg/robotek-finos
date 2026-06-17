@@ -4,13 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { setDealStage, setPriority } from "@/app/actions/crm-chatter";
-import { DEAL_STAGES, DEAL_STAGE_LABELS, DEPARTMENT_SHORT, ACTIVITY_TYPE_LABELS } from "@/lib/crm/types";
+import { DEAL_STAGES, DEAL_STAGE_LABELS, DEPARTMENT_SHORT, ACTIVITY_TYPE_LABELS, MAX_FOLLOWUPS } from "@/lib/crm/types";
 import { formatIndian } from "@/lib/format";
 import type { DealDetail } from "@/lib/crm/detail";
 import type { Database } from "@/types/database";
 import type { CrmDealStage } from "@/types/database";
 import { Chatter } from "./chatter";
-import { Trophy, XCircle, Building2, Calendar, User, Tag } from "lucide-react";
+import { Trophy, XCircle, Building2, Calendar, User, Tag, Phone } from "lucide-react";
 
 type LostReason = Database["public"]["Tables"]["crm_lost_reasons"]["Row"];
 
@@ -18,7 +18,7 @@ const PRIORITIES = ["COLD", "MEDIUM", "HOT"];
 const PRIORITY_COLORS: Record<string, string> = {
   HOT: "bg-red-100 text-red-700", MEDIUM: "bg-amber-100 text-amber-700", COLD: "bg-blue-100 text-blue-700",
 };
-const OPEN_STAGES: CrmDealStage[] = ["new", "qualified", "quoted", "negotiation"];
+const OPEN_STAGES: CrmDealStage[] = ["assigned", "follow_up"];
 
 function fmtDate(iso: string | null): string {
   if (!iso) return "—";
@@ -41,6 +41,10 @@ export function DealDetailView({ detail, lostReasons }: { detail: DealDetail; lo
 
   const isWon = deal.stage === "won";
   const isLost = deal.stage === "lost";
+  const followupCount = (deal as { followup_count?: number }).followup_count ?? 0;
+  const followupPct = Math.min((followupCount / MAX_FOLLOWUPS) * 100, 100);
+  const followupWarn = followupCount >= 25;
+  const followupMaxed = followupCount >= MAX_FOLLOWUPS;
 
   return (
     <div className="space-y-4">
@@ -50,7 +54,7 @@ export function DealDetailView({ detail, lostReasons }: { detail: DealDetail; lo
           <div className="flex items-center gap-1 flex-wrap">
             {OPEN_STAGES.map((s) => {
               const active = deal.stage === s;
-              const passed = OPEN_STAGES.indexOf(deal.stage) > OPEN_STAGES.indexOf(s);
+              const passed = OPEN_STAGES.indexOf(deal.stage as CrmDealStage) > OPEN_STAGES.indexOf(s);
               return (
                 <button key={s} onClick={() => move(s)} disabled={pending}
                   className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${active ? "bg-brand-red text-white" : passed ? "bg-emerald-50 text-emerald-700" : "bg-brand-gray-light text-brand-gray-mid hover:text-brand-black"}`}>
@@ -62,11 +66,11 @@ export function DealDetailView({ detail, lostReasons }: { detail: DealDetail; lo
           <div className="flex items-center gap-2">
             <button onClick={() => move("won")} disabled={pending || isWon}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${isWon ? "bg-emerald-600 text-white" : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"} disabled:opacity-60`}>
-              <Trophy className="w-3.5 h-3.5" /> Won
+              <Trophy className="w-3.5 h-3.5" /> Order Received (Won)
             </button>
             <button onClick={() => setLostOpen((v) => !v)} disabled={pending}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium ${isLost ? "bg-gray-600 text-white" : "border border-border text-brand-gray-mid hover:bg-brand-gray-light"}`}>
-              <XCircle className="w-3.5 h-3.5" /> Lost
+              <XCircle className="w-3.5 h-3.5" /> Lead Closed (Lost)
             </button>
           </div>
         </div>
@@ -85,6 +89,35 @@ export function DealDetailView({ detail, lostReasons }: { detail: DealDetail; lo
           </div>
         )}
       </div>
+
+      {/* Follow-up counter (30-cap tracker) */}
+      {!isWon && !isLost && (
+        <div className={`rounded-xl border p-4 ${followupMaxed ? "border-red-300 bg-red-50" : followupWarn ? "border-amber-300 bg-amber-50" : "border-border bg-white"}`}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="flex items-center gap-1.5 text-sm font-medium text-brand-black">
+              <Phone className="w-4 h-4" /> Follow-up Tracker
+            </span>
+            <span className={`text-sm font-bold tabular-nums ${followupMaxed ? "text-red-700" : followupWarn ? "text-amber-700" : "text-brand-black"}`}>
+              {followupCount} / {MAX_FOLLOWUPS}
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+            <div
+              className={`h-2 rounded-full transition-all ${followupMaxed ? "bg-red-500" : followupWarn ? "bg-amber-400" : "bg-emerald-500"}`}
+              style={{ width: `${followupPct}%` }}
+            />
+          </div>
+          {followupMaxed && (
+            <p className="mt-2 text-xs text-red-700 font-medium">30 follow-ups reached — mark as Won or Lost per the sales funnel.</p>
+          )}
+          {followupWarn && !followupMaxed && (
+            <p className="mt-2 text-xs text-amber-700">Approaching 30-follow-up limit. Close or escalate soon.</p>
+          )}
+          {!followupWarn && (
+            <p className="mt-2 text-xs text-brand-gray-mid">Each call or WhatsApp logged counts toward the 30-follow-up limit.</p>
+          )}
+        </div>
+      )}
 
       {/* Header + fields */}
       <div className="bg-white rounded-xl border border-border p-5">

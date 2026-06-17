@@ -74,19 +74,25 @@ export const ACCOUNT_STATUS_LABELS: Record<CrmAccountStatus, string> = {
 };
 
 export const LEAD_STATUS_LABELS: Record<CrmLeadStatus, string> = {
-  new:         "New",
-  contacted:   "Contacted",
-  qualified:   "Qualified",
-  unqualified: "Unqualified",
-  converted:   "Converted",
+  new:          "New",
+  contacted:    "Contacted",
+  docs_pending: "Docs Pending",
+  qualified:    "Qualified",
+  hold:         "On Hold",
+  rejected:     "Rejected",
+  unqualified:  "Unqualified",
+  converted:    "Converted",
 };
 
 export const LEAD_STATUS_COLORS: Record<CrmLeadStatus, string> = {
-  new:         "bg-blue-100 text-blue-700",
-  contacted:   "bg-amber-100 text-amber-700",
-  qualified:   "bg-emerald-100 text-emerald-700",
-  unqualified: "bg-gray-200 text-gray-600",
-  converted:   "bg-purple-100 text-purple-700",
+  new:          "bg-blue-100 text-blue-700",
+  contacted:    "bg-amber-100 text-amber-700",
+  docs_pending: "bg-orange-100 text-orange-700",
+  qualified:    "bg-emerald-100 text-emerald-700",
+  hold:         "bg-yellow-100 text-yellow-700",
+  rejected:     "bg-red-100 text-red-700",
+  unqualified:  "bg-gray-200 text-gray-600",
+  converted:    "bg-purple-100 text-purple-700",
 };
 
 export const ACTIVITY_TYPE_LABELS: Record<CrmActivityType, string> = {
@@ -107,22 +113,26 @@ export const DEAL_STAGES: {
   accent: string;
   terminal?: "won" | "lost";
 }[] = [
-  { key: "new",         label: "New",         accent: "border-t-blue-400" },
-  { key: "qualified",   label: "Qualified",   accent: "border-t-indigo-400" },
-  { key: "quoted",      label: "Quoted",      accent: "border-t-amber-400" },
-  { key: "negotiation", label: "Negotiation", accent: "border-t-orange-400" },
-  { key: "won",         label: "Won",         accent: "border-t-emerald-500", terminal: "won" },
-  { key: "lost",        label: "Lost",        accent: "border-t-gray-400", terminal: "lost" },
+  { key: "assigned",  label: "SC Assigned",  accent: "border-t-blue-400" },
+  { key: "follow_up", label: "Follow-up",    accent: "border-t-amber-400" },
+  { key: "won",       label: "Sale Closed (Won)",  accent: "border-t-emerald-500", terminal: "won" },
+  { key: "lost",      label: "Lead Closed (Lost)", accent: "border-t-gray-400",    terminal: "lost" },
 ];
 
 export const DEAL_STAGE_LABELS: Record<CrmDealStage, string> = {
-  new:         "New",
-  qualified:   "Qualified",
-  quoted:      "Quoted",
-  negotiation: "Negotiation",
+  assigned:    "SC Assigned",
+  follow_up:   "Follow-up",
   won:         "Won",
   lost:        "Lost",
+  // legacy — kept so old DB rows don't break
+  new:         "New (legacy)",
+  qualified:   "Qualified (legacy)",
+  quoted:      "Quoted (legacy)",
+  negotiation: "Negotiation (legacy)",
 };
+
+/** Max follow-ups per deal before flagging stale (per flowchart) */
+export const MAX_FOLLOWUPS = 30;
 
 /** Common lead/deal sources for Robotek's funnel */
 export const CRM_SOURCES = [

@@ -664,3 +664,91 @@ export async function completeAndScheduleNext(
   revalidatePath("/dashboard/sales-os");
   return { error: null };
 }
+
+/**
+ * Update the docs-collection checklist on a lead:
+ * shop photo received, visiting card received, GST number.
+ * Auto-advances status to 'docs_pending' if contacted and docs incomplete.
+ */
+export async function updateLeadDocs(
+  id: string,
+  docs: { shop_photo_ok: boolean; visiting_card_ok: boolean; gst_number: string }
+): Promise<Result> {
+  const uid = await currentUserId();
+  if (!uid) return { error: "Not authenticated" };
+  const supabase = (await createClient()) as any;
+
+  const { data: lead } = await supabase.from("crm_leads").select("status").eq("id", id).single();
+  const allDone = docs.shop_photo_ok && docs.visiting_card_ok && !!docs.gst_number.trim();
+
+  let status: CrmLeadStatus | undefined;
+  if (lead?.status === "contacted" && !allDone) status = "docs_pending";
+
+  const { error } = await supabase
+    .from("crm_leads")
+    .update({ ...docs, gst_number: docs.gst_number.trim() || null, ...(status ? { status } : {}) })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/dashboard/sales-os/leads");
+  return { error: null };
+}
+
+/**
+ * Transfer a qualified lead (with all docs) into the active sales funnel.
+ * Creates account + deal at stage 'assigned' and marks lead converted.
+ * Enforces: status=qualified, shop_photo_ok, visiting_card_ok, gst_number present.
+ */
+export async function transferToFunnel(id: string): Promise<Result> {
+  const uid = await currentUserId();
+  if (!uid) return { error: "Not authenticated" };
+  const supabase = (await createClient()) as any;
+
+  const { data: lead, error: leadErr } = await supabase.from("crm_leads").select("*").eq("id", id).single();
+  if (leadErr || !lead) return { error: leadErr?.message ?? "Lead not found" };
+  if (lead.converted_account_id) return { error: "Lead is already in the funnel" };
+  if (lead.status !== "qualified") return { error: "Lead must be Qualified before transferring to funnel" };
+  if (!lead.shop_photo_ok) return { error: "Shop photo not received yet" };
+  if (!lead.visiting_card_ok) return { error: "Visiting card not received yet" };
+  if (!lead.gst_number) return { error: "GST number is required before transferring" };
+
+  const { data: account, error: accErr } = await supabase
+    .from("crm_accounts")
+    .insert({
+      name: lead.company ?? lead.name,
+      department: "nbd",
+      status: "prospect",
+      owner_id: lead.assigned_to,
+      phone: lead.phone,
+      email: lead.email,
+      city: lead.city,
+      state: lead.state,
+      created_by: uid,
+    })
+    .select("id")
+    .single();
+  if (accErr || !account) return { error: accErr?.message ?? "Could not create account" };
+
+  await supabase.from("crm_deals").insert({
+    title: `${lead.company ?? lead.name} — opening deal`,
+    account_id: account.id,
+    department: "nbd",
+    stage: "assigned",
+    value: lead.est_value,
+    probability: 20,
+    owner_id: lead.assigned_to,
+    source: lead.source,
+    created_by: uid,
+  });
+
+  await supabase
+    .from("crm_leads")
+    .update({ status: "converted", converted_account_id: account.id, converted_at: new Date().toISOString() })
+    .eq("id", id);
+
+  revalidatePath("/dashboard/sales-os/leads");
+  revalidatePath("/dashboard/sales-os/accounts");
+  revalidatePath("/dashboard/sales-os/pipeline");
+  revalidatePath("/dashboard/sales-os");
+  return { error: null };
+}

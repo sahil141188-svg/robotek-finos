@@ -3,7 +3,7 @@
 import { useState, useTransition, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createLead, updateLeadStatus, convertLead, scheduleFollowup, startDrip, stopDrip, setLeadTags, distributeLeads } from "@/app/actions/crm";
+import { createLead, updateLeadStatus, transferToFunnel, scheduleFollowup, startDrip, stopDrip, setLeadTags, distributeLeads } from "@/app/actions/crm";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS, CRM_SOURCES } from "@/lib/crm/types";
 import { LEAD_TYPE_LABELS, DRIP_STATUS_LABELS, DRIP_STATUS_COLORS } from "@/lib/crm/drip";
 import { scoreLead, BAND_LABELS, BAND_COLORS } from "@/lib/crm/scoring";
@@ -20,7 +20,7 @@ const LEAD_PRIORITY_COLORS: Record<string, string> = {
   HOT: "bg-red-100 text-red-700", MEDIUM: "bg-amber-100 text-amber-700", COLD: "bg-blue-100 text-blue-700",
 };
 
-const STATUS_OPTIONS: CrmLeadStatus[] = ["new", "contacted", "qualified", "unqualified", "converted"];
+const STATUS_OPTIONS: CrmLeadStatus[] = ["new", "contacted", "docs_pending", "qualified", "hold", "rejected", "unqualified"];
 
 function fmtShort(iso: string): string {
   return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
@@ -72,9 +72,9 @@ export function LeadsClient({
     });
   }
 
-  function handleConvert(id: string) {
+  function handleTransfer(id: string) {
     start(async () => {
-      const r = await convertLead(id);
+      const r = await transferToFunnel(id);
       if (r.error) { setErr(r.error); return; }
       setErr(null);
       router.refresh();
@@ -277,14 +277,17 @@ export function LeadsClient({
                     <CalendarPlus className="w-3 h-3" />{fuLead === l.id ? "Cancel" : "Follow-up"}
                   </button>
                   {l.status === "converted" ? (
-                    <span className="text-xs text-purple-600">Converted</span>
+                    <span className="text-xs text-purple-600">In Funnel ✓</span>
+                  ) : l.status === "rejected" || l.status === "hold" ? (
+                    <span className="text-xs text-brand-gray-mid">{l.status === "hold" ? "On Hold" : "Rejected"}</span>
                   ) : (
                     <button
-                      onClick={() => handleConvert(l.id)}
-                      disabled={pending}
-                      className="inline-flex items-center gap-1 text-xs text-brand-red hover:underline disabled:opacity-60"
+                      onClick={() => handleTransfer(l.id)}
+                      disabled={pending || l.status !== "qualified" || !(l as { shop_photo_ok?: boolean }).shop_photo_ok || !(l as { visiting_card_ok?: boolean }).visiting_card_ok || !(l as { gst_number?: string | null }).gst_number}
+                      title={l.status !== "qualified" ? "Mark as Qualified first" : (!(l as { shop_photo_ok?: boolean }).shop_photo_ok || !(l as { visiting_card_ok?: boolean }).visiting_card_ok || !(l as { gst_number?: string | null }).gst_number) ? "Complete docs (shop photo, visiting card, GST) first" : "Transfer to Sales Funnel"}
+                      className="inline-flex items-center gap-1 text-xs text-brand-red hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
                     >
-                      Convert <ArrowRight className="w-3 h-3" />
+                      Transfer to Funnel <ArrowRight className="w-3 h-3" />
                     </button>
                   )}
                 </td>

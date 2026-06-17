@@ -48,12 +48,14 @@ export type SalesAnalytics = {
   overdueFollowups: number;
 };
 
-/** Stage → close probability for forecasting (deals rarely edit probability). */
+/** Stage → close probability for forecasting. */
 const STAGE_PROBABILITY: Record<CrmDealStage, number> = {
-  new: 0.1, qualified: 0.3, quoted: 0.5, negotiation: 0.7, won: 1, lost: 0,
+  assigned: 0.2, follow_up: 0.6, won: 1, lost: 0,
+  // legacy stages kept for backward-compat
+  new: 0.1, qualified: 0.3, quoted: 0.5, negotiation: 0.7,
 };
 
-const OPEN_STAGES = new Set<CrmDealStage>(["new", "qualified", "quoted", "negotiation"]);
+const OPEN_STAGES = new Set<CrmDealStage>(["assigned", "follow_up", "new", "qualified", "quoted", "negotiation"]);
 
 function pct(n: number, d: number): number {
   return d > 0 ? Math.round((n / d) * 100) : 0;
