@@ -529,37 +529,55 @@ function showCopySidebar(sheetName, partyName) {
 
   var html = HtmlService.createHtmlOutput(
     '<!DOCTYPE html><html><head><style>' +
-    'body{font-family:Arial,sans-serif;padding:14px;margin:0;font-size:13px}' +
-    'h3{color:#1565C0;margin:0 0 4px;font-size:15px;word-break:break-word}' +
-    '.sub{color:#666;font-size:11px;margin:0 0 12px}' +
+    'body{font-family:Arial,sans-serif;padding:16px;margin:0;font-size:13px;background:#fff}' +
+    'h3{color:#1F1B20;margin:0 0 2px;font-size:15px;word-break:break-word}' +
+    '.sub{color:#666;font-size:11px;margin:0 0 14px}' +
+    '.banner{background:#e8f5e9;border:2px solid #25D366;border-radius:8px;padding:12px;text-align:center;margin-bottom:12px}' +
+    '.banner .tick{font-size:28px;display:block;margin-bottom:4px}' +
+    '.banner .msg{color:#1b5e20;font-weight:bold;font-size:13px}' +
+    '.banner .sub2{color:#388e3c;font-size:11px;margin-top:2px}' +
     '.label{font-size:11px;font-weight:bold;color:#444;margin:10px 0 4px}' +
     'textarea{width:100%;font-size:12px;font-family:monospace;' +
     'border:2px solid #ddd;padding:6px;box-sizing:border-box;resize:none;background:#f8f9fa;border-radius:4px}' +
-    '#twa{height:220px;border-color:#25D366}' +
-    '#terp{height:120px;border-color:#1565C0}' +
+    '#twa{height:200px;border-color:#25D366}' +
+    '#terp{height:100px;border-color:#1565C0}' +
     '.btn{width:100%;color:#fff;border:none;padding:11px;' +
     'font-size:13px;font-weight:bold;border-radius:5px;cursor:pointer;margin-top:6px;display:block}' +
     '.btnwa{background:#25D366}.btnwa:hover{background:#1da851}' +
     '.btnerp{background:#1565C0}.btnerp:hover{background:#0d47a1}' +
-    '.ok{display:none;color:#2e7d32;font-weight:bold;text-align:center;' +
-    'margin-top:6px;padding:6px;background:#e8f5e9;border-radius:4px;font-size:12px}' +
     '</style></head><body>' +
     '<h3>' + partyEsc + '</h3>' +
     '<p class="sub"><b>' + items.length + ' items</b> &nbsp;·&nbsp; ' + totalQty + ' pcs total</p>' +
+    '<div class="banner" id="banner" style="display:none">' +
+    '<span class="tick">✅</span>' +
+    '<div class="msg">Copied to clipboard!</div>' +
+    '<div class="sub2">Go to WhatsApp and press Paste</div>' +
+    '</div>' +
     '<div class="label">📱 WhatsApp Format</div>' +
     '<textarea id="twa" readonly>' + waEsc + '</textarea>' +
-    '<button class="btn btnwa" onclick="doCopy(\'twa\',this,\'✅ Copied for WhatsApp! Now paste in chat\')">Copy for WhatsApp</button>' +
+    '<button class="btn btnwa" id="btnwa" onclick="doCopy(\'twa\',this)">📋 Copy for WhatsApp</button>' +
     '<div class="label">💼 ERP Format (Tab-separated)</div>' +
     '<textarea id="terp" readonly>' + erpEsc + '</textarea>' +
-    '<button class="btn btnerp" onclick="doCopy(\'terp\',this,\'✅ Copied for ERP! Press Ctrl+V there\')">Copy for ERP</button>' +
-    '<div class="ok" id="ok"></div>' +
+    '<button class="btn btnerp" onclick="doCopy(\'terp\',this)">📋 Copy for ERP</button>' +
     '<script>' +
-    'function doCopy(id,btn,msg){' +
-    'var t=document.getElementById(id);t.select();' +
-    'try{navigator.clipboard.writeText(t.value).catch(function(){document.execCommand("copy");});}catch(e){document.execCommand("copy");}' +
-    'btn.textContent=msg;' +
-    'var ok=document.getElementById("ok");ok.textContent=msg;ok.style.display="block";}' +
-    'window.onload=function(){document.getElementById("twa").focus();document.getElementById("twa").select();};' +
+    'function doCopy(id,btn){' +
+    'var t=document.getElementById(id);' +
+    'var txt=t.value;' +
+    'if(navigator.clipboard&&navigator.clipboard.writeText){' +
+    'navigator.clipboard.writeText(txt).then(function(){onCopied(btn);}).catch(function(){fallback(t,btn);});' +
+    '}else{fallback(t,btn);}' +
+    '}' +
+    'function fallback(t,btn){t.select();document.execCommand("copy");onCopied(btn);}' +
+    'function onCopied(btn){' +
+    'btn.textContent="✅ Copied!";btn.style.background="#2e7d32";' +
+    'document.getElementById("banner").style.display="block";}' +
+    'window.onload=function(){' +
+    'var t=document.getElementById("twa");' +
+    'var txt=t.value;' +
+    'if(navigator.clipboard&&navigator.clipboard.writeText){' +
+    'navigator.clipboard.writeText(txt).then(function(){onCopied(document.getElementById("btnwa"));}).catch(function(){});' +
+    '}' +
+    '};' +
     '<\/script></body></html>'
   ).setTitle(partyName).setWidth(360);
 
