@@ -4,7 +4,9 @@ import type { UserRole } from "@/types/database";
 export const ROLE_LABELS: Record<UserRole, string> = {
   ceo:      "CEO",
   cfo:      "CFO",
-  coo:      "COO",          // Bug #6 fix: COO role was missing from labels
+  coo:      "COO",
   accounts: "Accounts",
   ca:       "CA",
+  designer: "Designer",
+  reviewer: "Reviewer",
 };

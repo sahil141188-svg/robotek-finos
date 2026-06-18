@@ -1,5 +1,5 @@
 /** Roles available in the UI. Bug #6 fix: added "coo" which exists in DB enum. */
-export type UserRole = "ceo" | "cfo" | "coo" | "accounts" | "ca";
+export type UserRole = "ceo" | "cfo" | "coo" | "accounts" | "ca" | "designer" | "reviewer";
 
 /** CRM department — which sales team owns a record */
 export type CrmDepartment = "crr" | "nbd";

@@ -3,6 +3,16 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { sendWhatsApp } from "@/lib/whatsapp";
+import { getWhatsAppConfig } from "@/app/actions/notification-settings";
+
+// WhatsApp numbers for the design team
+const DESIGNER_PHONES: Record<string, string> = {
+  vishal: process.env.DESIGNER_VISHAL_PHONE ?? "",
+  nitin:  process.env.DESIGNER_NITIN_PHONE  ?? "",
+  both:   "",
+};
+const SARTHAK_PHONE = process.env.REVIEWER_SARTHAK_PHONE ?? "";
 
 export type TaskStatus =
   | "pending_review"
@@ -79,6 +89,25 @@ export async function createDesignTask(formData: FormData) {
   });
 
   if (error) throw new Error(error.message);
+
+  // Send WhatsApp notification to assigned designer(s)
+  try {
+    const waConfig = await getWhatsAppConfig();
+    const assignedTo = (formData.get("assigned_to") as string) || "";
+    const title      = (formData.get("title") as string) || "";
+    const deadline   = (formData.get("deadline") as string) || "";
+    const priority   = (formData.get("priority") as string) || "medium";
+    const msg = `🎨 *New Design Task Assigned*\n\n*Task:* ${title}\n*Type:* ${formData.get("task_type")}\n*Priority:* ${priority.toUpperCase()}\n${deadline ? `*Deadline:* ${new Date(deadline).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}\n` : ""}*Notes:* ${(formData.get("notes") as string) || "—"}\n\nPlease upload your design at: robotek.design`;
+
+    const recipients = assignedTo === "both"
+      ? [DESIGNER_PHONES.vishal, DESIGNER_PHONES.nitin].filter(Boolean)
+      : [DESIGNER_PHONES[assignedTo]].filter(Boolean);
+
+    for (const phone of recipients) {
+      await sendWhatsApp(waConfig, phone, msg).catch(() => null);
+    }
+  } catch { /* WhatsApp is optional — don't block task creation */ }
+
   revalidatePath("/dashboard/design-os");
 }
 
@@ -195,11 +224,29 @@ export async function reviewSubmission(
 
   const { data } = await db
     .from("design_submissions")
-    .select("task_id")
+    .select("task_id, submitted_by, design_tasks(title)")
     .eq("id", submissionId)
     .single();
 
-  revalidatePath(`/dashboard/design-os/tasks/${(data as { task_id: string })?.task_id}`);
+  const sub = data as { task_id: string; submitted_by: string; design_tasks: { title: string } } | null;
+
+  // Notify designer via WhatsApp
+  try {
+    const waConfig = await getWhatsAppConfig();
+    const phone = DESIGNER_PHONES[sub?.submitted_by ?? ""] ?? "";
+    if (phone) {
+      const msg = decision === "approved"
+        ? `✅ *Design Approved by Sarthak*\n\n*Task:* ${sub?.design_tasks?.title}\n\nPlease share in the WhatsApp group for final management approval.`
+        : `↩ *Design Correction Required*\n\n*Task:* ${sub?.design_tasks?.title}\n\n*Feedback:* ${note || "Please review and resubmit."}\n\nLogin to upload the corrected version.`;
+      await sendWhatsApp(waConfig, phone, msg).catch(() => null);
+    }
+    // Also notify Sarthak if approved (for management step)
+    if (decision === "approved" && SARTHAK_PHONE) {
+      await sendWhatsApp(waConfig, SARTHAK_PHONE, `✅ You approved: *${sub?.design_tasks?.title}*. Management final approval pending.`).catch(() => null);
+    }
+  } catch { /* optional */ }
+
+  revalidatePath(`/dashboard/design-os/tasks/${sub?.task_id}`);
   revalidatePath("/dashboard/design-os");
 }
 
@@ -227,10 +274,24 @@ export async function finalApproval(
 
   const { data } = await db
     .from("design_submissions")
-    .select("task_id")
+    .select("task_id, submitted_by, design_tasks(title, assigned_to)")
     .eq("id", submissionId)
     .single();
 
-  revalidatePath(`/dashboard/design-os/tasks/${(data as { task_id: string })?.task_id}`);
+  const sub2 = data as { task_id: string; submitted_by: string; design_tasks: { title: string; assigned_to: string } } | null;
+
+  // Notify designer & reviewer via WhatsApp on final decision
+  try {
+    const waConfig = await getWhatsAppConfig();
+    const designerPhone = DESIGNER_PHONES[sub2?.design_tasks?.assigned_to ?? ""] ?? "";
+    const taskTitle = sub2?.design_tasks?.title ?? "";
+    const msg = decision === "final_approved"
+      ? `🎉 *Final Approval Granted!*\n\n*Task:* ${taskTitle}\n\nManagement has given final approval. Great work!`
+      : `❌ *Design Rejected by Management*\n\n*Task:* ${taskTitle}\n\n*Reason:* ${note || "—"}`;
+    if (designerPhone) await sendWhatsApp(waConfig, designerPhone, msg).catch(() => null);
+    if (SARTHAK_PHONE)  await sendWhatsApp(waConfig, SARTHAK_PHONE, msg).catch(() => null);
+  } catch { /* optional */ }
+
+  revalidatePath(`/dashboard/design-os/tasks/${sub2?.task_id}`);
   revalidatePath("/dashboard/design-os");
 }
