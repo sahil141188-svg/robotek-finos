@@ -479,58 +479,89 @@ function showCopySidebar(sheetName, partyName) {
   var lastRow = srcSheet.getLastRow();
   if (lastRow < 2) return;
 
-  // Read columns A-I (9 cols). We only use col F (index 5) = Product, col I (index 8) = Total Qty
-  var allData = srcSheet.getRange(2, 1, lastRow - 1, 9).getValues();
-  var lines   = [];
+  var allData  = srcSheet.getRange(2, 1, lastRow - 1, 9).getValues();
+  var items    = [];
+  var orderDate = '';
+  var totalQty  = 0;
 
   for (var i = 0; i < allData.length; i++) {
     var cust    = allData[i][2];  // col C = Customer
     var isTotal = (typeof cust === 'string' && cust.indexOf('TOTAL') !== -1);
     if (!isTotal && String(cust).trim() === String(partyName).trim()) {
-      var product = allData[i][5];  // col F = Product name
-      var qty     = allData[i][6];  // col G = Total Qty (pcs)
-      if (product !== '' && product !== null && product !== undefined) {
-        lines.push(product + '\t' + (qty || 0));
+      var product = String(allData[i][5] || '').trim();  // col F = Product
+      var qty     = allData[i][6];                        // col G = Total Qty
+      var dateVal = allData[i][4];                        // col E = Order Date
+      if (product) {
+        items.push({ product: product, qty: qty || 0 });
+        totalQty += (typeof qty === 'number' ? qty : 0);
+        if (!orderDate && dateVal) {
+          orderDate = (dateVal instanceof Date)
+            ? dateVal.getDate() + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dateVal.getMonth()] + ' ' + dateVal.getFullYear()
+            : String(dateVal).substring(0, 10);
+        }
       }
     }
   }
 
-  if (!lines.length) return;
+  if (!items.length) return;
 
-  var copyText = lines.join('\n');
-  var escaped  = copyText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // WhatsApp-friendly format
+  var waLines = ['*' + partyName + '*'];
+  if (orderDate) waLines.push('📅 ' + orderDate);
+  waLines.push('');
+  for (var j = 0; j < items.length; j++) {
+    waLines.push((j + 1) + '. ' + items[j].product + ' — ' + items[j].qty + ' pcs');
+  }
+  waLines.push('');
+  waLines.push('*Total: ' + totalQty + ' pcs*');
+
+  // ERP tab-separated format
+  var erpLines = [];
+  for (var k = 0; k < items.length; k++) {
+    erpLines.push(items[k].product + '\t' + items[k].qty);
+  }
+
+  var waText   = waLines.join('\n');
+  var erpText  = erpLines.join('\n');
+  var waEsc    = waText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  var erpEsc   = erpText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   var partyEsc = partyName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  var sheetEsc = sheetName.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
   var html = HtmlService.createHtmlOutput(
     '<!DOCTYPE html><html><head><style>' +
     'body{font-family:Arial,sans-serif;padding:14px;margin:0;font-size:13px}' +
-    'h3{color:#1565C0;margin:0 0 2px;font-size:14px;word-break:break-word}' +
-    '.sub{color:#666;font-size:11px;margin:0 0 10px}' +
-    'textarea{width:100%;height:300px;font-size:12px;font-family:monospace;' +
-    'border:2px solid #1565C0;padding:6px;box-sizing:border-box;resize:none;background:#f8f9fa}' +
-    '.btn{width:100%;background:#1565C0;color:#fff;border:none;padding:12px;' +
-    'font-size:13px;font-weight:bold;border-radius:5px;cursor:pointer;margin-top:10px;display:block}' +
+    'h3{color:#1565C0;margin:0 0 4px;font-size:15px;word-break:break-word}' +
+    '.sub{color:#666;font-size:11px;margin:0 0 12px}' +
+    '.label{font-size:11px;font-weight:bold;color:#444;margin:10px 0 4px}' +
+    'textarea{width:100%;font-size:12px;font-family:monospace;' +
+    'border:2px solid #ddd;padding:6px;box-sizing:border-box;resize:none;background:#f8f9fa;border-radius:4px}' +
+    '#twa{height:220px;border-color:#25D366}' +
+    '#terp{height:120px;border-color:#1565C0}' +
+    '.btn{width:100%;color:#fff;border:none;padding:11px;' +
+    'font-size:13px;font-weight:bold;border-radius:5px;cursor:pointer;margin-top:6px;display:block}' +
+    '.btnwa{background:#25D366}.btnwa:hover{background:#1da851}' +
+    '.btnerp{background:#1565C0}.btnerp:hover{background:#0d47a1}' +
     '.ok{display:none;color:#2e7d32;font-weight:bold;text-align:center;' +
-    'margin-top:10px;padding:8px;background:#e8f5e9;border-radius:4px}' +
-    '.hint{color:#999;font-size:10px;text-align:center;margin-top:6px}' +
+    'margin-top:6px;padding:6px;background:#e8f5e9;border-radius:4px;font-size:12px}' +
     '</style></head><body>' +
     '<h3>' + partyEsc + '</h3>' +
-    '<p class="sub">' + sheetEsc + ' &nbsp;·&nbsp; <b>' + lines.length + ' items</b></p>' +
-    '<textarea id="t" readonly>' + escaped + '</textarea>' +
-    '<button class="btn" onclick="doCopy()">Copy All -- then Ctrl+V in ERP</button>' +
-    '<div class="ok" id="ok">Copied! Go to ERP and press Ctrl+V</div>' +
-    '<p class="hint">Format: Product Name [Tab] Total Qty</p>' +
+    '<p class="sub"><b>' + items.length + ' items</b> &nbsp;·&nbsp; ' + totalQty + ' pcs total</p>' +
+    '<div class="label">📱 WhatsApp Format</div>' +
+    '<textarea id="twa" readonly>' + waEsc + '</textarea>' +
+    '<button class="btn btnwa" onclick="doCopy(\'twa\',this,\'✅ Copied for WhatsApp! Now paste in chat\')">Copy for WhatsApp</button>' +
+    '<div class="label">💼 ERP Format (Tab-separated)</div>' +
+    '<textarea id="terp" readonly>' + erpEsc + '</textarea>' +
+    '<button class="btn btnerp" onclick="doCopy(\'terp\',this,\'✅ Copied for ERP! Press Ctrl+V there\')">Copy for ERP</button>' +
+    '<div class="ok" id="ok"></div>' +
     '<script>' +
-    'function doCopy(){' +
-    'var t=document.getElementById("t");t.select();' +
-    'document.execCommand("copy");' +
-    'document.querySelector(".btn").style.background="#2e7d32";' +
-    'document.querySelector(".btn").textContent="Copied! Paste in ERP with Ctrl+V";' +
-    'document.getElementById("ok").style.display="block";}' +
-    'window.onload=function(){document.getElementById("t").focus();document.getElementById("t").select();};' +
+    'function doCopy(id,btn,msg){' +
+    'var t=document.getElementById(id);t.select();' +
+    'try{navigator.clipboard.writeText(t.value).catch(function(){document.execCommand("copy");});}catch(e){document.execCommand("copy");}' +
+    'btn.textContent=msg;' +
+    'var ok=document.getElementById("ok");ok.textContent=msg;ok.style.display="block";}' +
+    'window.onload=function(){document.getElementById("twa").focus();document.getElementById("twa").select();};' +
     '<\/script></body></html>'
-  ).setTitle(partyName).setWidth(340);
+  ).setTitle(partyName).setWidth(360);
 
   SpreadsheetApp.getUi().showSidebar(html);
 }
