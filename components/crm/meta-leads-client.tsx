@@ -81,37 +81,67 @@ export function MetaLeadsClient({ leads, sales }: { leads: MetaLead[]; sales: Sa
       </div>
 
       {/* Setup card */}
-      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h3 className="text-sm font-semibold text-blue-900 mb-1">Meta Ads Setup</h3>
-            <p className="text-xs text-blue-700 mb-2">
-              <strong>WhatsApp number:</strong>{" "}
-              <a href={`https://wa.me/${META_WA_NUMBER}`} target="_blank" rel="noopener noreferrer"
-                className="underline hover:text-blue-900 inline-flex items-center gap-0.5">
-                +91 96259 97436 <ExternalLink className="w-3 h-3" />
-              </a>
-              {" "}— add this number as the Click-to-WhatsApp destination in your Meta Ad.
-            </p>
-            <p className="text-xs text-blue-700">
-              <strong>Lead Form webhook:</strong> To auto-capture Meta Lead Form submissions, paste this URL in{" "}
-              <span className="font-medium">Meta Business Suite → Leads Centre → Webhooks</span>:
-            </p>
-            <div className="mt-1.5 flex items-center gap-2">
-              <code className="text-[11px] bg-white border border-blue-200 rounded px-2 py-1 font-mono text-blue-900 break-all">
-                {webhookUrl}
-              </code>
-              <button onClick={copyWebhook} className="shrink-0 inline-flex items-center gap-1 text-xs text-blue-700 hover:text-blue-900">
-                {copied ? <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? "Copied!" : "Copy"}
-              </button>
-            </div>
-            <p className="text-xs text-blue-600 mt-1.5">
-              Verify token (set in Meta): <code className="font-mono bg-white border border-blue-200 rounded px-1">robotek_meta_2024</code>
-              {" "}— also add <code className="font-mono bg-white border border-blue-200 rounded px-1">META_VERIFY_TOKEN=robotek_meta_2024</code> to Vercel env vars.
-            </p>
-          </div>
+      <div className="rounded-xl border border-green-200 bg-green-50 p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-green-900">Connect +91 96259 97436 → Auto-capture all WhatsApp chats</h3>
+
+        {/* Step 1 */}
+        <div className="bg-white rounded-lg border border-green-200 p-3">
+          <p className="text-xs font-semibold text-green-800 mb-1">Step 1 — Create a Meta Developer App (one-time)</p>
+          <ol className="text-xs text-green-700 space-y-0.5 list-decimal ml-4">
+            <li>Go to <a href="https://developers.facebook.com/apps" target="_blank" rel="noopener noreferrer" className="underline font-medium">developers.facebook.com/apps <ExternalLink className="inline w-2.5 h-2.5" /></a></li>
+            <li>Click <strong>Create App</strong> → choose <strong>Business</strong> → fill name (e.g. &quot;Robotek CRM&quot;)</li>
+            <li>Add product: <strong>WhatsApp</strong></li>
+            <li>Connect your <strong>Meta Business Account</strong> (the one running your ads)</li>
+          </ol>
         </div>
+
+        {/* Step 2 */}
+        <div className="bg-white rounded-lg border border-green-200 p-3">
+          <p className="text-xs font-semibold text-green-800 mb-1">Step 2 — Register +91 96259 97436 on WhatsApp Business API</p>
+          <ol className="text-xs text-green-700 space-y-0.5 list-decimal ml-4">
+            <li>In your Meta App → <strong>WhatsApp → Getting Started</strong></li>
+            <li>Under <strong>Add a phone number</strong> → click <strong>Add phone number</strong></li>
+            <li>Enter <strong>+91 96259 97436</strong> and verify via OTP</li>
+            <li className="text-orange-700 font-medium">⚠️ This will unregister the number from the WhatsApp Business app — you will use the API instead</li>
+          </ol>
+        </div>
+
+        {/* Step 3 */}
+        <div className="bg-white rounded-lg border border-green-200 p-3">
+          <p className="text-xs font-semibold text-green-800 mb-1">Step 3 — Point the webhook at this CRM</p>
+          <p className="text-xs text-green-700 mb-2">In your Meta App → <strong>WhatsApp → Configuration → Webhook</strong> → paste this URL:</p>
+          <div className="flex items-center gap-2 mb-2">
+            <code className="text-[11px] bg-green-50 border border-green-200 rounded px-2 py-1 font-mono text-green-900 break-all flex-1">
+              {typeof window !== "undefined" ? `${window.location.origin}/api/webhooks/whatsapp` : "/api/webhooks/whatsapp"}
+            </code>
+            <button onClick={copyWebhook} className="shrink-0 inline-flex items-center gap-1 text-xs text-green-700 hover:text-green-900">
+              {copied ? <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+          <p className="text-xs text-green-700">
+            Verify token: <code className="font-mono bg-green-50 border border-green-200 rounded px-1 text-green-900">robotek_wa_2024</code>
+            {" "}· Subscribe to field: <code className="font-mono bg-green-50 border border-green-200 rounded px-1 text-green-900">messages</code>
+          </p>
+          <p className="text-xs text-green-600 mt-1.5">
+            Also add to Vercel env vars: <code className="font-mono bg-green-50 border border-green-200 rounded px-1">WHATSAPP_VERIFY_TOKEN=robotek_wa_2024</code>
+          </p>
+        </div>
+
+        {/* After setup */}
+        <div className="text-xs text-green-800 bg-green-100 rounded-lg px-3 py-2">
+          ✅ After setup: every new WhatsApp message on +91 96259 97436 will <strong>auto-create a lead</strong> here with the contact&apos;s name, phone, and first message — no manual entry needed.
+        </div>
+
+        {/* Lead Form webhook (collapsed) */}
+        <details className="text-xs text-green-700">
+          <summary className="cursor-pointer font-medium">Also connect Meta Lead Form ads (optional)</summary>
+          <p className="mt-2">In Meta Business Suite → Leads Centre → Webhooks → paste:</p>
+          <code className="block mt-1 bg-white border border-green-200 rounded px-2 py-1 font-mono text-green-900 break-all">
+            {webhookUrl}
+          </code>
+          <p className="mt-1">Verify token: <code className="font-mono">robotek_meta_2024</code></p>
+        </details>
       </div>
 
       {/* Toolbar */}
