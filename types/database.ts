@@ -1209,6 +1209,115 @@ export type Database = {
         };
         Update: { message?: string | null };
       };
+      design_tasks: {
+        Row: {
+          id: string;
+          title: string;
+          description: string | null;
+          task_type: string;
+          platform: string | null;
+          assigned_to: string;
+          deadline: string | null;
+          priority: string;
+          reference_url: string | null;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description?: string | null;
+          task_type: string;
+          platform?: string | null;
+          assigned_to: string;
+          deadline?: string | null;
+          priority?: string;
+          reference_url?: string | null;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          title?: string;
+          description?: string | null;
+          task_type?: string;
+          platform?: string | null;
+          assigned_to?: string;
+          deadline?: string | null;
+          priority?: string;
+          reference_url?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
+      };
+      design_submissions: {
+        Row: {
+          id: string;
+          task_id: string;
+          round: number;
+          submitted_by: string;
+          submitted_at: string;
+          status: string;
+          reviewer_note: string | null;
+          reviewed_by: string | null;
+          reviewed_at: string | null;
+          final_note: string | null;
+          final_by: string | null;
+          final_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          task_id: string;
+          round: number;
+          submitted_by: string;
+          submitted_at?: string;
+          status?: string;
+          reviewer_note?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          final_note?: string | null;
+          final_by?: string | null;
+          final_at?: string | null;
+        };
+        Update: {
+          status?: string;
+          reviewer_note?: string | null;
+          reviewed_by?: string | null;
+          reviewed_at?: string | null;
+          final_note?: string | null;
+          final_by?: string | null;
+          final_at?: string | null;
+        };
+      };
+      design_files: {
+        Row: {
+          id: string;
+          submission_id: string;
+          file_name: string;
+          file_url: string;
+          file_type: string | null;
+          file_size: number | null;
+          uploaded_at: string;
+        };
+        Insert: {
+          id?: string;
+          submission_id: string;
+          file_name: string;
+          file_url: string;
+          file_type?: string | null;
+          file_size?: number | null;
+          uploaded_at?: string;
+        };
+        Update: {
+          file_name?: string;
+          file_url?: string;
+          file_type?: string | null;
+          file_size?: number | null;
+        };
+      };
     };
     Views: { [_ in never]: never };
     Functions: { [_ in never]: never };

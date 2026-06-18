@@ -16,7 +16,7 @@ import {
   Wallet, ScrollText, ArrowRightLeft, Send, Users, Ship, Target,
   Briefcase, GitBranch, UserPlus, ListChecks, Sparkles, BarChart3, Package, Mail, CalendarDays,
   ChevronDown, ChevronRight, Coins, ClipboardCheck, Database as DatabaseIcon, CalendarClock, Trophy,
-  Tag,
+  Tag, Palette,
 } from "lucide-react";
 
 type UserRow = Database["public"]["Tables"]["users"]["Row"];
@@ -112,10 +112,11 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Compliance & Tasks",
     icon:  ClipboardCheck,
     items: [
-      { href: "/dashboard/compliance", label: "Compliance Calendar", icon: CalendarCheck, permKey: "view_compliance" },
-      { href: "/dashboard/tasks",      label: "Task Management",      icon: CheckSquare,   permKey: "manage_tasks" },
-      { href: "/dashboard/alerts",     label: "Alerts",               icon: Bell,          permKey: "view_alerts" },
-      { href: "/dashboard/review",     label: "Review Engine",        icon: FileText,      permKey: "view_review" },
+      { href: "/dashboard/compliance",  label: "Compliance Calendar", icon: CalendarCheck, permKey: "view_compliance" },
+      { href: "/dashboard/tasks",       label: "Task Management",      icon: CheckSquare,   permKey: "manage_tasks" },
+      { href: "/dashboard/design-os",   label: "Design OS",            icon: Palette,       permKey: null },
+      { href: "/dashboard/alerts",      label: "Alerts",               icon: Bell,          permKey: "view_alerts" },
+      { href: "/dashboard/review",      label: "Review Engine",        icon: FileText,      permKey: "view_review" },
     ],
   },
   {
