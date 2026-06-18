@@ -136,8 +136,9 @@ const NAV_GROUPS: NavGroup[] = [
  * one collapsible parent and ordered along the lead → conversion journey.
  */
 const NBD_ITEMS: { href: string; label: string; icon: React.ElementType; exact?: boolean }[] = [
-  { href: "/dashboard/sales-os",            label: "Dashboard",          icon: LayoutDashboard, exact: true },
-  { href: "/dashboard/sales-os/leads",      label: "Leads",              icon: UserPlus },
+  { href: "/dashboard/sales-os",                  label: "Dashboard",          icon: LayoutDashboard, exact: true },
+  { href: "/dashboard/sales-os/leads",            label: "Leads",              icon: UserPlus },
+  { href: "/dashboard/sales-os/meta-leads",       label: "Meta Leads",         icon: Tag },
   { href: "/dashboard/sales-os/pipeline",   label: "Pipeline",           icon: GitBranch },
   { href: "/dashboard/sales-os/activities", label: "Follow-ups",         icon: ListChecks },
   { href: "/dashboard/sales-os/calendar",   label: "Calendar",           icon: CalendarDays },
