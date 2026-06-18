@@ -6,7 +6,7 @@ import { createMetaLead, updateLeadStatus } from "@/app/actions/meta-leads";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_COLORS } from "@/lib/crm/types";
 import type { MetaLead } from "@/lib/crm/meta-leads";
 import type { CrmLeadStatus } from "@/types/database";
-import { Plus, X, Phone, Mail, MessageSquare, FileText, Copy, CheckCircle, ExternalLink } from "lucide-react";
+import { Plus, X, Phone, Mail, MessageSquare, FileText, Copy, CheckCircle, ExternalLink, Download } from "lucide-react";
 
 type SalesMember = { id: string; full_name: string };
 
@@ -53,6 +53,24 @@ export function MetaLeadsClient({ leads, sales }: { leads: MetaLead[]; sales: Sa
       setOpen(false);
       router.refresh();
     });
+  }
+
+  function exportCSV() {
+    const rows = shown;
+    const headers = ["Name", "Phone", "Email", "Company", "City", "State", "Source", "Ad/Campaign", "Assigned To", "Status", "Est. Value", "Date"];
+    const lines = [
+      headers.join(","),
+      ...rows.map((l) => [
+        l.name, l.phone ?? "", l.email ?? "", l.company ?? "",
+        l.city ?? "", l.state ?? "", l.source ?? "", l.ad_name ?? "",
+        l.assigned_name ?? "", l.status, l.est_value ?? "", l.created_at.slice(0, 10),
+      ].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")),
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `meta-leads-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
   }
 
   function changeStatus(id: string, status: CrmLeadStatus) {
@@ -154,11 +172,17 @@ export function MetaLeadsClient({ leads, sales }: { leads: MetaLead[]; sales: Sa
             </button>
           ))}
         </div>
-        <button onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-brand-red text-white rounded-lg text-sm font-medium hover:bg-brand-maroon transition-colors">
-          {open ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {open ? "Close" : "Add WhatsApp Lead"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={exportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-border text-brand-black rounded-lg text-sm font-medium hover:bg-brand-gray-light transition-colors">
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+          <button onClick={() => setOpen((v) => !v)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-brand-red text-white rounded-lg text-sm font-medium hover:bg-brand-maroon transition-colors">
+            {open ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {open ? "Close" : "Add WhatsApp Lead"}
+          </button>
+        </div>
       </div>
 
       {err && <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{err}</div>}
