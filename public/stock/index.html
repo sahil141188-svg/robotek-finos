@@ -535,12 +535,8 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
         <button id="langEn" class="lbtn lact" onclick="setLang('en')">EN</button>
         <button id="langHi" class="lbtn" onclick="setLang('hi')">हि</button>
       </div>
-      <button class="cartbtn ordbtn" id="ordHistBtn" onclick="showPrevOrders()" style="display:none" title="My Orders">
-        📋
-      </button>
-      <button class="cartbtn" id="cartBtn" onclick="showReview()" style="display:none">
-        🛒<span class="cart-count" id="cartCount">0</span>
-      </button>
+      <span id="ordHistBtn" style="display:none"></span>
+      <span id="cartBtn" style="display:none"><span id="cartCount"></span></span>
       <div class="spill"><div class="spnum" id="stockNum">—</div><div class="splbl" id="t-instock">IN STOCK</div></div>
       <button class="qrbtn" onclick="openQR()" title="Share QR">📲</button>
       <button id="installBtn" onclick="doInstall()">⤓ Install</button>
