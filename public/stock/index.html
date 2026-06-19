@@ -19,7 +19,9 @@
   --ease:cubic-bezier(.32,.72,0,1);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;touch-action:pan-y}
+html{height:100%}
+body{font-family:Roboto,-apple-system,BlinkMacSystemFont,Arial,sans-serif;background:var(--bg);color:var(--text);height:100%;overflow:hidden;display:flex;flex-direction:column;touch-action:pan-y}
+.page-scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
 /* ── Performance: GPU compositing + touch response ── */
 button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back-btn,.rev-cancel,.rev-send,.mbtn,.bcl,.bwa,.ann-ok,.ann-skip{touch-action:manipulation}
 .rev-ovl{pointer-events:none;will-change:transform}
@@ -68,7 +70,7 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .tab.active::after{transform:scaleX(1)}
 .bodyw{padding:14px 14px 100px}
 /* ── Bottom Nav ── */
-#bnav{position:fixed;bottom:0;left:0;right:0;z-index:500;background:#fff;border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -2px 12px rgba(0,0,0,.08);transform:translateZ(0);will-change:transform}
+#bnav{position:relative;z-index:500;background:#fff;border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -2px 12px rgba(0,0,0,.08);flex-shrink:0}
 .bni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 8px;gap:4px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.3px;position:relative;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .18s}
 .bni.active{color:var(--red)}
 .bni svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke .18s}
@@ -507,6 +509,7 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 </head>
 <body>
 
+<div class="page-scroll" id="pageScroll">
 <div class="hdr">
   <div class="hdr-top">
     <div>
@@ -599,8 +602,9 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
     <div class="skel skel-row"></div>
     <div class="skel skel-row"></div>
   </div>
-  <div id="sections" style="padding-bottom:100px"></div>
+  <div id="sections" style="padding-bottom:20px"></div>
 </div>
+</div><!-- end .page-scroll -->
 
 <div id="bbar">
   <div class="bpnl" id="bpnl"></div>
@@ -2519,13 +2523,13 @@ function bnSetActive(id){
 }
 function bnHome(){
   bnSetActive("bni-home");
-  window.scrollTo({top:0,behavior:"smooth"});
+  var ps=document.getElementById("pageScroll");
+  if(ps) ps.scrollTo({top:0,behavior:"smooth"});
 }
 function bnShop(){
   bnSetActive("bni-shop");
-  var tw=document.getElementById("tw");
-  if(tw){tw.scrollIntoView({behavior:"smooth",block:"start"});}
-  // activate "All" tab
+  var ps=document.getElementById("pageScroll");
+  if(ps) ps.scrollTo({top:0,behavior:"smooth"});
   var first=document.querySelector(".tab");
   if(first){document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});first.classList.add("active");fC("all",first);}
 }
@@ -2537,16 +2541,6 @@ function bnCart(){
   bnSetActive("bni-cart");
   showReview();
 }
-// Keep bottom nav pinned — Android Chrome URL bar collapse can shift fixed elements
-(function(){
-  var nav=document.getElementById('bnav');
-  if(!nav) return;
-  function pin(){ nav.style.bottom='0px'; }
-  window.addEventListener('scroll',pin,{passive:true});
-  window.addEventListener('resize',pin,{passive:true});
-  window.visualViewport&&window.visualViewport.addEventListener('resize',pin,{passive:true});
-  window.visualViewport&&window.visualViewport.addEventListener('scroll',pin,{passive:true});
-})();
 function updateBnBadges(){
   var total=Object.keys(CART_MAP).length+Object.keys(ENQ_SET).length;
   var cb=document.getElementById("bn-cart-badge");
