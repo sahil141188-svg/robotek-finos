@@ -68,7 +68,7 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .tab.active::after{transform:scaleX(1)}
 .bodyw{padding:14px 14px 100px}
 /* ── Bottom Nav ── */
-#bnav{position:fixed;bottom:0;left:0;right:0;z-index:500;background:#fff;border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+#bnav{position:fixed;bottom:0;left:0;right:0;z-index:500;background:#fff;border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -2px 12px rgba(0,0,0,.08);transform:translateZ(0);will-change:transform}
 .bni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 8px;gap:4px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.3px;position:relative;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .18s}
 .bni.active{color:var(--red)}
 .bni svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke .18s}
@@ -352,7 +352,7 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .rev-item{display:flex;align-items:center;gap:8px;padding:11px 16px;background:#fff;border-bottom:1px solid var(--border)}
 .rev-sno{font-size:11px;font-weight:600;color:var(--muted);width:22px;flex-shrink:0;text-align:right}
 .rev-info{flex:1;min-width:0}
-.rev-name{font-size:14px;font-weight:700;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.rev-name{font-size:13px;font-weight:700;color:var(--black);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .rev-qw{display:flex;align-items:center;gap:3px;flex-shrink:0;width:102px;justify-content:center}
 .rev-qs{background:var(--bg);border:1.5px solid var(--border);color:var(--black);border-radius:7px;width:28px;height:30px;font-size:18px;font-weight:300;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:inherit;flex-shrink:0}
 .rev-qs:active{background:var(--red);color:#fff;border-color:var(--red)}
@@ -360,7 +360,7 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .rev-qn:focus{border-color:var(--red)}
 .rev-qn::-webkit-outer-spin-button,.rev-qn::-webkit-inner-spin-button{-webkit-appearance:none}
 .rev-unit{font-size:11px;color:var(--muted);font-weight:600;width:36px;text-align:right;flex-shrink:0}
-.rev-tot{font-size:12px;color:var(--green);font-weight:800;width:52px;text-align:right;flex-shrink:0}
+.rev-tot{font-size:12px;color:var(--green);font-weight:800;width:64px;text-align:right;flex-shrink:0}
 .rev-rm{background:none;border:none;color:#ddd;font-size:18px;cursor:pointer;padding:0 0 0 6px;line-height:1;flex-shrink:0}
 .rev-rm:active{color:var(--red)}
 /* Grand total row */
@@ -386,7 +386,7 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .pord-ovl{position:fixed;inset:0;z-index:850;background:#fff;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s var(--ease);pointer-events:none;will-change:transform}
 .pord-ovl.show{transform:translateX(0);pointer-events:auto}
 .pord-card{display:flex;flex-direction:column;height:100%;overflow:hidden}
-.pord-head{background:var(--black);padding:16px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0}
+.pord-head{background:var(--red);padding:16px 18px;display:flex;align-items:center;gap:10px;flex-shrink:0}
 .pord-htxt{font-size:16px;font-weight:700;color:#fff;flex:1}
 .pord-close{background:none;border:none;color:#888;font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;touch-action:manipulation}
 .pord-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
@@ -716,8 +716,8 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
     <div class="pord-head">
       <button class="rev-back-btn" onclick="closePrevOrders()">&#8592;</button>
       <div style="flex:1">
-        <div style="font-size:16px;font-weight:700;color:var(--yellow)">&#128203; My Orders</div>
-        <div style="font-size:11px;color:#888;margin-top:2px">Last 5 orders &middot; Tap to reorder</div>
+        <div style="font-size:17px;font-weight:800;color:#fff;letter-spacing:-.3px">&#128203; My Orders</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px">Tap any order to expand &middot; Reorder instantly</div>
       </div>
     </div>
     <div class="pord-body" id="pordBody" style="padding:12px 12px 24px"></div>
