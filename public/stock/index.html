@@ -66,7 +66,13 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .tab::after{content:"";position:absolute;bottom:0;left:10px;right:10px;height:2.5px;background:var(--red);border-radius:2px 2px 0 0;transform:scaleX(0);transition:transform .22s var(--ease)}
 .tab.active{color:var(--red);font-weight:700}
 .tab.active::after{transform:scaleX(1)}
-.bodyw{padding:14px 14px 160px}
+.bodyw{padding:14px 14px 100px}
+/* ── Bottom Nav ── */
+#bnav{position:fixed;bottom:0;left:0;right:0;z-index:500;background:#fff;border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 8px;gap:4px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:.3px;position:relative;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .18s}
+.bni.active{color:var(--red)}
+.bni svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke .18s}
+.bn-badge{position:absolute;top:6px;right:calc(50% - 18px);background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:50px;display:none;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff}
 .stats{display:flex;gap:9px;margin:12px 12px 0}
 .stbox{flex:1;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:13px 10px;text-align:center;box-shadow:var(--shadow-sm)}
 .stnum{font-size:24px;font-weight:900;color:var(--red);line-height:1;letter-spacing:-.5px}
@@ -1468,6 +1474,7 @@ function uB(){
   var cb=document.getElementById("cartBtn");
   if(cb){cb.style.display=total>0?"flex":"none";document.getElementById("cartCount").textContent=total;}
   saveCart();
+  updateBnBadges();
   // bct / blistsub for bbar (hidden but keep compat)
   var bctEl=document.getElementById("bct");if(bctEl)bctEl.textContent=total;
   var blsEl=document.getElementById("blistsub");if(blsEl)blsEl.textContent="";
@@ -2295,6 +2302,7 @@ function updateMyOrdersBanner(){
     var hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");
     var hb=document.getElementById("ordHistBtn");
     if(hb) hb.style.display=hist.length?"flex":"none";
+    updateBnBadges();
     if(!bar){return;}
     if(!hist.length){bar.style.display="none";return;}
     bar.style.display="block";
@@ -2482,5 +2490,63 @@ boot();
   </div>
 </div>
 
+<!-- Bottom Navigation -->
+<nav id="bnav">
+  <button class="bni active" id="bni-home" onclick="bnHome()">
+    <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H5a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></svg>
+    Home
+  </button>
+  <button class="bni" id="bni-shop" onclick="bnShop()">
+    <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Shop
+  </button>
+  <button class="bni" id="bni-orders" onclick="bnOrders()">
+    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+    <span class="bn-badge" id="bn-ord-badge">0</span>
+    Orders
+  </button>
+  <button class="bni" id="bni-cart" onclick="bnCart()">
+    <svg viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+    <span class="bn-badge" id="bn-cart-badge">0</span>
+    Cart
+  </button>
+</nav>
+
+<script>
+function bnSetActive(id){
+  document.querySelectorAll(".bni").forEach(function(b){b.classList.remove("active");});
+  var el=document.getElementById(id);if(el)el.classList.add("active");
+}
+function bnHome(){
+  bnSetActive("bni-home");
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function bnShop(){
+  bnSetActive("bni-shop");
+  var tw=document.getElementById("tw");
+  if(tw){tw.scrollIntoView({behavior:"smooth",block:"start"});}
+  // activate "All" tab
+  var first=document.querySelector(".tab");
+  if(first){document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});first.classList.add("active");fC("all",first);}
+}
+function bnOrders(){
+  bnSetActive("bni-orders");
+  showPrevOrders();
+}
+function bnCart(){
+  bnSetActive("bni-cart");
+  showReview();
+}
+function updateBnBadges(){
+  var total=Object.keys(CART_MAP).length+Object.keys(ENQ_SET).length;
+  var cb=document.getElementById("bn-cart-badge");
+  if(cb){cb.textContent=total;cb.style.display=total>0?"flex":"none";}
+  try{
+    var hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");
+    var ob=document.getElementById("bn-ord-badge");
+    if(ob){ob.textContent=hist.length;ob.style.display=hist.length>0?"flex":"none";}
+  }catch(e){}
+}
+</script>
 </body>
 </html>
