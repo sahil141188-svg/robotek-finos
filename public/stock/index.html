@@ -215,6 +215,7 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 /* Cart button in header */
 .cartbtn{position:relative;background:var(--black);border:none;border-radius:14px;padding:9px 14px;font-size:22px;cursor:pointer;line-height:1;display:flex;align-items:center;gap:6px;touch-action:manipulation;transition:transform .15s,opacity .15s}
 .cartbtn:active{transform:scale(.92);opacity:.85}
+.ordbtn{background:var(--bg);border:1.5px solid var(--border);font-size:20px;padding:8px 12px}
 .cart-count{background:var(--yellow);color:var(--black);font-size:13px;font-weight:900;border-radius:10px;padding:3px 8px;line-height:1.4;min-width:22px;text-align:center}
 .nores{display:none;text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
 /* Skeleton loading — shimmer placeholder cards */
@@ -512,6 +513,9 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
         <button id="langEn" class="lbtn lact" onclick="setLang('en')">EN</button>
         <button id="langHi" class="lbtn" onclick="setLang('hi')">हि</button>
       </div>
+      <button class="cartbtn ordbtn" id="ordHistBtn" onclick="showPrevOrders()" style="display:none" title="My Orders">
+        📋
+      </button>
       <button class="cartbtn" id="cartBtn" onclick="showReview()" style="display:none">
         🛒<span class="cart-count" id="cartCount">0</span>
       </button>
@@ -2287,9 +2291,11 @@ function saveOrderHistory(orderData){
 }
 function updateMyOrdersBanner(){
   var bar=document.getElementById("myOrdBar");
-  if(!bar) return;
   try{
     var hist=JSON.parse(localStorage.getItem(ORDERS_KEY)||"[]");
+    var hb=document.getElementById("ordHistBtn");
+    if(hb) hb.style.display=hist.length?"flex":"none";
+    if(!bar){return;}
     if(!hist.length){bar.style.display="none";return;}
     bar.style.display="block";
     var last=hist[0];
