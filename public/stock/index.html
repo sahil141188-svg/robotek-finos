@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover,interactive-widget=resizes-content">
 <title>Robotek — Live Stock</title>
 <meta name="theme-color" content="#E52D31">
 <link rel="manifest" href="/stock/manifest.webmanifest">
@@ -2537,6 +2537,16 @@ function bnCart(){
   bnSetActive("bni-cart");
   showReview();
 }
+// Keep bottom nav pinned — Android Chrome URL bar collapse can shift fixed elements
+(function(){
+  var nav=document.getElementById('bnav');
+  if(!nav) return;
+  function pin(){ nav.style.bottom='0px'; }
+  window.addEventListener('scroll',pin,{passive:true});
+  window.addEventListener('resize',pin,{passive:true});
+  window.visualViewport&&window.visualViewport.addEventListener('resize',pin,{passive:true});
+  window.visualViewport&&window.visualViewport.addEventListener('scroll',pin,{passive:true});
+})();
 function updateBnBadges(){
   var total=Object.keys(CART_MAP).length+Object.keys(ENQ_SET).length;
   var cb=document.getElementById("bn-cart-badge");
