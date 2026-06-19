@@ -124,39 +124,45 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .img-gallery-body{flex:1;min-height:0}
 .img-gallery-body iframe{width:100%;height:70vh;border:none;display:block}
 /* ── Category grid — column layout ── */
-.cgrid{background:var(--card);padding:10px;display:flex;flex-direction:column;gap:6px}
+.cgrid{background:var(--bg);padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .ecat{width:100%;padding:16px;text-align:center;font-size:12px;color:var(--muted);font-style:italic}
 
 /* ── Product chip — card row ── */
 .chip{
   display:flex;flex-direction:column;
-  background:var(--card);
+  background:#fff;
   border:1.5px solid var(--border);
-  border-radius:10px;
+  border-radius:12px;
   font-family:inherit;cursor:pointer;
   user-select:none;-webkit-tap-highlight-color:transparent;
   transition:border-color .18s,box-shadow .18s,transform .12s;
   overflow:hidden;
+  box-shadow:var(--shadow-sm);
 }
-.chip:active{transform:scale(.985)}
-.cr1{display:flex;align-items:center;gap:10px;padding:11px 12px}
-.cdot{width:8px;height:8px;background:var(--green);border-radius:50%;flex-shrink:0}
-
-/* chip name + badges row */
+.chip:active{transform:scale(.97)}
+/* card image area */
+.chip-img-wrap{width:100%;height:110px;background:#f8f7f7;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;border-bottom:1px solid var(--border)}
+.chip-img-wrap img{width:100%;height:100%;object-fit:contain;padding:8px}
+.chip-img-ph{font-size:38px;opacity:.35}
+.chip-img-wrap .chip-oos-lbl{position:absolute;top:6px;left:6px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px;letter-spacing:.3px}
+.chip-img-wrap .chip-hot-lbl{position:absolute;top:6px;right:6px;background:var(--yellow);color:var(--black);font-size:9px;font-weight:800;padding:2px 6px;border-radius:6px}
+/* card body */
+.cr1{display:flex;flex-direction:column;padding:8px 10px;flex:1;gap:5px}
+.cdot{display:none}
 .chip-info{flex:1;min-width:0}
-.chip-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
-.chip-badges{display:flex;align-items:center;flex-wrap:wrap;gap:4px;margin-top:4px}
-
-/* + add indicator */
+.chip-name{font-size:13px;font-weight:700;color:var(--text);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.chip-badges{display:flex;align-items:center;flex-wrap:wrap;gap:3px;margin-top:2px}
+/* add button — row at bottom of card */
+.chip-foot{display:flex;align-items:center;justify-content:flex-end;padding:0 8px 8px}
 .chip-add{
-  width:32px;height:32px;border-radius:50%;
+  width:30px;height:30px;border-radius:50%;
   border:2px solid var(--border);background:var(--bg);
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;font-size:20px;color:var(--muted);
   transition:background .18s,border-color .18s,color .18s;
   line-height:1;
 }
-.chip.sel{border-color:var(--red);background:#fff8f8;box-shadow:0 0 0 1px rgba(229,45,49,.12),var(--shadow-sm)}
+.chip.sel{border-color:var(--red);background:#fff8f8;box-shadow:0 0 0 2px rgba(229,45,49,.15)}
 .chip.sel .chip-add{background:var(--red);border-color:var(--red);color:#fff;font-size:16px;font-weight:700}
 .chip.sel .cdot{background:var(--green)}
 .chip.oos{opacity:.72}
@@ -340,9 +346,9 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .rev-ovl.show{transform:translateX(0)}
 .rev-card{flex:1;display:flex;flex-direction:column;overflow:hidden}
 /* Header */
-.rev-head{background:var(--black);padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
-.rev-back-btn{background:rgba(255,255,255,.14);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.rev-htxt{font-size:17px;font-weight:800;color:#fff;flex:1;letter-spacing:-.3px}
+.rev-head{background:var(--yellow);padding:14px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.rev-back-btn{background:rgba(0,0,0,.12);border:none;color:var(--black);width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rev-htxt{font-size:17px;font-weight:800;color:var(--black);flex:1;letter-spacing:-.3px}
 .rev-hcnt{background:var(--red);color:#fff;font-size:12px;font-weight:800;padding:4px 12px;border-radius:20px;flex-shrink:0}
 /* Customer + date meta strip */
 .pi-meta{background:#fff;border-bottom:2px solid var(--border);padding:12px 16px;display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0}
@@ -351,12 +357,12 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .pi-date{text-align:right;font-size:11px;color:var(--muted);line-height:1.7}
 .pi-date b{display:block;font-size:13px;font-weight:800;color:var(--black)}
 /* Table column header */
-.pi-th{display:flex;align-items:center;gap:8px;padding:8px 16px;background:var(--black);flex-shrink:0}
-.pi-th-sno{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);width:22px;flex-shrink:0}
-.pi-th-name{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);flex:1;letter-spacing:.5px}
-.pi-th-qty{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);width:102px;text-align:center;flex-shrink:0;letter-spacing:.5px}
-.pi-th-unit{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);width:36px;text-align:right;flex-shrink:0;letter-spacing:.5px}
-.pi-th-pcs{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);width:52px;text-align:right;flex-shrink:0;letter-spacing:.5px}
+.pi-th{display:flex;align-items:center;gap:8px;padding:8px 16px;background:#f5f4f4;border-bottom:2px solid var(--border);flex-shrink:0}
+.pi-th-sno{font-size:10px;font-weight:700;color:var(--muted);width:22px;flex-shrink:0}
+.pi-th-name{font-size:10px;font-weight:700;color:var(--muted);flex:1;letter-spacing:.5px}
+.pi-th-qty{font-size:10px;font-weight:700;color:var(--muted);width:102px;text-align:center;flex-shrink:0;letter-spacing:.5px}
+.pi-th-unit{font-size:10px;font-weight:700;color:var(--muted);width:36px;text-align:right;flex-shrink:0;letter-spacing:.5px}
+.pi-th-pcs{font-size:10px;font-weight:700;color:var(--muted);width:52px;text-align:right;flex-shrink:0;letter-spacing:.5px}
 /* Scrollable list */
 .rev-list{flex:1;overflow-y:auto}
 /* Category divider */
@@ -379,10 +385,10 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .rev-rm{background:none;border:none;color:#ddd;font-size:18px;cursor:pointer;padding:0 0 0 6px;line-height:1;flex-shrink:0}
 .rev-rm:active{color:var(--red)}
 /* Grand total row */
-.pi-total-row{background:var(--black);padding:13px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0}
-.pi-total-lbl{font-size:11px;font-weight:800;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.8px;flex:1}
-.pi-total-val{font-size:13px;font-weight:800;color:var(--yellow)}
-.pi-total-sep{color:rgba(255,255,255,.2);font-size:12px;margin:0 2px}
+.pi-total-row{background:var(--yellow);padding:13px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.pi-total-lbl{font-size:11px;font-weight:800;color:rgba(0,0,0,.5);text-transform:uppercase;letter-spacing:.8px;flex:1}
+.pi-total-val{font-size:13px;font-weight:800;color:var(--black)}
+.pi-total-sep{color:rgba(0,0,0,.25);font-size:12px;margin:0 2px}
 /* Enquiry section */
 .rev-enq-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 6px;background:#fffbeb;position:sticky;top:0;z-index:2;border-top:2px solid #fde68a;border-bottom:1px solid #fde68a}
 .rev-enq-title{font-size:10px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:1px}
@@ -431,11 +437,11 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .myord-arrow{font-size:18px;color:#555;flex-shrink:0}
 /* Previous Orders Sheet — redesigned */
 .pord-order{margin-bottom:12px;border-radius:12px;overflow:hidden;border:1.5px solid var(--border);background:#fff}
-.pord-oh{background:var(--black);padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.pord-oh{background:var(--yellow);padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer}
 .pord-oh:active{opacity:.85}
-.pord-num{background:var(--yellow);color:var(--black);font-size:11px;font-weight:800;padding:3px 9px;border-radius:8px;flex-shrink:0}
-.pord-date{font-size:13px;font-weight:700;color:#fff;flex:1}
-.pord-cust{font-size:12px;color:#aaa}
+.pord-num{background:var(--black);color:var(--yellow);font-size:11px;font-weight:800;padding:3px 9px;border-radius:8px;flex-shrink:0}
+.pord-date{font-size:13px;font-weight:700;color:var(--black);flex:1}
+.pord-cust{font-size:12px;color:#555}
 .pord-arr{font-size:13px;color:#666;transition:transform .2s;flex-shrink:0}
 .pord-arr.open{transform:rotate(180deg)}
 .pord-items{border-top:1px solid var(--border)}
@@ -1143,7 +1149,6 @@ function chipHtml(p){
   var hot=p.fast?'<span class="hotbdg">🔥 Hot</span>':'';
   var demoId=DEMO_IMAGES[p.name.toLowerCase().trim()]||DEMO_IMAGES[p.name.toLowerCase().replace(/\s/g,'')];
   var imgSrc=driveThumb(p.img)||(demoId?'https://drive.google.com/thumbnail?id='+demoId+'&sz=w400':'');
-  var imgBtn=imgSrc?'<button class="prodimgbtn" onclick="event.stopPropagation();showProductImage(\''+esc(p.name)+'\',\''+imgSrc+'\')">📷</button>':'';
   var prevOrd=PREV_ORDERED[p.name]?'<span class="reordbdg">↩ Reorder</span>':'';
   var scm=p.scheme?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\',\''+esc(p.scheme)+'\')">🏷️ Scheme</button>':'';
   var hotCls=p.fast?' hot':'';
@@ -1155,32 +1160,35 @@ function chipHtml(p){
   else if(wty&&(wty==="no"||wty==="none"||wty==="no warranty"||wty==="non warranty"||wty==="non")){wBadge='<span class="wbdg wno">NON</span>';}
   else if(wty){wBadge='<span class="wbdg w6m">🛡️ '+esc(p.warranty)+'</span>';}
 
-  /* ── OOS chip ── */
+  var imgArea='<div class="chip-img-wrap">'
+    +(imgSrc?'<img src="'+imgSrc+'" alt="'+esc(p.name)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">'
+            +'<span class="chip-img-ph" style="display:none">📦</span>'
+           :'<span class="chip-img-ph">📦</span>')
+    +(p.fast?'<span class="chip-hot-lbl">🔥 Hot</span>':'')
+  +'</div>';
+
+  /* ── OOS card ── */
   if(!p.stock){
     return '<span class="chip oos'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" onclick="tEnq(this)">'
+      +imgArea.replace('chip-img-wrap','chip-img-wrap').replace('<span class="chip-hot','<span class="chip-oos-lbl">Out of Stock</span><span class="chip-hot')
       +'<span class="cr1">'
-        +'<span class="cdot" style="background:#d1d5db"></span>'
-        +'<span class="chip-info">'
-          +'<span class="chip-name">'+esc(p.name)+'</span>'
-          +'<span class="chip-badges"><span class="hotbdg" style="color:#991b1b;background:#fef2f2;border:1px solid #fecaca">Out of Stock</span>'+hot+bx+inr+scm+wBadge+prevOrd+imgBtn+'</span>'
-        +'</span>'
-        +'<span class="chip-add" style="font-size:16px;border-style:dashed">📩</span>'
+        +'<span class="chip-info"><span class="chip-name">'+esc(p.name)+'</span>'
+        +'<span class="chip-badges">'+bx+inr+scm+wBadge+prevOrd+'</span></span>'
       +'</span>'
+      +'<div class="chip-foot"><span class="chip-add" style="font-size:16px;border-style:dashed">📩</span></div>'
       +'<button class="enqbtn" style="display:none;pointer-events:none;position:absolute;visibility:hidden">'+t.enq+'</button>'
     +'</span>';
   }
 
-  /* ── In-stock chip ── */
+  /* ── In-stock card ── */
   var isPoly=p.catKey.indexOf("polymer")!==-1;
   return '<span class="chip'+hotCls+'"'+scmAttr+' data-cat="'+esc(p.catKey)+'" data-name="'+esc(p.name)+'" data-bx="'+esc(p.box)+'" data-in="'+esc(p.inner)+'" data-alt="'+esc(p.alt)+'" data-oq="1" data-mode="box" onclick="tC(this)">'
+    +imgArea
     +'<span class="cr1">'
-      +'<span class="cdot"></span>'
-      +'<span class="chip-info">'
-        +'<span class="chip-name">'+esc(p.name)+'</span>'
-        +'<span class="chip-badges">'+bx+inr+hot+scm+wBadge+prevOrd+imgBtn+'</span>'
-      +'</span>'
-      +'<span class="chip-add">+</span>'
+      +'<span class="chip-info"><span class="chip-name">'+esc(p.name)+'</span>'
+      +'<span class="chip-badges">'+bx+inr+scm+wBadge+prevOrd+'</span></span>'
     +'</span>'
+    +'<div class="chip-foot"><span class="chip-add">+</span></div>'
     +qctrlHtml(isPoly)
   +'</span>';
 }
@@ -1435,7 +1443,7 @@ function fC(cat,el){
         if(isHot){n++;sf++;}
       }
       secs[i].classList.toggle("hidden",sf===0);
-      var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"flex":"none";
+      var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"grid":"none";
     }
   } else if(cat==="schm"){
     // Special: show all categories but only chips with a scheme
@@ -1448,7 +1456,7 @@ function fC(cat,el){
         if(hasScm){n++;sf++;}
       }
       secs[i].classList.toggle("hidden",sf===0);
-      var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"flex":"none";
+      var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"grid":"none";
     }
   } else {
     for(var i=0;i<secs.length;i++){
@@ -1457,7 +1465,7 @@ function fC(cat,el){
       var show=isSpecial?(v===cat):(cat==="all"||v===cat);
       secs[i].classList.toggle("hidden",!show);
       if(show){var chips=secs[i].querySelectorAll(".chip");for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");n++;}
-        var g=secs[i].querySelector(".cgrid");if(g)g.style.display="flex";}
+        var g=secs[i].querySelector(".cgrid");if(g)g.style.display="grid";}
     }
   }
   document.getElementById("nores").style.display="none";
@@ -1471,7 +1479,7 @@ function doSearch(){
   if(!q){
     for(var i=0;i<secs.length;i++){secs[i].classList.remove("hidden");
       var chips=secs[i].querySelectorAll(".chip");for(var j=0;j<chips.length;j++){chips[j].style.display="";chips[j].classList.remove("match");}
-      var g=secs[i].querySelector(".cgrid");if(g)g.style.display="flex";}
+      var g=secs[i].querySelector(".cgrid");if(g)g.style.display="grid";}
     document.getElementById("sinf").style.display="none";
     document.getElementById("nores").style.display="none";return;
   }
@@ -1484,7 +1492,7 @@ function doSearch(){
       chips[j].classList.toggle("match",m);if(m){found++;sf++;}
     }
     secs[i].classList.toggle("hidden",sf===0);
-    var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"flex":"none";
+    var g=secs[i].querySelector(".cgrid");if(g)g.style.display=sf>0?"grid":"none";
   }
   var sf=document.getElementById("sinf");sf.style.display="block";sf.innerHTML="Showing <b>"+found+"</b> of "+TOT+" products";
   document.getElementById("nores").style.display=found===0?"block":"none";
@@ -2161,7 +2169,20 @@ function checkStockChanges(products){
 function showReview(){
   var selNames=Object.keys(CART_MAP);
   var enqNames=Object.keys(ENQ_SET);
-  if(!selNames.length&&!enqNames.length) return;
+  if(!selNames.length&&!enqNames.length){
+    document.getElementById("revList").innerHTML='<div style="padding:60px 20px;text-align:center;color:var(--muted)">'
+      +'<div style="font-size:52px;margin-bottom:14px">🛒</div>'
+      +'<div style="font-size:17px;font-weight:800;color:var(--black);margin-bottom:8px">Your cart is empty</div>'
+      +'<div style="font-size:13px;line-height:1.7">Browse products and tap <b>+</b> to add items</div>'
+      +'</div>';
+    document.getElementById("revCount").textContent="0 items";
+    document.getElementById("piTotItems").textContent="";
+    document.getElementById("piTotBoxes").textContent="";
+    document.getElementById("piTotPcs").textContent="";
+    document.getElementById("piTotalRow").style.display="none";
+    document.getElementById("revOvl").classList.add("show");
+    return;
+  }
 
   // Group by category
   var catOrder=[],catItems={};
@@ -2523,7 +2544,7 @@ boot();
   </button>
   <button class="bni" id="bni-shop" onclick="bnShop()">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-    Shop
+    Category
   </button>
   <button class="bni" id="bni-gallery" onclick="bnGallery()">
     <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
@@ -2579,10 +2600,28 @@ function openShop(){
     cats[k].total++;
     if(p.stock) cats[k].live++;
   });
+  var fastCount=ALL_PRODUCTS.filter(function(p){return p.fast;}).length;
+  var newCount=ALL_PRODUCTS.filter(function(p){return p.newl;}).length;
+  var scmCount=ALL_PRODUCTS.filter(function(p){return p.scheme;}).length;
   var html='<div class="shop-cat shop-cat-all" onclick="closeShop()">'
     +'<span style="font-size:28px">📦</span>'
     +'<div><div class="shop-cat-name">All Products</div>'
     +'<div class="shop-cat-count">'+ALL_PRODUCTS.length+' products</div></div>'
+    +'</div>';
+  if(fastCount>0) html+='<div class="shop-cat" style="border-color:#fde68a;background:#fffbeb" onclick="pickShopCat(\'fast\')">'
+    +'<div class="shop-cat-icon">⭐</div>'
+    +'<div class="shop-cat-name">Fast Selling</div>'
+    +'<div class="shop-cat-count">'+fastCount+' products</div>'
+    +'</div>';
+  if(newCount>0) html+='<div class="shop-cat" style="border-color:#c7d2fe;background:#eef2ff" onclick="pickShopCat(\'newl\')">'
+    +'<div class="shop-cat-icon">✨</div>'
+    +'<div class="shop-cat-name">New Launch</div>'
+    +'<div class="shop-cat-count">'+newCount+' products</div>'
+    +'</div>';
+  if(scmCount>0) html+='<div class="shop-cat" style="border-color:#bbf7d0;background:#f0fdf4" onclick="pickShopCat(\'schm\')">'
+    +'<div class="shop-cat-icon">🏷️</div>'
+    +'<div class="shop-cat-name">Schemes</div>'
+    +'<div class="shop-cat-count">'+scmCount+' products</div>'
     +'</div>';
   catOrder.forEach(function(k){
     var c=cats[k];
