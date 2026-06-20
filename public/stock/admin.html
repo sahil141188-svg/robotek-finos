@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>Robotek Admin</title>
+<style>
+:root{
+  --red:#E52D31;--maroon:#852321;--yellow:#F7DA11;--black:#1F1B20;
+  --bg:#F5F4F4;--card:#fff;--border:#E8E6E7;--muted:#9A9596;
+  --green:#22c55e;--shadow:0 2px 12px rgba(0,0,0,.09);
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--black);min-height:100vh}
+
+/* ── LOGIN ── */
+#loginWrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:var(--card);border-radius:20px;padding:36px 32px;width:100%;max-width:360px;box-shadow:0 8px 40px rgba(0,0,0,.12);text-align:center}
+.login-logo{font-size:28px;font-weight:900;letter-spacing:1px;color:var(--black);margin-bottom:4px}
+.login-logo span{color:var(--red)}
+.login-sub{font-size:13px;color:var(--muted);margin-bottom:28px}
+.login-label{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.8px;text-align:left;margin-bottom:6px}
+.login-input{width:100%;border:2px solid var(--border);border-radius:10px;padding:12px 16px;font-size:20px;letter-spacing:6px;text-align:center;outline:none;font-family:inherit;transition:border-color .2s}
+.login-input:focus{border-color:var(--red)}
+.login-btn{width:100%;margin-top:16px;background:var(--red);color:#fff;border:none;border-radius:10px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;transition:opacity .15s}
+.login-btn:active{opacity:.85}
+.login-err{color:var(--red);font-size:12px;margin-top:10px;font-weight:600;min-height:18px}
+.login-hint{font-size:11px;color:var(--muted);margin-top:20px}
+
+/* ── HEADER ── */
+#adminWrap{display:none}
+.adm-hdr{background:var(--card);border-bottom:2px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow)}
+.adm-logo{font-size:17px;font-weight:900;letter-spacing:.5px}
+.adm-logo span{color:var(--red)}
+.adm-logout{background:none;border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit}
+
+/* ── TABS ── */
+.adm-tabs{display:flex;background:var(--card);border-bottom:2px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.adm-tabs::-webkit-scrollbar{display:none}
+.adm-tab{flex:1;min-width:100px;padding:13px 8px;font-size:13px;font-weight:700;color:var(--muted);text-align:center;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:color .15s}
+.adm-tab.active{color:var(--red);border-bottom-color:var(--red)}
+
+/* ── PANEL ── */
+.adm-panel{display:none;padding:14px}
+.adm-panel.active{display:block}
+
+/* ── SECTION TITLE ── */
+.sec-title{font-size:13px;font-weight:800;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-bottom:12px}
+
+/* ── ORDERS ── */
+.ord-search{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px}
+.ord-search:focus{border-color:var(--red)}
+.ord-card{background:var(--card);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow);border-left:4px solid var(--red)}
+.ord-row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.ord-name{font-size:14px;font-weight:800;color:var(--black)}
+.ord-date{font-size:11px;color:var(--muted)}
+.ord-phone{font-size:12px;color:var(--muted);margin-bottom:6px}
+.ord-items{font-size:12px;color:var(--black);line-height:1.7}
+.ord-item{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)}
+.ord-item:last-child{border:none}
+.ord-item-name{font-weight:600;flex:1}
+.ord-item-qty{color:var(--muted);font-size:11px}
+.ord-status{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:.3px}
+.ord-status.new{background:#fef3c7;color:#92400e}
+.ord-status.done{background:#d1fae5;color:#065f46}
+.ord-empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px}
+.ord-loading{text-align:center;padding:40px;color:var(--muted);font-size:14px}
+.ord-filter-row{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.ord-filter-row::-webkit-scrollbar{display:none}
+.ord-chip{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;border:1.5px solid var(--border);background:var(--card);cursor:pointer;white-space:nowrap;color:var(--muted)}
+.ord-chip.active{background:var(--red);border-color:var(--red);color:#fff}
+.ord-count{background:var(--bg);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:12px}
+
+/* ── IMAGES ── */
+.img-search{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px}
+.img-search:focus{border-color:var(--red)}
+.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.img-card{background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:2px solid var(--border);transition:border-color .2s}
+.img-card.has-custom{border-color:var(--yellow)}
+.img-thumb{width:100%;aspect-ratio:1;background:#f5f4f4;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;cursor:pointer}
+.img-thumb img{width:100%;height:100%;object-fit:contain;padding:6px}
+.img-thumb-ph{font-size:36px;opacity:.22}
+.img-card-body{padding:8px 10px 10px}
+.img-cat{font-size:8px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.4px}
+.img-name{font-size:11px;font-weight:800;color:var(--black);margin-bottom:6px;line-height:1.3}
+.img-url-input{width:100%;border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;font-size:11px;font-family:inherit;outline:none;margin-bottom:6px;color:var(--black)}
+.img-url-input:focus{border-color:var(--yellow)}
+.img-url-input::placeholder{color:#c0bebe}
+.img-actions{display:flex;gap:5px}
+.img-save-btn{flex:1;background:var(--yellow);color:var(--black);border:none;border-radius:7px;padding:6px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit}
+.img-save-btn:active{opacity:.8}
+.img-clear-btn{background:var(--bg);color:var(--muted);border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.img-clear-btn:active{opacity:.7}
+.img-custom-badge{position:absolute;top:5px;right:5px;background:var(--yellow);color:var(--black);font-size:8px;font-weight:800;padding:2px 5px;border-radius:4px}
+.img-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--black);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
+.img-toast.show{opacity:1}
+
+/* ── SETTINGS ── */
+.set-card{background:var(--card);border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
+.set-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.3px}
+.set-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit;outline:none}
+.set-input:focus{border-color:var(--red)}
+.set-btn{background:var(--red);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;margin-top:8px}
+.set-btn.yellow{background:var(--yellow);color:var(--black)}
+.set-btn:active{opacity:.85}
+.set-note{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════ LOGIN ═══════════════════════════════ -->
+<div id="loginWrap">
+  <div class="login-card">
+    <div class="login-logo">ROBOT<span>EK</span></div>
+    <div class="login-sub">Admin Panel · Stock App</div>
+    <div class="login-label">ENTER PIN</div>
+    <input type="password" class="login-input" id="pinInput" maxlength="6" inputmode="numeric" placeholder="••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-hint">Default PIN: 1234 · Change in Settings</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ ADMIN ═══════════════════════════════ -->
+<div id="adminWrap">
+  <div class="adm-hdr">
+    <div class="adm-logo">ROBOT<span>EK</span> Admin</div>
+    <button class="adm-logout" onclick="doLogout()">Sign Out</button>
+  </div>
+
+  <div class="adm-tabs">
+    <div class="adm-tab active" onclick="switchTab('orders',this)">📦 Orders</div>
+    <div class="adm-tab" onclick="switchTab('images',this)">🖼️ Images</div>
+    <div class="adm-tab" onclick="switchTab('settings',this)">⚙️ Settings</div>
+  </div>
+
+  <!-- ORDERS TAB -->
+  <div class="adm-panel active" id="tab-orders">
+    <div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+      <div class="sec-title" style="margin-bottom:0">Customer Orders</div>
+      <button class="set-btn" style="padding:6px 12px;font-size:11px;margin-top:0" onclick="loadOrders()">↻ Refresh</button>
+    </div>
+    <input class="ord-search" id="ordSearch" placeholder="Search by name, product…" oninput="filterOrders()">
+    <div class="ord-filter-row" id="ordFilters">
+      <div class="ord-chip active" onclick="setOrdFilter('all',this)">All</div>
+      <div class="ord-chip" onclick="setOrdFilter('today',this)">Today</div>
+      <div class="ord-chip" onclick="setOrdFilter('week',this)">This Week</div>
+    </div>
+    <div class="ord-count" id="ordCount"></div>
+    <div id="ordList"><div class="ord-loading">Loading orders…</div></div>
+  </div>
+
+  <!-- IMAGES TAB -->
+  <div class="adm-panel" id="tab-images">
+    <div class="sec-title">Product Image Manager</div>
+    <input class="img-search" id="imgSearch" placeholder="Search product name or category…" oninput="filterImgGrid()">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+      Paste a Google Drive share link or file ID for any product. The app will use your image immediately on all devices.<br>
+      <strong>Tip:</strong> Upload image to Google Drive → right-click → "Get link" → paste here.
+    </div>
+    <div class="img-grid" id="imgGrid"><div class="ord-loading">Loading products…</div></div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div class="adm-panel" id="tab-settings">
+    <div class="sec-title">Settings</div>
+
+    <div class="set-card">
+      <div class="set-label">Change Admin PIN</div>
+      <input class="set-input" id="newPin" type="password" inputmode="numeric" maxlength="6" placeholder="Enter new PIN">
+      <input class="set-input" style="margin-top:8px" id="confirmPin" type="password" inputmode="numeric" maxlength="6" placeholder="Confirm new PIN">
+      <button class="set-btn" onclick="changePin()">Save New PIN</button>
+      <div class="set-note" id="pinMsg"></div>
+    </div>
+
+    <div class="set-card">
+      <div class="set-label">Google Sheet ID</div>
+      <input class="set-input" id="sheetId" placeholder="Sheet ID from URL">
+      <button class="set-btn" style="margin-top:8px" onclick="saveSheetId()">Save Sheet ID</button>
+      <div class="set-note">Current: <span id="curSheetId"></span></div>
+    </div>
+
+    <div class="set-card">
+      <div class="set-label">Reset Image Overrides</div>
+      <div class="set-note" style="margin-bottom:8px">Remove all custom images you've set — products will go back to their original Sheet images.</div>
+      <button class="set-btn" style="background:#ef4444" onclick="resetImgOverrides()">Clear All Custom Images</button>
+    </div>
+
+    <div class="set-card">
+      <div class="set-label">Export Image Overrides</div>
+      <div class="set-note" style="margin-bottom:8px">Download a JSON file of all custom image mappings you've set.</div>
+      <button class="set-btn yellow" onclick="exportOverrides()">Download JSON</button>
+    </div>
+
+    <div class="set-card">
+      <div class="set-label">Links</div>
+      <button class="set-btn yellow" onclick="window.open('https://docs.google.com/spreadsheets/d/'+getSheetId(),'_blank')" style="width:100%;margin-top:0">Open Google Sheet ↗</button>
+      <button class="set-btn" onclick="window.location.href='index.html'" style="width:100%;margin-top:8px;background:var(--black)">← Back to Stock App</button>
+    </div>
+  </div>
+</div>
+
+<div class="img-toast" id="toast"></div>
+
+<script>
+var SHEET_ID_KEY="rb_admin_sheet_id";
+var PIN_KEY="rb_admin_pin";
+var IMG_OVERRIDES_KEY="rb_img_overrides";
+var DEFAULT_SHEET_ID="1jNYhM-pkzGvV13ggc7LaRpe5zFz5PWe9oxLhBSWSy20";
+var DEFAULT_PIN="1234";
+
+var _allOrders=[], _ordFilter="all";
+var _allProds=[], _imgOverrides={};
+
+/* ── AUTH ── */
+function getPin(){return localStorage.getItem(PIN_KEY)||DEFAULT_PIN;}
+function getSheetId(){return localStorage.getItem(SHEET_ID_KEY)||DEFAULT_SHEET_ID;}
+
+function doLogin(){
+  var pin=document.getElementById("pinInput").value.trim();
+  if(pin===getPin()){
+    document.getElementById("loginWrap").style.display="none";
+    document.getElementById("adminWrap").style.display="block";
+    init();
+  } else {
+    document.getElementById("loginErr").textContent="Incorrect PIN. Try again.";
+    document.getElementById("pinInput").value="";
+    document.getElementById("pinInput").focus();
+  }
+}
+function doLogout(){
+  document.getElementById("adminWrap").style.display="none";
+  document.getElementById("loginWrap").style.display="flex";
+  document.getElementById("pinInput").value="";
+  document.getElementById("loginErr").textContent="";
+}
+
+/* ── TABS ── */
+function switchTab(name,el){
+  document.querySelectorAll(".adm-tab").forEach(function(t){t.classList.remove("active");});
+  document.querySelectorAll(".adm-panel").forEach(function(p){p.classList.remove("active");});
+  el.classList.add("active");
+  document.getElementById("tab-"+name).classList.add("active");
+}
+
+/* ── INIT ── */
+function init(){
+  _imgOverrides=JSON.parse(localStorage.getItem(IMG_OVERRIDES_KEY)||"{}");
+  document.getElementById("curSheetId").textContent=getSheetId();
+  document.getElementById("sheetId").value=getSheetId();
+  loadOrders();
+  loadProducts();
+}
+
+/* ════════════════════════════════════════
+   ORDERS
+════════════════════════════════════════ */
+function loadOrders(){
+  document.getElementById("ordList").innerHTML='<div class="ord-loading">Loading orders from Google Sheet…</div>';
+  var url="https://docs.google.com/spreadsheets/d/"+getSheetId()+"/gviz/tq?tqx=out:json&sheet=Orders";
+  fetch(url)
+    .then(function(r){return r.text();})
+    .then(function(txt){
+      var json=JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+      _allOrders=parseOrders(json);
+      renderOrders();
+    })
+    .catch(function(){
+      // Fallback: try localStorage orders (customer's own device)
+      _allOrders=[];
+      var key="rb_order_history";
+      try{
+        var lsOrds=JSON.parse(localStorage.getItem(key)||"[]");
+        lsOrds.forEach(function(o,i){
+          _allOrders.push({
+            id:"#"+(1000+i),
+            name:o.custName||o.name||"Customer",
+            phone:o.custPhone||o.phone||"",
+            date:o.date||o.ts||"",
+            items:o.items||[],
+            total:o.total||"",
+            raw:JSON.stringify(o)
+          });
+        });
+      }catch(e){}
+      renderOrders();
+    });
+}
+
+function parseOrders(json){
+  var rows=json.table.rows;
+  var cols=json.table.cols;
+  // Map column labels
+  var colMap={};
+  cols.forEach(function(c,i){colMap[c.label.toLowerCase().replace(/\s/g,'')]=i;});
+  var orders=[];
+  rows.forEach(function(row){
+    if(!row||!row.c) return;
+    var get=function(label){
+      var i=colMap[label];
+      if(i===undefined) return "";
+      return row.c[i]&&row.c[i].v!=null?String(row.c[i].v):"";
+    };
+    orders.push({
+      id:get("orderid")||get("id")||"",
+      name:get("customername")||get("name")||get("customer")||"",
+      phone:get("phone")||get("mobile")||get("whatsapp")||"",
+      date:get("date")||get("timestamp")||get("time")||"",
+      items:get("items")||get("products")||get("order")||"",
+      total:get("total")||get("amount")||"",
+      city:get("city")||get("location")||""
+    });
+  });
+  return orders.filter(function(o){return o.name||o.items;});
+}
+
+var _ordFilterActive="all";
+function setOrdFilter(f,el){
+  _ordFilterActive=f;
+  document.querySelectorAll(".ord-chip").forEach(function(c){c.classList.remove("active");});
+  el.classList.add("active");
+  renderOrders();
+}
+
+function filterOrders(){renderOrders();}
+
+function renderOrders(){
+  var q=(document.getElementById("ordSearch").value||"").toLowerCase();
+  var now=new Date();
+  var filtered=_allOrders.filter(function(o){
+    var match=!q||(o.name+o.phone+o.items+o.city).toLowerCase().includes(q);
+    if(!match) return false;
+    if(_ordFilterActive==="today"){
+      return o.date&&o.date.startsWith(now.toISOString().slice(0,10));
+    }
+    if(_ordFilterActive==="week"){
+      var d=new Date(o.date);
+      return (now-d)<7*86400000;
+    }
+    return true;
+  });
+  document.getElementById("ordCount").textContent=filtered.length+" order"+(filtered.length!==1?"s":"")+" found";
+  if(!filtered.length){
+    document.getElementById("ordList").innerHTML='<div class="ord-empty">No orders found.<br><small>Orders are logged when customers place orders through the Stock App.</small></div>';
+    return;
+  }
+  var html="";
+  filtered.forEach(function(o){
+    var itemsHtml="";
+    if(Array.isArray(o.items)){
+      o.items.forEach(function(it){
+        itemsHtml+='<div class="ord-item"><span class="ord-item-name">'+esc(it.nm||it.name||"")+'</span><span class="ord-item-qty">'+(it.qty||it.q||"")+'</span></div>';
+      });
+    } else if(o.items){
+      itemsHtml='<div style="font-size:12px;color:var(--black);white-space:pre-wrap;line-height:1.6">'+esc(o.items)+'</div>';
+    }
+    html+='<div class="ord-card">'
+      +'<div class="ord-row1"><span class="ord-name">'+esc(o.name||"Customer")+'</span><span class="ord-date">'+esc(o.date||"")+'</span></div>'
+      +(o.phone?'<div class="ord-phone">📞 '+esc(o.phone)+(o.city?' · '+esc(o.city):'')+'</div>':'')
+      +(itemsHtml?'<div class="ord-items">'+itemsHtml+'</div>':'')
+      +(o.total?'<div style="font-size:12px;font-weight:800;color:var(--red);margin-top:6px">Total: '+esc(o.total)+'</div>':'')
+    +'</div>';
+  });
+  document.getElementById("ordList").innerHTML=html;
+}
+
+/* ════════════════════════════════════════
+   IMAGES
+════════════════════════════════════════ */
+function loadProducts(){
+  document.getElementById("imgGrid").innerHTML='<div class="ord-loading">Loading products…</div>';
+  var url="https://docs.google.com/spreadsheets/d/"+getSheetId()+"/gviz/tq?tqx=out:json&sheet=Stock+List";
+  fetch(url)
+    .then(function(r){return r.text();})
+    .then(function(txt){
+      var json=JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+      _allProds=parseProducts(json);
+      renderImgGrid(_allProds);
+    })
+    .catch(function(e){
+      document.getElementById("imgGrid").innerHTML='<div class="ord-empty">Could not load products.<br><small>Check Sheet ID in Settings.</small></div>';
+    });
+}
+
+function parseProducts(json){
+  var rows=json.table.rows;
+  // Using CONFIG.COL positions from main app: cat=0,name=1,box=2,stock=3,fast=4,new=5,inner=6,scheme=7,alt=8,warranty=9,img=10
+  var prods=[];
+  rows.forEach(function(row){
+    if(!row||!row.c) return;
+    var g=function(i){return row.c[i]&&row.c[i].v!=null?String(row.c[i].v).trim():"";};
+    var name=g(1); if(!name) return;
+    prods.push({cat:g(0),name:name,img:g(10)});
+  });
+  return prods;
+}
+
+function driveThumb(url){
+  if(!url) return "";
+  var m=url.match(/[-\w]{25,}/);
+  if(!m) return "";
+  return "https://drive.google.com/thumbnail?id="+m[0]+"&sz=w400";
+}
+
+function getImgSrc(p){
+  var ov=_imgOverrides[p.name];
+  if(ov&&ov.url) return driveThumb(ov.url)||ov.url;
+  if(p.img){
+    var parts=p.img.split("|");
+    var src=driveThumb(parts[0].trim())||parts[0].trim();
+    return src;
+  }
+  return "";
+}
+
+var _imgFilterQ="";
+function filterImgGrid(){
+  _imgFilterQ=(document.getElementById("imgSearch").value||"").toLowerCase();
+  var filtered=_allProds.filter(function(p){
+    return !_imgFilterQ||(p.name+p.cat).toLowerCase().includes(_imgFilterQ);
+  });
+  renderImgGrid(filtered);
+}
+
+function renderImgGrid(prods){
+  if(!prods.length){
+    document.getElementById("imgGrid").innerHTML='<div class="ord-empty">No products found.</div>';
+    return;
+  }
+  var html="";
+  prods.forEach(function(p){
+    var src=getImgSrc(p);
+    var hasCustom=!!(_imgOverrides[p.name]&&_imgOverrides[p.name].url);
+    var curOvUrl=hasCustom?_imgOverrides[p.name].url:"";
+    html+='<div class="img-card'+(hasCustom?" has-custom":"")+'" id="icard-'+esc(p.name)+'">'
+      +'<div class="img-thumb" onclick="previewImg(\''+esc(p.name)+'\')">'
+      +(src?'<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'">'
+           :'<span class="img-thumb-ph">📦</span>')
+      +(hasCustom?'<span class="img-custom-badge">Custom ✓</span>':'')
+      +'</div>'
+      +'<div class="img-card-body">'
+        +'<div class="img-cat">'+esc(p.cat)+'</div>'
+        +'<div class="img-name">'+esc(p.name)+'</div>'
+        +'<input class="img-url-input" id="iurl-'+esc(p.name)+'" placeholder="Paste Drive link or file ID…" value="'+esc(curOvUrl)+'">'
+        +'<div class="img-actions">'
+          +'<button class="img-save-btn" onclick="saveImg(\''+esc(p.name)+'\')">✓ Set Image</button>'
+          +(hasCustom?'<button class="img-clear-btn" onclick="clearImg(\''+esc(p.name)+'\')">✕</button>':'')
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  });
+  document.getElementById("imgGrid").innerHTML=html;
+}
+
+function saveImg(name){
+  var input=document.getElementById("iurl-"+name);
+  if(!input) return;
+  var url=input.value.trim();
+  if(!url){clearImg(name);return;}
+  if(!_imgOverrides[name]) _imgOverrides[name]={};
+  _imgOverrides[name].url=url;
+  localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));
+  showToast("Image saved for "+name);
+  filterImgGrid();
+}
+
+function clearImg(name){
+  if(_imgOverrides[name]){delete _imgOverrides[name];}
+  localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));
+  showToast("Cleared custom image for "+name);
+  filterImgGrid();
+}
+
+function previewImg(name){
+  var ov=_imgOverrides[name];
+  var p=_allProds.find(function(x){return x.name===name;});
+  var src=ov&&ov.url?driveThumb(ov.url)||ov.url:(p?getImgSrc(p):"");
+  if(!src){showToast("No image yet");return;}
+  var win=window.open("","_blank","width=600,height=600");
+  win.document.write('<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;height:100vh"><img src="'+src+'" style="max-width:90vw;max-height:90vh;object-fit:contain"></body></html>');
+}
+
+/* ── SETTINGS ACTIONS ── */
+function changePin(){
+  var np=document.getElementById("newPin").value.trim();
+  var cp=document.getElementById("confirmPin").value.trim();
+  if(!np){document.getElementById("pinMsg").textContent="Enter a new PIN.";return;}
+  if(np!==cp){document.getElementById("pinMsg").textContent="PINs do not match.";return;}
+  localStorage.setItem(PIN_KEY,np);
+  document.getElementById("pinMsg").textContent="PIN changed successfully!";
+  document.getElementById("newPin").value="";
+  document.getElementById("confirmPin").value="";
+}
+
+function saveSheetId(){
+  var id=document.getElementById("sheetId").value.trim();
+  if(!id) return;
+  localStorage.setItem(SHEET_ID_KEY,id);
+  document.getElementById("curSheetId").textContent=id;
+  showToast("Sheet ID saved");
+  loadOrders();
+  loadProducts();
+}
+
+function resetImgOverrides(){
+  if(!confirm("Remove all custom images? This cannot be undone.")) return;
+  localStorage.removeItem(IMG_OVERRIDES_KEY);
+  _imgOverrides={};
+  showToast("All custom images cleared");
+  filterImgGrid();
+}
+
+function exportOverrides(){
+  var data=JSON.stringify(_imgOverrides,null,2);
+  var blob=new Blob([data],{type:"application/json"});
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="robotek-image-overrides.json";
+  a.click();
+}
+
+/* ── UTILS ── */
+function esc(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+
+function showToast(msg){
+  var t=document.getElementById("toast");
+  t.textContent=msg;
+  t.classList.add("show");
+  setTimeout(function(){t.classList.remove("show");},2200);
+}
+
+/* auto-login if session is active */
+(function(){
+  if(sessionStorage.getItem("rb_admin_ok")==="1"){
+    document.getElementById("loginWrap").style.display="none";
+    document.getElementById("adminWrap").style.display="block";
+    init();
+  }
+  document.getElementById("pinInput").addEventListener("input",function(){
+    document.getElementById("loginErr").textContent="";
+    if(this.value.length===getPin().length) doLogin();
+  });
+})();
+</script>
+</body>
+</html>

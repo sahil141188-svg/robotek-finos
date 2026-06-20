@@ -551,6 +551,7 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
       <div class="spill"><div class="spnum" id="stockNum">—</div><div class="splbl" id="t-instock">IN STOCK</div></div>
       <button class="qrbtn" onclick="openQR()" title="Share QR">📲</button>
       <button id="installBtn" onclick="doInstall()">⤓ Install</button>
+      <a href="admin.html" style="background:#1f1b20;color:#F7DA11;border:none;border-radius:7px;padding:5px 9px;font-size:10px;font-weight:800;text-decoration:none;letter-spacing:.3px;display:flex;align-items:center;gap:3px;white-space:nowrap">⚙ Admin</a>
     </div>
   </div>
   <div class="hmeta">
@@ -1138,7 +1139,6 @@ var DEMO_IMAGES = {
 // Convert any Drive URL to a thumbnail URL — extracts file ID and uses thumbnail endpoint
 function driveThumb(url){
   if(!url) return '';
-  // Extract file ID from any Drive URL format (thumbnail, share, lh3, or raw ID)
   var m=url.match(/\/d\/([a-zA-Z0-9_-]{25,})/)||
         url.match(/[?&]id=([a-zA-Z0-9_-]{25,})/)||
         url.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]{25,})/)||
@@ -1147,13 +1147,23 @@ function driveThumb(url){
   return 'https://drive.google.com/thumbnail?id='+m[1]+'&sz=w800';
 }
 
+/* Admin image overrides — set via /stock/admin.html, stored in localStorage */
+var IMG_OVERRIDES={};
+try{IMG_OVERRIDES=JSON.parse(localStorage.getItem("rb_img_overrides")||"{}");}catch(e){}
+function getAdminImgSrc(name,fallbackUrl){
+  var ov=IMG_OVERRIDES[name];
+  if(ov&&ov.url) return driveThumb(ov.url)||ov.url;
+  return fallbackUrl||'';
+}
+
 function chipHtml(p){
   var t=T[lang];
   var bx=p.box?'<span class="hotbdg" style="color:#1e40af;background:#eff6ff;border:1px solid #bfdbfe">Bx:'+esc(p.box)+'</span>':'';
   var inr=p.inner?'<span class="hotbdg" style="color:#5b21b6;background:#f5f3ff;border:1px solid #ddd6fe">In:'+esc(p.inner)+'</span>':'';
   var hot=p.fast?'<span class="hotbdg">🔥 Hot</span>':'';
   var demoId=DEMO_IMAGES[p.name.toLowerCase().trim()]||DEMO_IMAGES[p.name.toLowerCase().replace(/\s/g,'')];
-  var imgSrc=driveThumb(p.img)||(demoId?'https://drive.google.com/thumbnail?id='+demoId+'&sz=w400':'');
+  var _fallback=driveThumb(p.img)||(demoId?'https://drive.google.com/thumbnail?id='+demoId+'&sz=w400':'');
+  var imgSrc=getAdminImgSrc(p.name,_fallback);
   var prevOrd=PREV_ORDERED[p.name]?'<span class="reordbdg">↩ Reorder</span>':'';
   var scm=p.scheme?'<button class="scmbdg" onclick="showScheme(event,\''+esc(p.name)+'\',\''+esc(p.scheme)+'\')">🏷️ Scheme</button>':'';
   var hotCls=p.fast?' hot':'';
