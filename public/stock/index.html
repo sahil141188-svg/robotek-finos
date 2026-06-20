@@ -123,8 +123,8 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .img-gallery-close{background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;width:32px;height:32px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:300}
 .img-gallery-body{flex:1;min-height:0}
 .img-gallery-body iframe{width:100%;height:70vh;border:none;display:block}
-/* ── Category grid — 4-column layout ── */
-.cgrid{background:#f0eff0;padding:6px;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+/* ── Category grid — 6-column layout ── */
+.cgrid{background:#f0eff0;padding:5px;display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
 .ecat{width:100%;padding:16px;text-align:center;font-size:12px;color:var(--muted);font-style:italic}
 
 /* ── Product chip — reference-style card ── */
@@ -149,22 +149,22 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 /* divider line between image and text */
 .chip-img-wrap::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:rgba(0,0,0,.06)}
 /* card text body */
-.cr1{display:flex;flex-direction:column;padding:5px 6px 2px;flex:1}
+.cr1{display:flex;flex-direction:column;padding:3px 4px 1px;flex:1}
 .cdot{display:none}
 .chip-img-main{display:none}
 .chip-img-row{display:none}
 .chip-img-thumb{display:none}
 .chip-info{flex:1;min-width:0}
-.chip-cat-tag{font-size:7px;font-weight:700;color:#9a9596;letter-spacing:.6px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-bottom:1px}
-.chip-name{font-size:10.5px;font-weight:800;color:#1f1b20;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.chip-badges{display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-top:3px}
+.chip-cat-tag{font-size:6.5px;font-weight:700;color:#9a9596;letter-spacing:.3px;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.chip-name{font-size:9px;font-weight:800;color:#1f1b20;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:1px}
+.chip-badges{display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-top:2px}
 /* full-width yellow add button */
-.chip-foot{padding:5px 6px 7px}
+.chip-foot{padding:3px 4px 5px}
 .chip-add{
-  width:100%;height:26px;border-radius:6px;
+  width:100%;height:22px;border-radius:5px;
   border:none;background:var(--yellow);
   display:flex;align-items:center;justify-content:center;
-  font-size:15px;font-weight:900;color:#1f1b20;
+  font-size:13px;font-weight:900;color:#1f1b20;
   transition:background .15s;
   line-height:1;
 }
@@ -481,20 +481,20 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .gallery-cats::-webkit-scrollbar{display:none}
 .gcat{flex-shrink:0;font-family:inherit;font-size:12px;font-weight:600;white-space:nowrap;padding:6px 14px;border-radius:18px;background:var(--bg);border:1.5px solid var(--border);color:var(--muted);cursor:pointer;transition:all .18s}
 .gcat.active{background:var(--black);border-color:var(--black);color:var(--yellow)}
-.gallery-body{flex:1;overflow-y:auto;padding:6px 6px 90px;-webkit-overflow-scrolling:touch}
-.gallery-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-.gallery-card{background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;transition:transform .12s;-webkit-tap-highlight-color:transparent}
-.gallery-card:active{transform:scale(.94)}
+.gallery-body{flex:1;overflow-y:auto;padding:5px 5px 80px;-webkit-overflow-scrolling:touch}
+.gallery-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.gallery-card{background:#fff;border-radius:6px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.09);cursor:pointer;transition:transform .1s;-webkit-tap-highlight-color:transparent}
+.gallery-card:active{transform:scale(.93)}
 .gallery-img-wrap{background:#f5f4f4;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
 .gallery-img-wrap img{width:100%;height:100%;object-fit:cover;display:block}
-.gallery-img-placeholder{font-size:28px;opacity:.22}
-.gallery-card-body{padding:4px 5px 5px}
-.gallery-cat-tag{font-size:7px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.4px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.gallery-prod-name{font-size:9px;font-weight:700;color:var(--black);line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
-.gallery-stock-dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:3px;vertical-align:middle;flex-shrink:0}
+.gallery-img-placeholder{font-size:20px;opacity:.22}
+.gallery-card-body{padding:3px 4px 4px}
+.gallery-cat-tag{font-size:6.5px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.3px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.gallery-prod-name{font-size:8.5px;font-weight:700;color:var(--black);line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.gallery-stock-dot{display:none}
 .gallery-status{display:none}
 .gallery-empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px}
-.gallery-img-count{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;font-size:8px;font-weight:700;border-radius:5px;padding:1px 5px;letter-spacing:.2px}
+.gallery-img-count{position:absolute;bottom:3px;right:3px;background:rgba(0,0,0,.65);color:#fff;font-size:7px;font-weight:700;border-radius:4px;padding:1px 4px}
 /* ── Product Carousel ── */
 .carousel-ovl{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.92);display:none;flex-direction:column}
 .carousel-ovl.show{display:flex}
