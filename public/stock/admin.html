@@ -349,11 +349,6 @@ function parseOrders(json){
   var colLabels=cols.map(function(c){return c.label;});
   console.log("Orders cols:", colLabels, colMap);
   // Debug: show first row raw data
-  var lastRow=rows[rows.length-1];
-  if(lastRow&&lastRow.c){
-    var dbg=lastRow.c.map(function(cell,i){return i+":"+(cell?JSON.stringify(cell.v):"null");}).join(" | ");
-    setTimeout(function(){var el=document.getElementById("ordCount");if(el)el.textContent="DEBUG lastRow: "+dbg;},100);
-  }
 
   function cellVal(row, idx, isPhone){
     if(idx===undefined||idx===null) return "";
@@ -409,7 +404,7 @@ function parseOrders(json){
       for(var ci=0;ci<row.c.length;ci++){
         var cc=row.c[ci]; if(!cc||cc.v==null) continue;
         var cv=String(typeof cc.v==="number"?Math.round(cc.v):cc.v).replace(/[,\s\-]/g,"");
-        if(/^\d{10}$/.test(cv)){phone=cv;break;}
+        if(/^\d{10}$/.test(cv)||(cv.startsWith("91")&&cv.length===12)){phone=cv.slice(-10);break;}
       }
     }
     if(phone) phoneByOrder[orderId]=phone;
