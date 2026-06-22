@@ -380,6 +380,31 @@ function itemsText(o){
   return parts.join(" ");
 }
 
+function copyOrder(btn){
+  var card=btn.closest(".ord-card");
+  var name=card.querySelector(".ord-cname").textContent;
+  var date=card.querySelector(".ord-date").textContent;
+  var phone=card.querySelector(".ord-phone-txt")?card.querySelector(".ord-phone-txt").textContent:"";
+  var lines=["*"+name+"* — "+date+(phone?" ("+phone+")":""),""];
+  var items=card.querySelectorAll(".ord-item");
+  var total=0;
+  items.forEach(function(it){
+    var nm=it.querySelector(".ord-item-name").textContent;
+    var qty=it.querySelector(".ord-item-qty").textContent;
+    var pcs=parseInt((qty.match(/(\d+)\s*pcs/)||[])[1]||0);
+    total+=pcs;
+    lines.push("• "+nm+" — "+qty);
+  });
+  lines.push("");
+  lines.push("*TOTAL: "+total+" pcs*");
+  var txt=lines.join("\n");
+  navigator.clipboard.writeText(txt).then(function(){
+    btn.textContent="✓ Copied!";
+    btn.style.background="#16a34a";
+    setTimeout(function(){btn.textContent="📋 Copy";btn.style.background="";},2000);
+  });
+}
+
 function renderOrders(){
   var q=(document.getElementById("ordSearch").value||"").toLowerCase();
   var now=new Date(); now.setHours(0,0,0,0);
@@ -395,66 +420,51 @@ function renderOrders(){
     return true;
   });
 
-  // Group by customer name + date
-  var groups={};
-  var groupKeys=[];
-  filtered.forEach(function(o){
-    var key=(o.name||"Customer")+"|"+(o.date||"");
-    if(!groups[key]){
-      groups[key]={name:o.name||"Customer",date:o.date||"",phone:o.phone||"",refId:o.refId||"",orders:[],enquiries:[]};
-      groupKeys.push(key);
-    }
-    var g=groups[key];
-    if(!g.phone&&o.phone) g.phone=o.phone;
-    // Merge items
-    if(Array.isArray(o.items)) o.items.forEach(function(it){g.orders.push(it);});
-    // Merge enquiries
-    if(Array.isArray(o.enquiries)) o.enquiries.forEach(function(e){if(e)g.enquiries.push(e);});
-    else if(o.enquiries) g.enquiries.push(String(o.enquiries));
-  });
-
-  document.getElementById("ordCount").textContent=groupKeys.length+" order"+(groupKeys.length!==1?"s":"")+" found ("+filtered.length+" rows)";
-  if(!groupKeys.length){
+  document.getElementById("ordCount").textContent=filtered.length+" order"+(filtered.length!==1?"s":"")+" found";
+  if(!filtered.length){
     document.getElementById("ordList").innerHTML='<div class="ord-empty">No orders found.</div>';
     return;
   }
 
   var html="";
-  groupKeys.forEach(function(key){
-    var g=groups[key];
-    // Compute total pcs
+  // Each entry in filtered is already one order (grouped by Order ID in parseOrders)
+  filtered.forEach(function(o){
     var totalPcs=0;
     var itemsHtml='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px">';
-    g.orders.forEach(function(it){
-      var nm=it.name||it.nm||"";
-      var qty=it.qty||it.q||"";
-      var boxes=it.boxes?it.boxes+" box":"";
-      var pcs=parseInt(it.totalQty||it.pcs||0,10)||0;
-      totalPcs+=pcs;
-      var total=pcs?(pcs+" pcs"):"";
-      itemsHtml+='<div class="ord-item">'
-        +'<span class="ord-item-name">'+esc(nm)+'</span>'
-        +'<span class="ord-item-qty">'+esc(String(qty))+(boxes?" · "+boxes:"")+(total?" = "+total:"")+'</span>'
-      +'</div>';
-    });
+    if(Array.isArray(o.items)&&o.items.length){
+      o.items.forEach(function(it){
+        var nm=it.name||it.nm||"";
+        var boxes=it.boxes||0;
+        var pcs=parseInt(it.totalQty||0,10)||0;
+        totalPcs+=pcs;
+        var qtyTxt=boxes?(boxes+" box"+(boxes>1?"es":"")):"";
+        var pcsTxt=pcs?(pcs+" pcs"):"";
+        itemsHtml+='<div class="ord-item">'
+          +'<span class="ord-item-name">'+esc(nm)+'</span>'
+          +'<span class="ord-item-qty">'+esc(qtyTxt)+(qtyTxt&&pcsTxt?" = ":"")+(pcsTxt?esc(pcsTxt):"")+'</span>'
+        +'</div>';
+      });
+    }
     itemsHtml+='</div>';
 
-    var enqHtml="";
-    if(g.enquiries.length){
-      enqHtml='<div style="font-size:11px;color:#92400e;background:#fef3c7;border-radius:6px;padding:5px 8px;margin-top:6px">📩 Enquiry: '+esc(g.enquiries.join(", "))+'</div>';
-    }
-
-    var totalBadge=totalPcs?'<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px">'+totalPcs+' pcs</span>':'';
+    var totalBadge=totalPcs?'<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;margin-left:6px">'+totalPcs+' pcs</span>':'';
 
     html+='<div class="ord-card">'
-      +'<div class="ord-row1">'
-        +'<span class="ord-name">'+esc(g.name)+totalBadge+'</span>'
-        +'<span class="ord-date">'+esc(g.date)+'</span>'
+      +'<div class="ord-row1" style="align-items:flex-start">'
+        +'<div>'
+          +'<div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">'
+            +'<span class="ord-name ord-cname">'+esc(o.name||"Customer")+'</span>'
+            +totalBadge
+          +'</div>'
+          +(o.phone?'<div class="ord-phone"><span class="ord-phone-txt">'+esc(o.phone)+'</span></div>':'')
+          +(o.refId?'<div style="font-size:10px;color:var(--muted);margin-top:1px">'+esc(o.refId)+'</div>':'')
+        +'</div>'
+        +'<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'
+          +'<span class="ord-date">'+esc(o.date||"")+'</span>'
+          +'<button onclick="copyOrder(this)" style="background:var(--red);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">📋 Copy</button>'
+        +'</div>'
       +'</div>'
-      +(g.phone?'<div class="ord-phone">📞 '+esc(g.phone)+'</div>':'')
-      +(g.orders.length?'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+g.orders.length+' product'+(g.orders.length!==1?"s":"")+'</div>':'')
       +itemsHtml
-      +enqHtml
     +'</div>';
   });
   document.getElementById("ordList").innerHTML=html;
