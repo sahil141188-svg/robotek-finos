@@ -353,13 +353,15 @@ function parseOrders(json){
   function cellVal(row, idx, isPhone){
     if(idx===undefined||idx===null) return "";
     var cell=row.c[idx];
-    if(!cell||cell.v==null) return "";
-    // For phone: use raw numeric value to avoid comma-formatted strings
+    if(!cell) return "";
+    // For phone: check both v and f (text-stored numbers have v=null but f="9999999999")
     if(isPhone){
       var pv=cell.v;
-      if(typeof pv==="number") return String(Math.round(pv));
-      return String(cell.v).replace(/[,\s]/g,"");
+      if(pv!=null) return String(typeof pv==="number"?Math.round(pv):pv).replace(/[,\s]/g,"");
+      if(cell.f!=null) return String(cell.f).replace(/[,\s\+]/g,"").slice(-10);
+      return "";
     }
+    if(cell.v==null) return "";
     if(cell.f!=null){
       var fv=String(cell.f);
       var dm2=fv.match(/^Date\((\d+),(\d+),(\d+)\)/);
