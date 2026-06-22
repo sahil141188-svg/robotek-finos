@@ -226,6 +226,14 @@ body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--b
     </div>
 
     <div class="set-card">
+      <div class="set-label">Orders Tab GID <span style="font-weight:400;color:var(--muted)">(for phone numbers)</span></div>
+      <div class="set-note" style="margin-bottom:8px">Open your Google Sheet → click the <b>Orders</b> tab → copy the number after <code style="background:#f3f4f6;padding:1px 4px;border-radius:3px">gid=</code> in the URL bar.</div>
+      <input class="set-input" id="ordersGid" placeholder="e.g. 1510325982" inputmode="numeric">
+      <button class="set-btn" style="margin-top:8px" onclick="saveOrdersGid()">Save GID</button>
+      <div class="set-note">Current: <span id="curOrdersGid"></span></div>
+    </div>
+
+    <div class="set-card">
       <div class="set-label">Reset Image Overrides</div>
       <div class="set-note" style="margin-bottom:8px">Remove all custom images you've set — products will go back to their original Sheet images.</div>
       <button class="set-btn" style="background:#ef4444" onclick="resetImgOverrides()">Clear All Custom Images</button>
@@ -258,8 +266,10 @@ var _allOrders=[], _ordFilter="all";
 var _allProds=[], _imgOverrides={};
 
 /* ── AUTH ── */
+var ORDERS_GID_KEY="rb_orders_gid";
 function getPin(){return localStorage.getItem(PIN_KEY)||DEFAULT_PIN;}
 function getSheetId(){return localStorage.getItem(SHEET_ID_KEY)||DEFAULT_SHEET_ID;}
+function getOrdersGid(){return localStorage.getItem(ORDERS_GID_KEY)||"";}
 
 function doLogin(){
   var pin=document.getElementById("pinInput").value.trim();
@@ -293,6 +303,9 @@ function init(){
   _imgOverrides=JSON.parse(localStorage.getItem(IMG_OVERRIDES_KEY)||"{}");
   document.getElementById("curSheetId").textContent=getSheetId();
   document.getElementById("sheetId").value=getSheetId();
+  var gid=getOrdersGid();
+  document.getElementById("curOrdersGid").textContent=gid||"Not set";
+  document.getElementById("ordersGid").value=gid;
   loadOrders();
   loadProducts();
 }
@@ -300,14 +313,35 @@ function init(){
 /* ════════════════════════════════════════
    ORDERS
 ════════════════════════════════════════ */
+function parseCsvPhones(csvText){
+  // Returns {orderId: phoneString} from CSV text (col B=OrderID, col D=Phone)
+  var map={};
+  var lines=csvText.split(/\r?\n/);
+  for(var i=1;i<lines.length;i++){
+    var cols=lines[i].split(",");
+    var oid=(cols[1]||"").trim().replace(/^"|"$/g,"");
+    var ph=(cols[3]||"").trim().replace(/^"|"$/g,"").replace(/[^\d]/g,"").slice(-10);
+    if(oid&&ph&&!map[oid]) map[oid]=ph;
+  }
+  return map;
+}
+
 function loadOrders(){
   document.getElementById("ordList").innerHTML='<div class="ord-loading">Loading orders from Google Sheet…</div>';
-  var url="https://docs.google.com/spreadsheets/d/"+getSheetId()+"/gviz/tq?tqx=out:json&sheet=Orders";
-  fetch(url)
-    .then(function(r){return r.text();})
-    .then(function(txt){
+  var sid=getSheetId();
+  var gid=getOrdersGid();
+  var gvizUrl="https://docs.google.com/spreadsheets/d/"+sid+"/gviz/tq?tqx=out:json&sheet=Orders";
+  var csvUrl=gid?"https://docs.google.com/spreadsheets/d/"+sid+"/export?format=csv&gid="+gid:"";
+
+  var gvizP=fetch(gvizUrl).then(function(r){return r.text();});
+  var csvP=csvUrl?fetch(csvUrl).then(function(r){return r.text();}).catch(function(){return "";}):Promise.resolve("");
+
+  Promise.all([gvizP,csvP])
+    .then(function(res){
+      var txt=res[0], csvTxt=res[1];
       var json=JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
-      _allOrders=parseOrders(json);
+      var csvPhones=csvTxt?parseCsvPhones(csvTxt):{};
+      _allOrders=parseOrders(json, csvPhones);
       _allOrders.sort(function(a,b){
         var da=new Date(a.date||0), db=new Date(b.date||0);
         return db-da;
@@ -336,7 +370,8 @@ function loadOrders(){
     });
 }
 
-function parseOrders(json){
+function parseOrders(json, csvPhones){
+  csvPhones=csvPhones||{};
   var rows=json.table.rows;
   var cols=json.table.cols;
 
@@ -431,7 +466,7 @@ function parseOrders(json){
     var totalQty=numVal(row, iTotalQty);
     var boxSize=numVal(row, iBoxSize);
     var boxes=numVal(row, iBoxes);
-    var phone=phoneByOrder[orderId]||"";
+    var phone=phoneByOrder[orderId]||csvPhones[orderId]||"";
 
     if(!orderId&&!customer) return;
     var key=orderId||(customer+"|"+orderDate);
@@ -725,6 +760,14 @@ function saveSheetId(){
   showToast("Sheet ID saved");
   loadOrders();
   loadProducts();
+}
+function saveOrdersGid(){
+  var gid=document.getElementById("ordersGid").value.trim().replace(/\D/g,"");
+  if(!gid) return;
+  localStorage.setItem(ORDERS_GID_KEY,gid);
+  document.getElementById("curOrdersGid").textContent=gid;
+  showToast("GID saved — reloading orders…");
+  loadOrders();
 }
 
 function resetImgOverrides(){
