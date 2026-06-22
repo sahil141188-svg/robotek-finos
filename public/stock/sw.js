@@ -3,7 +3,7 @@
  * This guarantees every device gets fresh HTML from the network,
  * even if the previously cached page had a JS crash.
  */
-var CACHE = "robotek-stock-v52";
+var CACHE = "robotek-stock-v53";
 
 self.addEventListener("install", function(e){
   self.skipWaiting();

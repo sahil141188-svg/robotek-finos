@@ -97,24 +97,34 @@ body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--b
 /* ── IMAGES ── */
 .img-search{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px}
 .img-search:focus{border-color:var(--red)}
-.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
-.img-card{background:var(--card);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);border:2px solid var(--border);transition:border-color .2s}
+.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.img-card{background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);border:2px solid var(--border);transition:border-color .2s}
 .img-card.has-custom{border-color:var(--yellow)}
-.img-thumb{width:100%;aspect-ratio:1;background:#f5f4f4;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;cursor:pointer}
-.img-thumb img{width:100%;height:100%;object-fit:contain;padding:6px}
-.img-thumb-ph{font-size:36px;opacity:.22}
-.img-card-body{padding:8px 10px 10px}
-.img-cat{font-size:8px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.4px}
-.img-name{font-size:11px;font-weight:800;color:var(--black);margin-bottom:6px;line-height:1.3}
-.img-url-input{width:100%;border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;font-size:11px;font-family:inherit;outline:none;margin-bottom:6px;color:var(--black)}
-.img-url-input:focus{border-color:var(--yellow)}
-.img-url-input::placeholder{color:#c0bebe}
-.img-actions{display:flex;gap:5px}
-.img-save-btn{flex:1;background:var(--yellow);color:var(--black);border:none;border-radius:7px;padding:6px;font-size:11px;font-weight:800;cursor:pointer;font-family:inherit}
-.img-save-btn:active{opacity:.8}
-.img-clear-btn{background:var(--bg);color:var(--muted);border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
-.img-clear-btn:active{opacity:.7}
-.img-custom-badge{position:absolute;top:5px;right:5px;background:var(--yellow);color:var(--black);font-size:8px;font-weight:800;padding:2px 5px;border-radius:4px}
+.img-card-header{padding:8px 12px 6px;border-bottom:1px solid var(--border)}
+.img-cat{font-size:8px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px}
+.img-name{font-size:12px;font-weight:800;color:var(--black);line-height:1.3}
+.img-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid var(--border)}
+.img-slot{display:flex;flex-direction:column;border-right:1px solid var(--border);position:relative}
+.img-slot:last-child{border-right:none}
+.img-slot-drop{aspect-ratio:1;background:#f8f7f7;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;transition:background .15s}
+.img-slot-drop:hover,.img-slot-drop.drag-over{background:#fff3cd}
+.img-slot-drop img{width:100%;height:100%;object-fit:contain;padding:4px}
+.img-slot-ph{font-size:22px;opacity:.15;pointer-events:none}
+.img-slot-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;background:rgba(0,0,0,.45);color:#fff;font-size:9px;font-weight:700;text-align:center;gap:3px;pointer-events:none}
+.img-slot-drop:hover .img-slot-overlay,.img-slot-drop.drag-over .img-slot-overlay{opacity:1}
+.img-slot-label{font-size:8px;font-weight:700;color:var(--muted);text-align:center;padding:3px 2px 0;text-transform:uppercase;letter-spacing:.3px}
+.img-slot-footer{display:flex;gap:3px;padding:4px 5px 5px}
+.img-slot-url{flex:1;border:1.5px solid var(--border);border-radius:5px;padding:4px 5px;font-size:9px;font-family:inherit;outline:none;color:var(--black);min-width:0}
+.img-slot-url:focus{border-color:var(--yellow)}
+.img-slot-url::placeholder{color:#c8c7c7}
+.img-slot-set{background:var(--yellow);color:var(--black);border:none;border-radius:5px;padding:4px 6px;font-size:9px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
+.img-slot-clr{background:none;color:var(--muted);border:1.5px solid var(--border);border-radius:5px;padding:4px 5px;font-size:9px;cursor:pointer;font-family:inherit}
+.img-slot-badge{position:absolute;top:3px;left:3px;background:var(--yellow);color:var(--black);font-size:7px;font-weight:800;padding:1px 4px;border-radius:3px;pointer-events:none}
+.img-card-footer{padding:6px 10px 8px;display:flex;gap:6px;align-items:center}
+.img-clear-all-btn{background:none;border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit}
+.img-clear-all-btn:hover{border-color:#ef4444;color:#ef4444}
+.img-custom-note{font-size:9px;color:var(--muted);flex:1}
+.img-url-input,.img-actions,.img-save-btn,.img-clear-btn,.img-thumb,.img-thumb-ph,.img-card-body,.img-custom-badge{display:none}
 .img-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--black);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
 .img-toast.show{opacity:1}
 
@@ -658,12 +668,33 @@ function driveThumb(url){
 
 function getImgSrc(p){
   var ov=_imgOverrides[p.name];
-  if(ov&&ov.url) return driveThumb(ov.url)||ov.url;
+  if(ov&&ov.imgs&&ov.imgs[0]) return ov.imgs[0].startsWith("data:")?ov.imgs[0]:driveThumb(ov.imgs[0])||ov.imgs[0];
+  if(ov&&ov.url) return driveThumb(ov.url)||ov.url; // backward compat
+  if(p.img){var parts=p.img.split("|");return driveThumb(parts[0].trim())||parts[0].trim();}
+  return "";
+}
+
+function getSlotSrc(p, si){
+  var ov=_imgOverrides[p.name];
+  // Override slot
+  if(ov&&ov.imgs&&ov.imgs[si]){
+    var s=ov.imgs[si];
+    return s.startsWith("data:")?s:driveThumb(s)||s;
+  }
+  // Backward compat: old single url goes to slot 0
+  if(si===0&&ov&&ov.url) return driveThumb(ov.url)||ov.url;
+  // Sheet image (split by |)
   if(p.img){
     var parts=p.img.split("|");
-    var src=driveThumb(parts[0].trim())||parts[0].trim();
-    return src;
+    if(parts[si]) return driveThumb(parts[si].trim())||parts[si].trim();
   }
+  return "";
+}
+
+function getSlotRawUrl(p, si){
+  var ov=_imgOverrides[p.name];
+  if(ov&&ov.imgs&&ov.imgs[si]&&!ov.imgs[si].startsWith("data:")) return ov.imgs[si];
+  if(si===0&&ov&&ov.url&&!(ov.imgs&&ov.imgs[0])) return ov.url;
   return "";
 }
 
@@ -676,63 +707,129 @@ function filterImgGrid(){
   renderImgGrid(filtered);
 }
 
+var SLOT_LABELS=["Main","Alt 1","Alt 2"];
+
 function renderImgGrid(prods){
-  if(!prods.length){
-    document.getElementById("imgGrid").innerHTML='<div class="ord-empty">No products found.</div>';
-    return;
-  }
+  if(!prods.length){document.getElementById("imgGrid").innerHTML='<div class="ord-empty">No products found.</div>';return;}
   var html="";
   prods.forEach(function(p){
-    var src=getImgSrc(p);
-    var hasCustom=!!(_imgOverrides[p.name]&&_imgOverrides[p.name].url);
-    var curOvUrl=hasCustom?_imgOverrides[p.name].url:"";
-    html+='<div class="img-card'+(hasCustom?" has-custom":"")+'" id="icard-'+esc(p.name)+'">'
-      +'<div class="img-thumb" onclick="previewImg(\''+esc(p.name)+'\')">'
-      +(src?'<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'">'
-           :'<span class="img-thumb-ph">📦</span>')
-      +(hasCustom?'<span class="img-custom-badge">Custom ✓</span>':'')
-      +'</div>'
-      +'<div class="img-card-body">'
-        +'<div class="img-cat">'+esc(p.cat)+'</div>'
-        +'<div class="img-name">'+esc(p.name)+'</div>'
-        +'<input class="img-url-input" id="iurl-'+esc(p.name)+'" placeholder="Paste Drive link or file ID…" value="'+esc(curOvUrl)+'">'
-        +'<div class="img-actions">'
-          +'<button class="img-save-btn" onclick="saveImg(\''+esc(p.name)+'\')">✓ Set Image</button>'
-          +(hasCustom?'<button class="img-clear-btn" onclick="clearImg(\''+esc(p.name)+'\')">✕</button>':'')
+    var ov=_imgOverrides[p.name];
+    var hasCustom=!!(ov&&(ov.url||(ov.imgs&&ov.imgs.some(function(s){return !!s;}))));
+    var pn=esc(p.name);
+    html+='<div class="img-card'+(hasCustom?" has-custom":"")+'" id="icard-'+pn+'">'
+      +'<div class="img-card-header"><div class="img-cat">'+esc(p.cat)+'</div><div class="img-name">'+esc(p.name)+'</div></div>'
+      +'<div class="img-slots">';
+    for(var si=0;si<3;si++){
+      var src=getSlotSrc(p,si);
+      var rawUrl=getSlotRawUrl(p,si);
+      var isCustom=!!(ov&&ov.imgs&&ov.imgs[si]);
+      html+='<div class="img-slot">'
+        +'<div class="img-slot-drop" id="islot-'+pn+'-'+si+'"'
+          +' onclick="slotClick(\''+pn+'\','+si+')"'
+          +' ondragover="slotDragOver(event,this)" ondragleave="slotDragLeave(this)" ondrop="slotDrop(event,\''+pn+'\','+si+')">'
+          +(src?'<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'">'
+               :'<span class="img-slot-ph">📷</span>')
+          +(isCustom?'<span class="img-slot-badge">✓</span>':'')
+          +'<div class="img-slot-overlay"><span>📁 Upload</span><span>or drop</span></div>'
         +'</div>'
+        +'<div class="img-slot-label">'+SLOT_LABELS[si]+'</div>'
+        +'<div class="img-slot-footer">'
+          +'<input class="img-slot-url" id="isloturl-'+pn+'-'+si+'" placeholder="Paste URL…" value="'+esc(rawUrl)+'">'
+          +'<button class="img-slot-set" onclick="saveSlotUrl(\''+pn+'\','+si+')">Set</button>'
+          +(isCustom?'<button class="img-slot-clr" onclick="clearSlot(\''+pn+'\','+si+')">✕</button>':'')
+        +'</div>'
+      +'</div>';
+    }
+    html+='</div>'
+      +'<div class="img-card-footer">'
+        +(hasCustom?'<button class="img-clear-all-btn" onclick="clearImg(\''+pn+'\')">Clear all custom</button>':'')
+        +(hasCustom?'<span class="img-custom-note">Custom images active</span>':'<span class="img-custom-note" style="color:var(--muted)">Using sheet images</span>')
       +'</div>'
     +'</div>';
   });
   document.getElementById("imgGrid").innerHTML=html;
+  // hidden file input for slot clicks
+  if(!document.getElementById("_slotFileInput")){
+    var fi=document.createElement("input");fi.type="file";fi.id="_slotFileInput";fi.accept="image/*";fi.style.display="none";
+    fi.onchange=function(){if(fi.files[0])compressAndSave(fi._pname,fi._si,fi.files[0]);fi.value="";};
+    document.body.appendChild(fi);
+  }
 }
 
-function saveImg(name){
-  var input=document.getElementById("iurl-"+name);
-  if(!input) return;
-  var url=input.value.trim();
-  if(!url){clearImg(name);return;}
-  if(!_imgOverrides[name]) _imgOverrides[name]={};
-  _imgOverrides[name].url=url;
+/* ── slot helpers ── */
+function slotClick(pname, si){
+  var fi=document.getElementById("_slotFileInput");
+  fi._pname=pname; fi._si=si;
+  fi.click();
+}
+function slotDragOver(e,el){e.preventDefault();el.classList.add("drag-over");}
+function slotDragLeave(el){el.classList.remove("drag-over");}
+function slotDrop(e,pname,si){
+  e.preventDefault();
+  var el=document.getElementById("islot-"+pname+"-"+si);
+  if(el) el.classList.remove("drag-over");
+  var file=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
+  if(file&&file.type.startsWith("image/")) compressAndSave(pname,si,file);
+}
+
+function compressAndSave(pname,si,file){
+  showToast("Processing image…");
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var img=new Image();
+    img.onload=function(){
+      var MAX=600, q=0.72;
+      var w=img.width, h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
+      else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      var canvas=document.createElement("canvas");
+      canvas.width=w; canvas.height=h;
+      canvas.getContext("2d").drawImage(img,0,0,w,h);
+      var dataUrl=canvas.toDataURL("image/jpeg",q);
+      setSlotData(pname,si,dataUrl);
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function saveSlotUrl(pname,si){
+  var inp=document.getElementById("isloturl-"+pname+"-"+si);
+  if(!inp) return;
+  var url=inp.value.trim();
+  if(!url){clearSlot(pname,si);return;}
+  setSlotData(pname,si,url);
+}
+
+function setSlotData(pname,si,value){
+  if(!_imgOverrides[pname]) _imgOverrides[pname]={imgs:["","",""]};
+  if(!_imgOverrides[pname].imgs) _imgOverrides[pname].imgs=["","",""];
+  _imgOverrides[pname].imgs[si]=value;
+  try{
+    localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));
+    showToast("Image "+(si+1)+" saved for "+pname);
+  }catch(e){
+    showToast("Storage full — image too large");
+    _imgOverrides[pname].imgs[si]="";
+  }
+  filterImgGrid();
+}
+
+function clearSlot(pname,si){
+  if(_imgOverrides[pname]&&_imgOverrides[pname].imgs) _imgOverrides[pname].imgs[si]="";
   localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));
-  showToast("Image saved for "+name);
+  showToast("Slot "+(si+1)+" cleared");
   filterImgGrid();
 }
 
 function clearImg(name){
-  if(_imgOverrides[name]){delete _imgOverrides[name];}
+  if(_imgOverrides[name]) delete _imgOverrides[name];
   localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));
-  showToast("Cleared custom image for "+name);
+  showToast("Cleared all custom images for "+name);
   filterImgGrid();
 }
 
-function previewImg(name){
-  var ov=_imgOverrides[name];
-  var p=_allProds.find(function(x){return x.name===name;});
-  var src=ov&&ov.url?driveThumb(ov.url)||ov.url:(p?getImgSrc(p):"");
-  if(!src){showToast("No image yet");return;}
-  var win=window.open("","_blank","width=600,height=600");
-  win.document.write('<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;height:100vh"><img src="'+src+'" style="max-width:90vw;max-height:90vh;object-fit:contain"></body></html>');
-}
+function saveImg(name){ /* legacy no-op */ }
 
 /* ── SETTINGS ACTIONS ── */
 function changePin(){
