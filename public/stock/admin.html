@@ -97,33 +97,41 @@ body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--b
 /* ── IMAGES ── */
 .img-search{width:100%;border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;font-family:inherit;outline:none;margin-bottom:12px}
 .img-search:focus{border-color:var(--red)}
-.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+/* ── IMAGE MANAGER ── */
+.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px}
 .img-card{background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);border:2px solid var(--border);transition:border-color .2s}
 .img-card.has-custom{border-color:var(--yellow)}
-.img-card-header{padding:8px 12px 6px;border-bottom:1px solid var(--border)}
+.img-card-header{padding:8px 12px 6px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .img-cat{font-size:8px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.5px}
-.img-name{font-size:12px;font-weight:800;color:var(--black);line-height:1.3}
-.img-slots{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-bottom:1px solid var(--border)}
-.img-slot{display:flex;flex-direction:column;border-right:1px solid var(--border);position:relative}
-.img-slot:last-child{border-right:none}
-.img-slot-drop{aspect-ratio:1;background:#f8f7f7;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;overflow:hidden;transition:background .15s}
-.img-slot-drop:hover,.img-slot-drop.drag-over{background:#fff3cd}
-.img-slot-drop img{width:100%;height:100%;object-fit:contain;padding:4px}
-.img-slot-ph{font-size:22px;opacity:.15;pointer-events:none}
-.img-slot-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;background:rgba(0,0,0,.45);color:#fff;font-size:9px;font-weight:700;text-align:center;gap:3px;pointer-events:none}
-.img-slot-drop:hover .img-slot-overlay,.img-slot-drop.drag-over .img-slot-overlay{opacity:1}
-.img-slot-label{font-size:8px;font-weight:700;color:var(--muted);text-align:center;padding:3px 2px 0;text-transform:uppercase;letter-spacing:.3px}
-.img-slot-footer{display:flex;gap:3px;padding:4px 5px 5px}
-.img-slot-url{flex:1;border:1.5px solid var(--border);border-radius:5px;padding:4px 5px;font-size:9px;font-family:inherit;outline:none;color:var(--black);min-width:0}
-.img-slot-url:focus{border-color:var(--yellow)}
+.img-name{font-size:12px;font-weight:800;color:var(--black)}
+.img-clear-all-btn{background:none;border:none;color:var(--muted);font-size:10px;cursor:pointer;padding:2px 6px;border-radius:5px;font-family:inherit}
+.img-clear-all-btn:hover{color:#ef4444}
+/* preview */
+.img-preview-wrap{position:relative;background:#f5f4f4;border-bottom:1px solid var(--border);height:180px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.img-preview-wrap img{max-width:100%;max-height:180px;object-fit:contain;padding:8px}
+.img-preview-ph{font-size:40px;opacity:.12}
+.img-preview-nav{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.45);border-radius:20px;padding:3px 10px}
+.img-nav-btn{background:none;border:none;color:#fff;font-size:16px;cursor:pointer;line-height:1;padding:0 2px}
+.img-nav-count{font-size:11px;font-weight:700;color:#fff;min-width:30px;text-align:center}
+/* slots row */
+.img-slots-row{display:grid;grid-template-columns:repeat(3,1fr);gap:0;padding:10px 10px 0;border-bottom:1px solid var(--border)}
+.img-slot-card{border:2px solid var(--border);border-radius:9px;overflow:hidden;cursor:grab;transition:border-color .15s,opacity .15s;margin-bottom:10px;background:#fff}
+.img-slot-card.is-front{border-color:var(--red)}
+.img-slot-card.drag-src{opacity:.4}
+.img-slot-card.drag-over-slot{border-color:var(--yellow);background:#fffbea}
+.img-slot-badge{font-size:8px;font-weight:800;padding:2px 6px;text-align:center;background:var(--border)}
+.img-slot-card.is-front .img-slot-badge{background:var(--red);color:#fff}
+.img-slot-thumb{aspect-ratio:1;background:#f8f7f7;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.img-slot-thumb img{width:100%;height:100%;object-fit:contain;padding:3px}
+.img-slot-ph{font-size:20px;opacity:.13}
+.img-slot-x{position:absolute;top:3px;right:3px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0}
+.img-slot-actions{padding:4px 4px 5px;display:flex;flex-direction:column;gap:3px}
+.img-slot-upload{width:100%;background:#f3f4f6;border:none;border-radius:5px;padding:4px;font-size:9px;font-weight:700;cursor:pointer;font-family:inherit;color:var(--black)}
+.img-slot-upload:hover{background:var(--yellow)}
+.img-slot-url{width:100%;border:1.5px solid var(--border);border-radius:5px;padding:3px 5px;font-size:9px;font-family:inherit;outline:none;color:var(--black);box-sizing:border-box}
+.img-slot-url:focus{border-color:var(--red)}
 .img-slot-url::placeholder{color:#c8c7c7}
-.img-slot-set{background:var(--yellow);color:var(--black);border:none;border-radius:5px;padding:4px 6px;font-size:9px;font-weight:800;cursor:pointer;font-family:inherit;white-space:nowrap}
-.img-slot-clr{background:none;color:var(--muted);border:1.5px solid var(--border);border-radius:5px;padding:4px 5px;font-size:9px;cursor:pointer;font-family:inherit}
-.img-slot-badge{position:absolute;top:3px;left:3px;background:var(--yellow);color:var(--black);font-size:7px;font-weight:800;padding:1px 4px;border-radius:3px;pointer-events:none}
-.img-card-footer{padding:6px 10px 8px;display:flex;gap:6px;align-items:center}
-.img-clear-all-btn{background:none;border:1.5px solid var(--border);border-radius:7px;padding:5px 10px;font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit}
-.img-clear-all-btn:hover{border-color:#ef4444;color:#ef4444}
-.img-custom-note{font-size:9px;color:var(--muted);flex:1}
+.img-reorder-hint{font-size:9px;color:var(--muted);text-align:center;padding:4px 0 8px;letter-spacing:.2px}
 .img-url-input,.img-actions,.img-save-btn,.img-clear-btn,.img-thumb,.img-thumb-ph,.img-card-body,.img-custom-badge{display:none}
 .img-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--black);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap}
 .img-toast.show{opacity:1}
@@ -706,129 +714,237 @@ function filterImgGrid(){
   renderImgGrid(filtered);
 }
 
-var SLOT_LABELS=["Main","Alt 1","Alt 2"];
+/* ─── IMAGE MANAGER ─── */
+var _dragSrc=null; // {pname, si}
+
+function getProductImgArray(p){
+  // Returns array of 3 display-ready src strings (empty string = empty slot)
+  var ov=_imgOverrides[p.name];
+  var arr=["","",""];
+  // Sheet images as base
+  if(p.img){var parts=p.img.split("|");for(var i=0;i<3;i++){if(parts[i])arr[i]=driveThumb(parts[i].trim())||parts[i].trim();}}
+  // Apply overrides
+  if(ov){
+    if(ov.imgs){for(var j=0;j<3;j++){if(ov.imgs[j])arr[j]=ov.imgs[j].startsWith("data:")?ov.imgs[j]:driveThumb(ov.imgs[j])||ov.imgs[j];}}
+    else if(ov.url&&!arr[0]){arr[0]=driveThumb(ov.url)||ov.url;} // backward compat
+  }
+  return arr;
+}
+
+function hasCustomOverride(pname){
+  var ov=_imgOverrides[pname];
+  return !!(ov&&(ov.url||(ov.imgs&&ov.imgs.some(function(s){return !!s;}))));
+}
 
 function renderImgGrid(prods){
   if(!prods.length){document.getElementById("imgGrid").innerHTML='<div class="ord-empty">No products found.</div>';return;}
   var html="";
   prods.forEach(function(p){
-    var ov=_imgOverrides[p.name];
-    var hasCustom=!!(ov&&(ov.url||(ov.imgs&&ov.imgs.some(function(s){return !!s;}))));
-    var pn=esc(p.name);
-    html+='<div class="img-card'+(hasCustom?" has-custom":"")+'" id="icard-'+pn+'">'
-      +'<div class="img-card-header"><div class="img-cat">'+esc(p.cat)+'</div><div class="img-name">'+esc(p.name)+'</div></div>'
-      +'<div class="img-slots">';
-    for(var si=0;si<3;si++){
-      var src=getSlotSrc(p,si);
-      var rawUrl=getSlotRawUrl(p,si);
-      var isCustom=!!(ov&&ov.imgs&&ov.imgs[si]);
-      html+='<div class="img-slot">'
-        +'<div class="img-slot-drop" id="islot-'+pn+'-'+si+'"'
-          +' onclick="slotClick(\''+pn+'\','+si+')"'
-          +' ondragover="slotDragOver(event,this)" ondragleave="slotDragLeave(this)" ondrop="slotDrop(event,\''+pn+'\','+si+')">'
-          +(src?'<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'">'
-               :'<span class="img-slot-ph">📷</span>')
-          +(isCustom?'<span class="img-slot-badge">✓</span>':'')
-          +'<div class="img-slot-overlay"><span>📁 Upload</span><span>or drop</span></div>'
-        +'</div>'
-        +'<div class="img-slot-label">'+SLOT_LABELS[si]+'</div>'
-        +'<div class="img-slot-footer">'
-          +'<input class="img-slot-url" id="isloturl-'+pn+'-'+si+'" placeholder="Paste URL…" value="'+esc(rawUrl)+'">'
-          +'<button class="img-slot-set" onclick="saveSlotUrl(\''+pn+'\','+si+')">Set</button>'
-          +(isCustom?'<button class="img-slot-clr" onclick="clearSlot(\''+pn+'\','+si+')">✕</button>':'')
-        +'</div>'
-      +'</div>';
-    }
-    html+='</div>'
-      +'<div class="img-card-footer">'
-        +(hasCustom?'<button class="img-clear-all-btn" onclick="clearImg(\''+pn+'\')">Clear all custom</button>':'')
-        +(hasCustom?'<span class="img-custom-note">Custom images active</span>':'<span class="img-custom-note" style="color:var(--muted)">Using sheet images</span>')
-      +'</div>'
-    +'</div>';
+    html+=buildImgCard(p);
   });
   document.getElementById("imgGrid").innerHTML=html;
-  // hidden file input for slot clicks
-  if(!document.getElementById("_slotFileInput")){
-    var fi=document.createElement("input");fi.type="file";fi.id="_slotFileInput";fi.accept="image/*";fi.style.display="none";
-    fi.onchange=function(){if(fi.files[0])compressAndSave(fi._pname,fi._si,fi.files[0]);fi.value="";};
-    document.body.appendChild(fi);
+  ensureFileInput();
+}
+
+function buildImgCard(p){
+  var pn=esc(p.name);
+  var imgs=getProductImgArray(p);
+  var hasCustom=hasCustomOverride(p.name);
+  var ov=_imgOverrides[p.name];
+  // Preview shows first non-empty image
+  var previewSrc=imgs.find(function(s){return !!s;})||"";
+  var total=imgs.filter(function(s){return !!s;}).length||1;
+
+  var html='<div class="img-card'+(hasCustom?" has-custom":"")+'" id="icard-'+pn+'">'
+    +'<div class="img-card-header">'
+      +'<div><div class="img-cat">'+esc(p.cat)+'</div><div class="img-name">'+esc(p.name)+'</div></div>'
+      +(hasCustom?'<button class="img-clear-all-btn" onclick="clearImg(\''+pn+'\')">✕ Reset</button>':'')
+    +'</div>'
+    // large preview
+    +'<div class="img-preview-wrap" id="iprev-'+pn+'">'
+      +(previewSrc?'<img src="'+previewSrc+'" loading="lazy" onerror="this.style.display=\'none\'">'
+                  :'<span class="img-preview-ph">📦</span>')
+      +'<div class="img-preview-nav">'
+        +'<button class="img-nav-btn" onclick="navPreview(event,\''+pn+'\',-1)">‹</button>'
+        +'<span class="img-nav-count" id="iprevcnt-'+pn+'">1 / '+total+'</span>'
+        +'<button class="img-nav-btn" onclick="navPreview(event,\''+pn+'\',1)">›</button>'
+      +'</div>'
+    +'</div>'
+    +'<div class="img-reorder-hint">⠿ drag slots to reorder · first slot = front image</div>'
+    // 3 slot cards
+    +'<div class="img-slots-row" id="islots-'+pn+'">';
+
+  var LABELS=["Front","#2","#3"];
+  for(var si=0;si<3;si++){
+    var src=imgs[si];
+    var rawUrl=getSlotRawUrl(p,si);
+    html+='<div class="img-slot-card'+(si===0?" is-front":"")+'" draggable="true"'
+        +' data-pn="'+pn+'" data-si="'+si+'"'
+        +' ondragstart="slotDragStart(event,\''+pn+'\','+si+')"'
+        +' ondragover="slotDragOver(event,this)" ondragleave="slotDragLeave(this)"'
+        +' ondrop="slotReorder(event,\''+pn+'\','+si+')">'
+      +'<div class="img-slot-badge">'+LABELS[si]+'</div>'
+      +'<div class="img-slot-thumb">'
+        +(src?'<img src="'+src+'" loading="lazy" onerror="this.style.display=\'none\'">'
+             :'<span class="img-slot-ph">📷</span>')
+        +(src?'<button class="img-slot-x" onclick="clearSlot(event,\''+pn+'\','+si+')">✕</button>':'')
+      +'</div>'
+      +'<div class="img-slot-actions">'
+        +'<button class="img-slot-upload" onclick="slotClick(event,\''+pn+'\','+si+')">☁ Upload</button>'
+        +'<input class="img-slot-url" placeholder="Or paste URL…" value="'+esc(rawUrl)+'"'
+          +' onchange="saveSlotUrl(this,\''+pn+'\','+si+')" onblur="saveSlotUrl(this,\''+pn+'\','+si+')">'
+      +'</div>'
+    +'</div>';
   }
+  html+='</div></div>';
+  return html;
 }
 
-/* ── slot helpers ── */
-function slotClick(pname, si){
-  var fi=document.getElementById("_slotFileInput");
-  fi._pname=pname; fi._si=si;
-  fi.click();
+var _prevIdx={}; // preview index per product
+
+function navPreview(e,pn,dir){
+  e.stopPropagation();
+  var card=document.getElementById("icard-"+pn);
+  var p=_allProds.find(function(x){return esc(x.name)===pn;});
+  if(!p) return;
+  var imgs=getProductImgArray(p).filter(function(s){return !!s;});
+  if(!imgs.length) return;
+  _prevIdx[pn]=(((_prevIdx[pn]||0)+dir)+imgs.length)%imgs.length;
+  var wrap=document.getElementById("iprev-"+pn);
+  var img=wrap&&wrap.querySelector("img");
+  var ph=wrap&&wrap.querySelector(".img-preview-ph");
+  var cnt=document.getElementById("iprevcnt-"+pn);
+  if(img){img.src=imgs[_prevIdx[pn]];img.style.display="";}
+  else if(wrap){wrap.innerHTML='<img src="'+imgs[_prevIdx[pn]]+'" style="max-width:100%;max-height:180px;object-fit:contain;padding:8px">'+wrap.querySelector(".img-preview-nav").outerHTML;}
+  if(cnt) cnt.textContent=(_prevIdx[pn]+1)+" / "+imgs.length;
 }
-function slotDragOver(e,el){e.preventDefault();el.classList.add("drag-over");}
-function slotDragLeave(el){el.classList.remove("drag-over");}
-function slotDrop(e,pname,si){
+
+/* drag to reorder slots */
+function slotDragStart(e,pn,si){
+  _dragSrc={pn:pn,si:si};
+  e.currentTarget.classList.add("drag-src");
+  e.dataTransfer.effectAllowed="move";
+}
+function slotDragOver(e,el){
+  e.preventDefault();e.dataTransfer.dropEffect="move";
+  el.classList.add("drag-over-slot");
+}
+function slotDragLeave(el){el.classList.remove("drag-over-slot");}
+function slotReorder(e,pn,targetSi){
   e.preventDefault();
-  var el=document.getElementById("islot-"+pname+"-"+si);
-  if(el) el.classList.remove("drag-over");
+  // Remove drag-over-slot from all slots of this product
+  var row=document.getElementById("islots-"+pn);
+  if(row) row.querySelectorAll(".img-slot-card").forEach(function(c){c.classList.remove("drag-over-slot","drag-src");});
+
+  // Check if it's a file drop (image file onto slot)
   var file=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];
-  if(file&&file.type.startsWith("image/")) compressAndSave(pname,si,file);
+  if(file&&file.type.startsWith("image/")){compressAndSave(pn,targetSi,file);return;}
+
+  // Reorder: swap _dragSrc.si ↔ targetSi within same product
+  if(!_dragSrc||_dragSrc.pn!==pn||_dragSrc.si===targetSi){_dragSrc=null;return;}
+  var srcSi=_dragSrc.si; _dragSrc=null;
+  var p=_allProds.find(function(x){return esc(x.name)===pn;});
+  if(!p) return;
+  var imgs=getProductImgArray(p); // display srcs
+  // Build override array from current state
+  if(!_imgOverrides[pn]) _imgOverrides[pn]={imgs:["","",""]};
+  if(!_imgOverrides[pn].imgs) _imgOverrides[pn].imgs=["","",""];
+  var ov=_imgOverrides[pn].imgs;
+  // resolve current effective values (may include sheet images)
+  var effective=imgs.slice(0,3);
+  // swap
+  var tmp=effective[srcSi]; effective[srcSi]=effective[targetSi]; effective[targetSi]=tmp;
+  // store back - convert drive thumbs back to original form
+  for(var i=0;i<3;i++){
+    var s=effective[i]||"";
+    // if it's already a data: url or drive thumbnail url, store as-is
+    ov[i]=s;
+  }
+  try{localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));}catch(err){}
+  // Re-render just this card
+  var card=document.getElementById("icard-"+pn);
+  if(card){
+    var fresh=_allProds.find(function(x){return esc(x.name)===pn;});
+    if(fresh) card.outerHTML=buildImgCard(fresh);
+    ensureFileInput();
+  }
+  showToast("Reordered — image "+(srcSi+1)+" ↔ "+(targetSi+1));
 }
 
-function compressAndSave(pname,si,file){
-  showToast("Processing image…");
+/* file upload */
+function slotClick(e,pn,si){
+  e.stopPropagation();
+  var fi=document.getElementById("_slotFileInput");
+  fi._pn=pn; fi._si=si; fi.click();
+}
+function ensureFileInput(){
+  if(document.getElementById("_slotFileInput")) return;
+  var fi=document.createElement("input");fi.type="file";fi.id="_slotFileInput";fi.accept="image/*";fi.style.display="none";
+  fi.onchange=function(){if(fi.files[0])compressAndSave(fi._pn,fi._si,fi.files[0]);fi.value="";};
+  document.body.appendChild(fi);
+}
+
+function compressAndSave(pn,si,file){
+  showToast("Processing…");
   var reader=new FileReader();
   reader.onload=function(ev){
     var img=new Image();
     img.onload=function(){
-      var MAX=600, q=0.72;
-      var w=img.width, h=img.height;
-      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}
-      else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
-      var canvas=document.createElement("canvas");
-      canvas.width=w; canvas.height=h;
-      canvas.getContext("2d").drawImage(img,0,0,w,h);
-      var dataUrl=canvas.toDataURL("image/jpeg",q);
-      setSlotData(pname,si,dataUrl);
+      var MAX=700,q=0.75,w=img.width,h=img.height;
+      if(w>h){if(w>MAX){h=Math.round(h*MAX/w);w=MAX;}}else{if(h>MAX){w=Math.round(w*MAX/h);h=MAX;}}
+      var cv=document.createElement("canvas");cv.width=w;cv.height=h;
+      cv.getContext("2d").drawImage(img,0,0,w,h);
+      setSlotData(pn,si,cv.toDataURL("image/jpeg",q));
     };
     img.src=ev.target.result;
   };
   reader.readAsDataURL(file);
 }
 
-function saveSlotUrl(pname,si){
-  var inp=document.getElementById("isloturl-"+pname+"-"+si);
-  if(!inp) return;
-  var url=inp.value.trim();
-  if(!url){clearSlot(pname,si);return;}
-  setSlotData(pname,si,url);
+function saveSlotUrl(inp,pn,si){
+  var url=(inp.value||"").trim();
+  if(!url) return;
+  setSlotData(pn,si,url);
 }
 
-function setSlotData(pname,si,value){
-  if(!_imgOverrides[pname]) _imgOverrides[pname]={imgs:["","",""]};
-  if(!_imgOverrides[pname].imgs) _imgOverrides[pname].imgs=["","",""];
-  _imgOverrides[pname].imgs[si]=value;
+function setSlotData(pn,si,value){
+  if(!_imgOverrides[pn]) _imgOverrides[pn]={imgs:["","",""]};
+  if(!_imgOverrides[pn].imgs) _imgOverrides[pn].imgs=["","",""];
+  _imgOverrides[pn].imgs[si]=value;
   try{
     localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));
-    showToast("Image "+(si+1)+" saved for "+pname);
-  }catch(e){
-    showToast("Storage full — image too large");
-    _imgOverrides[pname].imgs[si]="";
+    showToast("Image "+(si+1)+" saved!");
+  }catch(err){
+    _imgOverrides[pn].imgs[si]="";
+    showToast("Storage full — try a URL instead of upload");
   }
-  filterImgGrid();
+  var card=document.getElementById("icard-"+pn);
+  var p=_allProds.find(function(x){return esc(x.name)===pn;});
+  if(card&&p) card.outerHTML=buildImgCard(p);
+  ensureFileInput();
 }
 
-function clearSlot(pname,si){
-  if(_imgOverrides[pname]&&_imgOverrides[pname].imgs) _imgOverrides[pname].imgs[si]="";
+function clearSlot(e,pn,si){
+  e.stopPropagation();
+  if(!_imgOverrides[pn]) return;
+  if(!_imgOverrides[pn].imgs) _imgOverrides[pn].imgs=["","",""];
+  _imgOverrides[pn].imgs[si]="";
   localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));
-  showToast("Slot "+(si+1)+" cleared");
-  filterImgGrid();
+  var card=document.getElementById("icard-"+pn);
+  var p=_allProds.find(function(x){return esc(x.name)===pn;});
+  if(card&&p) card.outerHTML=buildImgCard(p);
+  ensureFileInput();
+  showToast("Image "+(si+1)+" cleared");
 }
 
-function clearImg(name){
-  if(_imgOverrides[name]) delete _imgOverrides[name];
+function clearImg(pn){
+  delete _imgOverrides[pn];
   localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));
-  showToast("Cleared all custom images for "+name);
+  showToast("Reset to sheet images");
   filterImgGrid();
 }
 
-function saveImg(name){ /* legacy no-op */ }
+function saveImg(name){/* legacy */}
 
 /* ── SETTINGS ACTIONS ── */
 function changePin(){
