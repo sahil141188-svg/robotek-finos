@@ -397,24 +397,37 @@ function parseOrders(json){
   var iBoxSize   = colMap["boxsize"]!==undefined   ? colMap["boxsize"]   : 7;
   var iBoxes     = colMap["boxes"]!==undefined     ? colMap["boxes"]     : 8;
 
-  // Group rows by Order ID
+  // First pass: build a phone lookup by orderId (scan all rows to find any non-null phone)
+  var phoneByOrder={};
+  rows.forEach(function(row){
+    if(!row||!row.c) return;
+    var orderId=cellVal(row, iOrderId); if(!orderId) return;
+    if(phoneByOrder[orderId]) return; // already found
+    var phone=cellVal(row, iPhone, true);
+    // Brute-force: scan all cells for a 10-digit number if mapped column is null
+    if(!phone&&row.c){
+      for(var ci=0;ci<row.c.length;ci++){
+        var cc=row.c[ci]; if(!cc||cc.v==null) continue;
+        var cv=String(typeof cc.v==="number"?Math.round(cc.v):cc.v).replace(/[,\s\-]/g,"");
+        if(/^\d{10}$/.test(cv)){phone=cv;break;}
+      }
+    }
+    if(phone) phoneByOrder[orderId]=phone;
+  });
+
+  // Second pass: group rows by Order ID
   var groupMap={};
   var groupKeys=[];
   rows.forEach(function(row){
     if(!row||!row.c) return;
     var orderId=cellVal(row, iOrderId);
     var customer=cellVal(row, iCustomer);
-    // Phone: try mapped column first, then brute-force col 3
-    var phone=cellVal(row, iPhone, true);
-    if(!phone&&row.c&&row.c[3]){
-      var pc=row.c[3];
-      if(pc&&pc.v!=null) phone=String(typeof pc.v==="number"?Math.round(pc.v):pc.v).replace(/[,\s]/g,"");
-    }
     var orderDate=cellVal(row, iOrderDate)||cellVal(row, iTimestamp);
     var product=cellVal(row, iProduct);
     var totalQty=numVal(row, iTotalQty);
     var boxSize=numVal(row, iBoxSize);
     var boxes=numVal(row, iBoxes);
+    var phone=phoneByOrder[orderId]||"";
 
     if(!orderId&&!customer) return;
     var key=orderId||(customer+"|"+orderDate);
