@@ -397,7 +397,12 @@ function parseOrders(json){
     if(!row||!row.c) return;
     var orderId=cellVal(row, iOrderId);
     var customer=cellVal(row, iCustomer);
+    // Phone: try mapped column first, then brute-force col 3
     var phone=cellVal(row, iPhone, true);
+    if(!phone&&row.c&&row.c[3]){
+      var pc=row.c[3];
+      if(pc&&pc.v!=null) phone=String(typeof pc.v==="number"?Math.round(pc.v):pc.v).replace(/[,\s]/g,"");
+    }
     var orderDate=cellVal(row, iOrderDate)||cellVal(row, iTimestamp);
     var product=cellVal(row, iProduct);
     var totalQty=numVal(row, iTotalQty);
