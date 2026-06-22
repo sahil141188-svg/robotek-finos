@@ -346,7 +346,13 @@ function parseOrders(json){
     var key=(c.label||c.id||"").toLowerCase().replace(/[\s_()\-]/g,'');
     colMap[key]=i;
   });
-  console.log("Orders cols:", cols.map(function(c){return c.label;}), colMap);
+  var colLabels=cols.map(function(c){return c.label;});
+  console.log("Orders cols:", colLabels, colMap);
+  // Debug: show first row raw data
+  if(rows[0]&&rows[0].c){
+    var dbg=rows[0].c.map(function(cell,i){return i+":"+(cell?JSON.stringify(cell.v):"null");}).join(" | ");
+    setTimeout(function(){var el=document.getElementById("ordCount");if(el)el.textContent="DEBUG row0: "+dbg;},100);
+  }
 
   function cellVal(row, idx, isPhone){
     if(idx===undefined||idx===null) return "";
