@@ -1393,6 +1393,7 @@ function tC(el){
     el.classList.add("sel");resetChip(el);
     var a=el.querySelector(".chip-add");if(a)a.textContent="✓";
     CART_MAP[nm]={mode:el.dataset.mode||"box",oq:parseInt(el.dataset.oq,10)||1};
+    updateQlbl(el);
   }
   uB();
 }
