@@ -60,17 +60,27 @@ body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--b
 .ord-count{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;padding:0 2px}
 /* Table */
 .ord-table{width:100%;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
-.ord-thead{display:grid;grid-template-columns:80px 1fr 1fr 90px;padding:10px 14px;border-bottom:2px solid var(--border);font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.4px;text-transform:uppercase}
-.ord-row{display:grid;grid-template-columns:80px 1fr 1fr 90px;padding:13px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;align-items:center}
+.ord-thead{display:grid;grid-template-columns:1fr 1fr 100px 80px;padding:10px 14px;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;gap:8px}
+.ord-row{display:grid;grid-template-columns:1fr 1fr 100px 80px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;align-items:center;gap:8px}
 .ord-row:last-child{border:none}
 .ord-row:hover{background:#faf9f9}
-.ord-row:active{background:#f0eff0}
-.ord-num{font-size:13px;font-weight:800;color:var(--red)}
-.ord-date-cell{font-size:12px;color:var(--muted)}
-.ord-cust{font-size:13px;font-weight:700;color:var(--black);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ord-cell-main{display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.ord-num{font-size:11px;font-weight:800;color:var(--red);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ord-cust-name{font-size:13px;font-weight:700;color:var(--black);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ord-cust-date{font-size:11px;color:var(--muted)}
+.ord-phone-cell{font-size:12px;font-weight:600;color:var(--black)}
+.ord-total-cell{font-size:13px;font-weight:800;color:var(--black);text-align:right}
+/* Fulfillment status pill — clickable */
+.ord-status-btn{border:none;border-radius:20px;font-size:10px;font-weight:800;padding:4px 8px;cursor:pointer;font-family:inherit;white-space:nowrap;width:100%;text-align:center}
+.ord-status-btn.pending{background:#fef3c7;color:#92400e}
+.ord-status-btn.fulfilled{background:#d1fae5;color:#065f46}
+.ord-status-btn.processing{background:#dbeafe;color:#1e40af}
+/* Status picker popup */
+.status-picker{position:fixed;z-index:300;background:var(--card);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.18);padding:8px;min-width:160px;display:none}
+.status-picker.open{display:block}
+.status-opt{padding:10px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:2px}
+.status-opt:hover{background:var(--bg)}
 .ord-badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:800;white-space:nowrap}
-.ord-badge.stock{background:#fef3c7;color:#92400e}
-.ord-badge.done{background:#d1fae5;color:#065f46}
 /* Detail drawer */
 .ord-detail{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.45)}
 .ord-detail.open{display:block}
@@ -161,6 +171,13 @@ body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--b
     </div>
     <div class="ord-count" id="ordCount"></div>
     <div id="ordList"><div class="ord-loading">Loading orders…</div></div>
+  </div>
+
+  <!-- STATUS PICKER POPUP -->
+  <div class="status-picker" id="statusPicker">
+    <div class="status-opt" onclick="setStatus('pending')">🟡 Pending</div>
+    <div class="status-opt" onclick="setStatus('processing')">🔵 Processing</div>
+    <div class="status-opt" onclick="setStatus('fulfilled')">🟢 Fulfilled</div>
   </div>
 
   <!-- ORDER DETAIL DRAWER -->
@@ -411,14 +428,42 @@ function itemsText(o){
   return parts.join(" ");
 }
 
+/* ── Fulfillment status stored in localStorage keyed by Order ID ── */
+var FULFILL_KEY="rb_order_status";
+var _fulfillMap={};
+try{_fulfillMap=JSON.parse(localStorage.getItem(FULFILL_KEY)||"{}");}catch(e){}
+
+function getFulfill(refId){return _fulfillMap[refId]||"pending";}
+function saveFulfill(refId,status){_fulfillMap[refId]=status;localStorage.setItem(FULFILL_KEY,JSON.stringify(_fulfillMap));}
+
+var _statusPickerRefId=null;
+function openStatusPicker(ev,refId){
+  ev.stopPropagation();
+  _statusPickerRefId=refId;
+  var p=document.getElementById("statusPicker");
+  var r=ev.target.getBoundingClientRect();
+  p.style.top=(r.bottom+6)+"px";
+  p.style.left=Math.min(r.left,window.innerWidth-170)+"px";
+  p.classList.add("open");
+  setTimeout(function(){document.addEventListener("click",closeStatusPicker,{once:true});},10);
+}
+function closeStatusPicker(){document.getElementById("statusPicker").classList.remove("open");}
+function setStatus(status){
+  if(!_statusPickerRefId) return;
+  saveFulfill(_statusPickerRefId,status);
+  closeStatusPicker();
+  renderOrders();
+}
+
 var _currentDetOrder=null;
+var _filteredOrders=[];
 
 function openOrdDetail(idx){
   var o=_filteredOrders[idx]; if(!o) return;
   _currentDetOrder=o;
   var totalPcs=0;
   document.getElementById("detTitle").textContent=(o.name||"Customer")+(o.refId?" · "+o.refId:"");
-  document.getElementById("detDate").textContent="📅 "+( o.date||"");
+  document.getElementById("detDate").textContent="📅 "+(o.date||"");
   document.getElementById("detPhone").textContent=o.phone?"📞 "+o.phone:"";
   var html="";
   if(Array.isArray(o.items)&&o.items.length){
@@ -443,13 +488,11 @@ function closeOrdDetail(ev){
 
 function copyDetOrder(){
   var o=_currentDetOrder; if(!o) return;
-  var lines=["*"+esc(o.name||"Customer")+"*"+(o.refId?" ("+o.refId+")":"")+" — "+(o.date||""),
+  var lines=["*"+(o.name||"Customer")+"*"+(o.refId?" ("+o.refId+")":"")+" — "+(o.date||""),
              o.phone?"📞 "+o.phone:"",""];
   var total=0;
   if(Array.isArray(o.items)) o.items.forEach(function(it){
-    var boxes=it.boxes||0;
-    var pcs=parseInt(it.totalQty||0,10)||0;
-    total+=pcs;
+    var boxes=it.boxes||0; var pcs=parseInt(it.totalQty||0,10)||0; total+=pcs;
     lines.push("• "+(it.name||"")+" — "+(boxes?(boxes+" box"+(boxes>1?"es":"")):"")+(pcs?" = "+pcs+" pcs":""));
   });
   lines.push("","*TOTAL: "+total+" pcs*");
@@ -459,8 +502,6 @@ function copyDetOrder(){
     setTimeout(function(){btn.textContent="📋 Copy Order";btn.style.background="";},2000);
   });
 }
-
-var _filteredOrders=[];
 
 function renderOrders(){
   var q=(document.getElementById("ordSearch").value||"").toLowerCase();
@@ -478,19 +519,25 @@ function renderOrders(){
     return;
   }
 
+  var statusLabel={pending:"🟡 Pending",processing:"🔵 Processing",fulfilled:"🟢 Fulfilled"};
+
   var html='<div class="ord-table">'
-    +'<div class="ord-thead"><span>Order</span><span>Date</span><span>Customer</span><span>Channel</span></div>';
+    +'<div class="ord-thead"><span>Order / Customer</span><span>Phone</span><span>Status</span><span style="text-align:right">Total Qty</span></div>';
 
   _filteredOrders.forEach(function(o,i){
-    var ordNum=o.refId||("#"+((_filteredOrders.length-i).toString().padStart(4,"0")));
+    var refId=o.refId||("ORD-"+i);
     var totalPcs=0;
     if(Array.isArray(o.items)) o.items.forEach(function(it){totalPcs+=parseInt(it.totalQty||0,10)||0;});
-    var pcsBadge=totalPcs?'<br><span style="font-size:10px;color:var(--muted);font-weight:600">'+totalPcs+' pcs</span>':'';
+    var status=getFulfill(refId);
     html+='<div class="ord-row" onclick="openOrdDetail('+i+')">'
-      +'<span class="ord-num">'+esc(ordNum)+'</span>'
-      +'<span class="ord-date-cell">'+esc(o.date||"")+'</span>'
-      +'<span class="ord-cust">'+esc(o.name||"Customer")+pcsBadge+(o.phone?'<br><span style="font-size:11px;color:var(--muted);font-weight:500">📞 '+esc(o.phone)+'</span>':'')+'</span>'
-      +'<span><span class="ord-badge stock">Stock App</span></span>'
+      +'<div class="ord-cell-main">'
+        +'<span class="ord-cust-name">'+esc(o.name||"Customer")+'</span>'
+        +'<span class="ord-num">'+esc(refId)+'</span>'
+        +'<span class="ord-cust-date">'+esc(o.date||"")+'</span>'
+      +'</div>'
+      +'<span class="ord-phone-cell">'+(o.phone?esc(o.phone):"-")+'</span>'
+      +'<span><button class="ord-status-btn '+status+'" onclick="openStatusPicker(event,\''+esc(refId)+'\')">'+statusLabel[status]+'</button></span>'
+      +'<span class="ord-total-cell">'+(totalPcs?totalPcs+" pcs":"-")+'</span>'
     +'</div>';
   });
   html+='</div>';
