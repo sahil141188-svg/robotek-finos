@@ -292,23 +292,20 @@ function parseOrders(json){
   var rows=json.table.rows;
   var cols=json.table.cols;
 
-  // Build both a key-map and index-map; use formatted value (f) for dates
+  // Map column labels to indices
   var colMap={};
   cols.forEach(function(c,i){
-    var key=(c.label||c.id||"").toLowerCase().replace(/[\s_-]/g,'');
+    var key=(c.label||c.id||"").toLowerCase().replace(/[\s_()\-]/g,'');
     colMap[key]=i;
   });
-  console.log("Orders sheet columns:", cols.map(function(c){return c.label;}));
+  console.log("Orders cols:", cols.map(function(c){return c.label;}), colMap);
 
-  function getVal(row, label){
-    var i=colMap[label];
-    if(i===undefined) return "";
-    var cell=row.c[i];
+  function cellVal(row, idx){
+    if(idx===undefined||idx===null) return "";
+    var cell=row.c[idx];
     if(!cell||cell.v==null) return "";
-    // Use formatted value for dates
     if(cell.f!=null) return String(cell.f);
     var v=String(cell.v);
-    // Parse gviz date string Date(Y,M,D)
     var dm=v.match(/^Date\((\d+),(\d+),(\d+)\)/);
     if(dm){
       var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -317,40 +314,51 @@ function parseOrders(json){
     return v;
   }
 
-  function getByAny(row, labels){
-    for(var k=0;k<labels.length;k++){
-      var v=getVal(row,labels[k]);
-      if(v) return v;
-    }
-    return "";
+  function numVal(row, idx){
+    if(idx===undefined||idx===null) return 0;
+    var cell=row.c[idx];
+    if(!cell||cell.v==null) return 0;
+    return parseFloat(cell.v)||0;
   }
 
-  var orders=[];
+  // Sheet columns: Timestamp(A) OrderID(B) Customer(C) Phone(D) OrderDate(E) Product(F) TotalQty(G) BoxSize(H) Boxes(I)
+  var iTimestamp = colMap["timestamp"]!==undefined ? colMap["timestamp"] : 0;
+  var iOrderId   = colMap["orderid"]!==undefined   ? colMap["orderid"]   : colMap["orderid"]!==undefined ? colMap["orderid"] : 1;
+  var iCustomer  = colMap["customer"]!==undefined  ? colMap["customer"]  : 2;
+  var iPhone     = colMap["phone"]!==undefined     ? colMap["phone"]     : 3;
+  var iOrderDate = colMap["orderdate"]!==undefined ? colMap["orderdate"] : colMap["date"]!==undefined ? colMap["date"] : 4;
+  var iProduct   = colMap["product"]!==undefined   ? colMap["product"]   : 5;
+  var iTotalQty  = colMap["totalqtypcs"]!==undefined ? colMap["totalqtypcs"] : colMap["totalqty"]!==undefined ? colMap["totalqty"] : 6;
+  var iBoxSize   = colMap["boxsize"]!==undefined   ? colMap["boxsize"]   : 7;
+  var iBoxes     = colMap["boxes"]!==undefined     ? colMap["boxes"]     : 8;
+
+  // Group rows by Order ID
+  var groupMap={};
+  var groupKeys=[];
   rows.forEach(function(row){
     if(!row||!row.c) return;
-    var name=getByAny(row,["customername","customer","name","customr","cust"]);
-    var phone=getByAny(row,["phone","mobile","whatsapp","phonenumber","ph"]);
-    var date=getByAny(row,["timestamp","date","time","datetime","orderedat"]);
-    var itemsRaw=getByAny(row,["items","products","order","orderitems","itemsordered"]);
-    var enquiriesRaw=getByAny(row,["enquiries","enquiry","outofstock","oos"]);
-    var refId=getByAny(row,["refid","ref","orderid","id","reference"]);
+    var orderId=cellVal(row, iOrderId);
+    var customer=cellVal(row, iCustomer);
+    var phone=cellVal(row, iPhone);
+    var orderDate=cellVal(row, iOrderDate)||cellVal(row, iTimestamp);
+    var product=cellVal(row, iProduct);
+    var totalQty=numVal(row, iTotalQty);
+    var boxSize=numVal(row, iBoxSize);
+    var boxes=numVal(row, iBoxes);
 
-    // Parse items JSON string
-    var itemsParsed=null;
-    try{
-      if(itemsRaw&&itemsRaw.trim().startsWith("[")) itemsParsed=JSON.parse(itemsRaw);
-    }catch(e){}
-
-    // Parse enquiries JSON
-    var enqParsed=null;
-    try{
-      if(enquiriesRaw&&enquiriesRaw.trim().startsWith("[")) enqParsed=JSON.parse(enquiriesRaw);
-    }catch(e){}
-
-    if(!name&&!itemsRaw) return;
-    orders.push({name:name,phone:phone,date:date,items:itemsParsed||itemsRaw,enquiries:enqParsed||enquiriesRaw,refId:refId});
+    if(!orderId&&!customer) return;
+    var key=orderId||(customer+"|"+orderDate);
+    if(!groupMap[key]){
+      groupMap[key]={name:customer,phone:phone,date:orderDate,refId:orderId,items:[],enquiries:[]};
+      groupKeys.push(key);
+    }
+    if(product){
+      groupMap[key].items.push({name:product,totalQty:totalQty,boxes:boxes,boxSize:boxSize,qty:boxes});
+    }
+    if(!groupMap[key].phone&&phone) groupMap[key].phone=phone;
   });
-  return orders;
+
+  return groupKeys.map(function(k){return groupMap[k];});
 }
 
 var _ordFilterActive="all";
