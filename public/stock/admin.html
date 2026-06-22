@@ -463,8 +463,8 @@ function openOrdDetail(idx){
   _currentDetOrder=o;
   var totalPcs=0;
   document.getElementById("detTitle").textContent=(o.name||"Customer")+(o.refId?" · "+o.refId:"");
-  document.getElementById("detDate").textContent="📅 "+(o.date||"");
-  document.getElementById("detPhone").textContent=o.phone?"📞 "+o.phone:"";
+  document.getElementById("detDate").textContent="📅 "+(o.date||"")+(o.phone?"   📞 "+o.phone:"");
+  document.getElementById("detPhone").textContent="";
   var html="";
   if(Array.isArray(o.items)&&o.items.length){
     o.items.forEach(function(it){
