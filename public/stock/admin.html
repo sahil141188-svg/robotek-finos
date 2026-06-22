@@ -264,6 +264,10 @@ function loadOrders(){
     .then(function(txt){
       var json=JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
       _allOrders=parseOrders(json);
+      _allOrders.sort(function(a,b){
+        var da=new Date(a.date||0), db=new Date(b.date||0);
+        return db-da;
+      });
       renderOrders();
     })
     .catch(function(){
