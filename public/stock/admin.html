@@ -348,11 +348,21 @@ function parseOrders(json){
   });
   console.log("Orders cols:", cols.map(function(c){return c.label;}), colMap);
 
-  function cellVal(row, idx){
+  function cellVal(row, idx, isPhone){
     if(idx===undefined||idx===null) return "";
     var cell=row.c[idx];
     if(!cell||cell.v==null) return "";
-    if(cell.f!=null) return String(cell.f);
+    // For phone: use raw numeric value to avoid comma-formatted strings
+    if(isPhone){
+      var pv=cell.v;
+      if(typeof pv==="number") return String(Math.round(pv));
+      return String(cell.v).replace(/[,\s]/g,"");
+    }
+    if(cell.f!=null){
+      var fv=String(cell.f);
+      var dm2=fv.match(/^Date\((\d+),(\d+),(\d+)\)/);
+      if(!dm2) return fv;
+    }
     var v=String(cell.v);
     var dm=v.match(/^Date\((\d+),(\d+),(\d+)\)/);
     if(dm){
@@ -373,7 +383,7 @@ function parseOrders(json){
   var iTimestamp = colMap["timestamp"]!==undefined ? colMap["timestamp"] : 0;
   var iOrderId   = colMap["orderid"]!==undefined   ? colMap["orderid"]   : colMap["orderid"]!==undefined ? colMap["orderid"] : 1;
   var iCustomer  = colMap["customer"]!==undefined  ? colMap["customer"]  : 2;
-  var iPhone     = colMap["phone"]!==undefined     ? colMap["phone"]     : 3;
+  var iPhone     = colMap["phone"]!==undefined ? colMap["phone"] : colMap["phonenumber"]!==undefined ? colMap["phonenumber"] : colMap["mobile"]!==undefined ? colMap["mobile"] : colMap["whatsapp"]!==undefined ? colMap["whatsapp"] : 3;
   var iOrderDate = colMap["orderdate"]!==undefined ? colMap["orderdate"] : colMap["date"]!==undefined ? colMap["date"] : 4;
   var iProduct   = colMap["product"]!==undefined   ? colMap["product"]   : 5;
   var iTotalQty  = colMap["totalqtypcs"]!==undefined ? colMap["totalqtypcs"] : colMap["totalqty"]!==undefined ? colMap["totalqty"] : 6;
@@ -387,7 +397,7 @@ function parseOrders(json){
     if(!row||!row.c) return;
     var orderId=cellVal(row, iOrderId);
     var customer=cellVal(row, iCustomer);
-    var phone=cellVal(row, iPhone);
+    var phone=cellVal(row, iPhone, true);
     var orderDate=cellVal(row, iOrderDate)||cellVal(row, iTimestamp);
     var product=cellVal(row, iProduct);
     var totalQty=numVal(row, iTotalQty);
