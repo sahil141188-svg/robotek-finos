@@ -60,8 +60,8 @@ body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--b
 .ord-count{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;padding:0 2px}
 /* Table */
 .ord-table{width:100%;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
-.ord-thead{display:grid;grid-template-columns:1fr 1fr 100px 80px;padding:10px 14px;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;gap:8px}
-.ord-row{display:grid;grid-template-columns:1fr 1fr 100px 80px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;align-items:center;gap:8px}
+.ord-thead{display:grid;grid-template-columns:1fr 90px 90px 80px 70px;padding:10px 14px;border-bottom:2px solid var(--border);font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;gap:8px}
+.ord-row{display:grid;grid-template-columns:1fr 90px 90px 80px 70px;padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .12s;align-items:center;gap:8px}
 .ord-row:last-child{border:none}
 .ord-row:hover{background:#faf9f9}
 .ord-cell-main{display:flex;flex-direction:column;gap:2px;overflow:hidden}
@@ -522,7 +522,7 @@ function renderOrders(){
   var statusLabel={pending:"🟡 Pending",processing:"🔵 Processing",fulfilled:"🟢 Fulfilled"};
 
   var html='<div class="ord-table">'
-    +'<div class="ord-thead"><span>Order / Customer</span><span>Phone</span><span>Status</span><span style="text-align:right">Total Qty</span></div>';
+    +'<div class="ord-thead"><span>Order / Customer</span><span>Phone</span><span>Date</span><span>Status</span><span style="text-align:right">Qty</span></div>';
 
   _filteredOrders.forEach(function(o,i){
     var refId=o.refId||("ORD-"+i);
@@ -533,9 +533,9 @@ function renderOrders(){
       +'<div class="ord-cell-main">'
         +'<span class="ord-cust-name">'+esc(o.name||"Customer")+'</span>'
         +'<span class="ord-num">'+esc(refId)+'</span>'
-        +'<span class="ord-cust-date">'+esc(o.date||"")+'</span>'
       +'</div>'
       +'<span class="ord-phone-cell">'+(o.phone?esc(o.phone):"-")+'</span>'
+      +'<span class="ord-date-cell" style="font-size:11px;color:var(--muted)">'+esc(o.date||"")+'</span>'
       +'<span><button class="ord-status-btn '+status+'" onclick="openStatusPicker(event,\''+esc(refId)+'\')">'+statusLabel[status]+'</button></span>'
       +'<span class="ord-total-cell">'+(totalPcs?totalPcs+" pcs":"-")+'</span>'
     +'</div>';
