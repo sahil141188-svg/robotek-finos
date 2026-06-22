@@ -386,46 +386,65 @@ function renderOrders(){
     }
     return true;
   });
-  document.getElementById("ordCount").textContent=filtered.length+" order"+(filtered.length!==1?"s":"")+" found";
-  if(!filtered.length){
+
+  // Group by customer name + date
+  var groups={};
+  var groupKeys=[];
+  filtered.forEach(function(o){
+    var key=(o.name||"Customer")+"|"+(o.date||"");
+    if(!groups[key]){
+      groups[key]={name:o.name||"Customer",date:o.date||"",phone:o.phone||"",refId:o.refId||"",orders:[],enquiries:[]};
+      groupKeys.push(key);
+    }
+    var g=groups[key];
+    if(!g.phone&&o.phone) g.phone=o.phone;
+    // Merge items
+    if(Array.isArray(o.items)) o.items.forEach(function(it){g.orders.push(it);});
+    // Merge enquiries
+    if(Array.isArray(o.enquiries)) o.enquiries.forEach(function(e){if(e)g.enquiries.push(e);});
+    else if(o.enquiries) g.enquiries.push(String(o.enquiries));
+  });
+
+  document.getElementById("ordCount").textContent=groupKeys.length+" order"+(groupKeys.length!==1?"s":"")+" found ("+filtered.length+" rows)";
+  if(!groupKeys.length){
     document.getElementById("ordList").innerHTML='<div class="ord-empty">No orders found.</div>';
     return;
   }
+
   var html="";
-  filtered.forEach(function(o){
-    // Items rows
-    var itemsHtml="";
-    if(Array.isArray(o.items)&&o.items.length){
-      itemsHtml+='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px">';
-      o.items.forEach(function(it){
-        var nm=it.name||it.nm||"";
-        var qty=it.qty||it.q||"";
-        var boxes=it.boxes?it.boxes+" box":"";
-        var total=it.totalQty?(it.totalQty+" pcs"):"";
-        itemsHtml+='<div class="ord-item">'
-          +'<span class="ord-item-name">'+esc(nm)+'</span>'
-          +'<span class="ord-item-qty">'+esc(qty)+(boxes?" · "+boxes:"")+(total?" = "+total:"")+'</span>'
-        +'</div>';
-      });
-      itemsHtml+='</div>';
-    } else if(o.items){
-      itemsHtml='<div style="font-size:12px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);white-space:pre-wrap;line-height:1.7;color:var(--black)">'+esc(String(o.items))+'</div>';
-    }
-    // Enquiries
+  groupKeys.forEach(function(key){
+    var g=groups[key];
+    // Compute total pcs
+    var totalPcs=0;
+    var itemsHtml='<div style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px">';
+    g.orders.forEach(function(it){
+      var nm=it.name||it.nm||"";
+      var qty=it.qty||it.q||"";
+      var boxes=it.boxes?it.boxes+" box":"";
+      var pcs=parseInt(it.totalQty||it.pcs||0,10)||0;
+      totalPcs+=pcs;
+      var total=pcs?(pcs+" pcs"):"";
+      itemsHtml+='<div class="ord-item">'
+        +'<span class="ord-item-name">'+esc(nm)+'</span>'
+        +'<span class="ord-item-qty">'+esc(String(qty))+(boxes?" · "+boxes:"")+(total?" = "+total:"")+'</span>'
+      +'</div>';
+    });
+    itemsHtml+='</div>';
+
     var enqHtml="";
-    if(Array.isArray(o.enquiries)&&o.enquiries.length){
-      enqHtml='<div style="font-size:11px;color:#92400e;background:#fef3c7;border-radius:6px;padding:5px 8px;margin-top:6px">📩 Enquiry: '+esc(o.enquiries.join(", "))+'</div>';
-    } else if(o.enquiries){
-      enqHtml='<div style="font-size:11px;color:#92400e;background:#fef3c7;border-radius:6px;padding:5px 8px;margin-top:6px">📩 Enquiry: '+esc(String(o.enquiries))+'</div>';
+    if(g.enquiries.length){
+      enqHtml='<div style="font-size:11px;color:#92400e;background:#fef3c7;border-radius:6px;padding:5px 8px;margin-top:6px">📩 Enquiry: '+esc(g.enquiries.join(", "))+'</div>';
     }
+
+    var totalBadge=totalPcs?'<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:6px">'+totalPcs+' pcs</span>':'';
 
     html+='<div class="ord-card">'
       +'<div class="ord-row1">'
-        +'<span class="ord-name">'+esc(o.name||"Customer")+'</span>'
-        +'<span class="ord-date">'+esc(o.date||"")+'</span>'
+        +'<span class="ord-name">'+esc(g.name)+totalBadge+'</span>'
+        +'<span class="ord-date">'+esc(g.date)+'</span>'
       +'</div>'
-      +(o.phone?'<div class="ord-phone">📞 '+esc(o.phone)+'</div>':'')
-      +(o.refId?'<div style="font-size:10px;color:var(--muted);margin-top:2px">Ref: '+esc(o.refId)+'</div>':'')
+      +(g.phone?'<div class="ord-phone">📞 '+esc(g.phone)+'</div>':'')
+      +(g.orders.length?'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+g.orders.length+' product'+(g.orders.length!==1?"s":"")+'</div>':'')
       +itemsHtml
       +enqHtml
     +'</div>';

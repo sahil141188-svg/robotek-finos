@@ -25,7 +25,7 @@ self.addEventListener("activate", function(e){
     })
     .then(function(clients){
       return Promise.all(clients.map(function(client){
-        var url = client.url.split("?")[0] + "?v=35";
+        var url = client.url.split("?")[0] + "?v=36";
         return client.navigate(url);
       }));
     })

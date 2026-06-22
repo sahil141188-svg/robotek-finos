@@ -226,7 +226,8 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .qs:active{opacity:.7}
 .qnum{width:60px;background:#fff;border:1.5px solid var(--border);color:var(--red);border-radius:8px;padding:6px 4px;font-size:18px;font-weight:700;text-align:center;font-family:inherit;-moz-appearance:textfield;outline:none}
 .qnum::-webkit-outer-spin-button,.qnum::-webkit-inner-spin-button{-webkit-appearance:none}
-.qlbl{font-size:12px;color:var(--muted);align-self:center;flex:1}
+.qlbl-row{text-align:center;min-height:16px;margin-top:2px}
+.qlbl{font-size:12px;font-weight:700;color:var(--red)}
 /* --- Announcement Modal --- */
 .ann-ovl{position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:24px}
 .ann-ovl.show{display:flex}
@@ -1128,8 +1129,8 @@ function qctrlHtml(showPcs){
       '<button class="qs" onclick="stepQ(event,this,-1)">−</button>'+
       '<input class="qnum" type="number" inputmode="numeric" min="1" value="1" oninput="syncQ(event,this)" onclick="event.stopPropagation();this.select()">'+
       '<button class="qs" onclick="stepQ(event,this,1)">+</button>'+
-      '<span class="qlbl"></span>'+
     '</div>'+
+    '<div class="qlbl-row"><span class="qlbl"></span></div>'+
   '</div>';
 }
 // DEMO: sample images for a few products to preview the feature
