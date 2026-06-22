@@ -348,7 +348,14 @@ function parseOrders(json){
   });
   var colLabels=cols.map(function(c){return c.label;});
   console.log("Orders cols:", colLabels, colMap);
-  // Debug: show first row raw data
+
+  // Visible debug: show column labels + first row raw
+  (function(){
+    var dbg=document.getElementById("gviz-debug");
+    if(!dbg){dbg=document.createElement("div");dbg.id="gviz-debug";dbg.style.cssText="background:#1e40af;color:#fff;font-size:10px;padding:6px 10px;border-radius:8px;margin:6px 0;white-space:pre-wrap;word-break:break-all";document.getElementById("ordList").before(dbg);}
+    var r0=rows[0]&&rows[0].c?rows[0].c.map(function(c,i){return i+":(v="+JSON.stringify(c&&c.v!==undefined?c.v:"∅")+",f="+JSON.stringify(c&&c.f!==undefined?c.f:"∅")+")";}).join(" | "):"no rows";
+    dbg.textContent="COLS: "+colLabels.join(", ")+"\nROW0: "+r0;
+  })();
 
   function cellVal(row, idx, isPhone){
     if(idx===undefined||idx===null) return "";
