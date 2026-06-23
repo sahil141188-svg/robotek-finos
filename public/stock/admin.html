@@ -274,6 +274,16 @@ body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--b
       <button class="set-btn yellow" onclick="exportOverrides()">Download JSON</button>
     </div>
 
+    <div class="set-card" style="border:2px solid var(--red)">
+      <div class="set-label" style="color:var(--red)">📤 Push Images to Sheet</div>
+      <div class="set-note" style="margin-bottom:8px">
+        Admin pe jo images set ki hain woh <strong>Google Sheet mein likh do</strong> — taaki customers ke phone pe bhi images dikhen.<br><br>
+        <strong>Ye karke hi images sab ko dikhti hain.</strong>
+      </div>
+      <button class="set-btn" style="background:var(--red);font-size:14px;padding:12px" onclick="pushImagesToSheet()">📤 Push All Images to Sheet Now</button>
+      <div class="set-note" id="pushStatus" style="margin-top:8px"></div>
+    </div>
+
     <div class="set-card">
       <div class="set-label">Links</div>
       <button class="set-btn yellow" onclick="window.open('https://docs.google.com/spreadsheets/d/'+getSheetId(),'_blank')" style="width:100%;margin-top:0">Open Google Sheet ↗</button>
@@ -1037,6 +1047,35 @@ function exportOverrides(){
   a.href=URL.createObjectURL(blob);
   a.download="robotek-image-overrides.json";
   a.click();
+}
+
+function pushImagesToSheet(){
+  var SCRIPT_URL="https://script.google.com/macros/s/AKfycbwVp6SXct5WhWWA9FxJI-nsT_TDE0XQEINnwnL7joMgSzC5GPK_AhhxkSbS3PXpzm8r/exec";
+  var overrides=_imgOverrides||{};
+  var count=Object.keys(overrides).length;
+  if(!count){showToast("Koi image override nahi mili — pehle images set karo");return;}
+  var statusEl=document.getElementById("pushStatus");
+  statusEl.textContent="Sending "+count+" products to Sheet…";
+  // Convert overrides to sheet format: {productName: "url1|url2|url3"}
+  var sheetData={};
+  Object.keys(overrides).forEach(function(pname){
+    var ov=overrides[pname];
+    var urls=[];
+    if(ov.imgs){ov.imgs.forEach(function(s){if(s)urls.push(s);});}
+    else if(ov.url){urls.push(ov.url);}
+    if(urls.length) sheetData[pname]=urls.join("|");
+  });
+  fetch(SCRIPT_URL,{
+    method:"POST",
+    mode:"no-cors",
+    headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body:JSON.stringify({action:"syncImages",data:sheetData,sheetId:getSheetId()})
+  }).then(function(){
+    statusEl.textContent="✅ Sent! Sheet update hoga ~30 seconds mein. Phir stock app reload karo.";
+    showToast("Images pushed to Sheet — "+count+" products");
+  }).catch(function(e){
+    statusEl.textContent="❌ Error: "+e.message;
+  });
 }
 
 /* ── UTILS ── */
