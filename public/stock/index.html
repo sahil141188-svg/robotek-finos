@@ -1155,10 +1155,40 @@ function driveThumb(url){
 /* Admin image overrides — set via /stock/admin.html, stored in localStorage */
 var IMG_OVERRIDES={};
 try{IMG_OVERRIDES=JSON.parse(localStorage.getItem("rb_img_overrides")||"{}");}catch(e){}
+
 function getAdminImgSrc(name,fallbackUrl){
   var ov=IMG_OVERRIDES[name];
+  if(ov&&ov.imgs&&ov.imgs[0]){var s=ov.imgs[0];return s.startsWith("data:")?s:driveThumb(s)||s;}
   if(ov&&ov.url) return driveThumb(ov.url)||ov.url;
   return fallbackUrl||'';
+}
+
+// Returns ALL images for a product: admin overrides first, then sheet URLs
+function getAllProductImgs(p){
+  var ov=IMG_OVERRIDES[p.name];
+  var result=[];
+  // Admin overrides (3 slots)
+  if(ov&&ov.imgs){
+    ov.imgs.forEach(function(s){if(s){result.push(s.startsWith("data:")?s:driveThumb(s)||s);}});
+  } else if(ov&&ov.url){
+    var u=driveThumb(ov.url)||ov.url; if(u) result.push(u);
+  }
+  // Sheet images (only fill remaining slots)
+  if(p.img){
+    var parts=p.img.split('|');
+    parts.forEach(function(u){
+      u=u.trim(); if(!u) return;
+      var t=driveThumb(u)||u;
+      // Don't duplicate admin overrides
+      if(result.indexOf(t)===-1) result.push(t);
+    });
+  }
+  // Demo fallback
+  if(!result.length){
+    var demoId=DEMO_IMAGES[(p.name||"").toLowerCase().trim()]||DEMO_IMAGES[(p.name||"").toLowerCase().replace(/\s/g,'')];
+    if(demoId) result.push('https://lh3.googleusercontent.com/d/'+demoId+'=w800');
+  }
+  return result;
 }
 
 function chipHtml(p){
@@ -1183,12 +1213,14 @@ function chipHtml(p){
   var catLabel=PROD_CAT[p.name]||p.catKey||"";
   var catTag=catLabel?'<span class="chip-cat-tag">'+esc(catLabel)+'</span>':'';
 
-  var imgArea='<div class="chip-img-wrap">'
+  var hasMulti=getAllProductImgs(p).length>1;
+  var imgArea='<div class="chip-img-wrap" onclick="tapProdImg(event,\''+esc(p.name)+'\')" style="cursor:zoom-in">'
     +(p.fast?'<span class="chip-hot-lbl">🔥 HOT</span>':'')
     +(imgSrc
       ?'<img src="'+imgSrc+'" alt="'+esc(p.name)+'" loading="lazy" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'flex\'">'
        +'<span class="chip-img-ph" style="display:none">📦</span>'
       :'<span class="chip-img-ph">📦</span>')
+    +(hasMulti?'<span style="position:absolute;bottom:4px;right:5px;background:rgba(0,0,0,.55);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;pointer-events:none">1/'+getAllProductImgs(p).length+'</span>':'')
   +'</div>';
 
   /* ── OOS card ── */
@@ -1786,22 +1818,9 @@ function getProductImgSrc(p){
   var imgs=getProductImgs(p);
   return imgs.length?imgs[0]:'';
 }
-// Returns ALL image URLs for a product (for carousel)
+// Returns ALL image URLs for a product (for carousel) — uses admin overrides + sheet
 function getProductImgs(p){
-  var result=[];
-  if(p.img){
-    var parts=p.img.split('|');
-    for(var i=0;i<parts.length;i++){
-      var u=parts[i].trim();
-      var t=driveThumb(u);
-      if(t) result.push(t);
-    }
-  }
-  if(!result.length){
-    var demoId=DEMO_IMAGES[(p.name||"").toLowerCase().trim()]||DEMO_IMAGES[(p.name||"").toLowerCase().replace(/\s/g,'')];
-    if(demoId) result.push('https://lh3.googleusercontent.com/d/'+demoId+'=w800');
-  }
-  return result;
+  return getAllProductImgs(p);
 }
 
 function openGallery(){
@@ -1877,6 +1896,15 @@ function galleryCardTap(card){
 
 /* ---------- PRODUCT CAROUSEL ---------- */
 var _carImgs=[], _carIdx=0, _carTouchX=0;
+
+function tapProdImg(e, pname){
+  e.stopPropagation();
+  var p=ALL_PRODUCTS.find(function(x){return x.name===pname;});
+  if(!p) return;
+  var imgs=getAllProductImgs(p);
+  if(!imgs.length) return;
+  openCarousel(pname, imgs);
+}
 
 function openCarousel(name, imgs){
   if(!imgs||!imgs.length) return;
