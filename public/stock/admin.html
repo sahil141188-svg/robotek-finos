@@ -209,7 +209,10 @@ body{font-family:'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--b
       <div style="font-size:13px;color:var(--muted);margin-bottom:14px" id="detPhone"></div>
       <div id="detItems"></div>
       <div class="ord-det-total"><span>Total</span><span id="detTotal"></span></div>
-      <button onclick="copyDetOrder()" style="margin-top:14px;width:100%;background:var(--red);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit" id="detCopyBtn">📋 Copy Order</button>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="toggleEditOrder()" style="flex:1;background:var(--black);color:var(--yellow);border:none;border-radius:10px;padding:13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit" id="detEditBtn">✏️ Edit Order</button>
+        <button onclick="copyDetOrder()" style="flex:2;background:var(--red);color:#fff;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit" id="detCopyBtn">📋 Copy Order</button>
+      </div>
     </div>
   </div>
 
@@ -575,27 +578,102 @@ function setStatus(status){
 
 var _currentDetOrder=null;
 var _filteredOrders=[];
+var _editMode=false;
 
-function openOrdDetail(idx){
-  var o=_filteredOrders[idx]; if(!o) return;
-  _currentDetOrder=o;
+function toggleEditOrder(){
+  _editMode=!_editMode;
+  var btn=document.getElementById("detEditBtn");
+  if(_editMode){
+    btn.textContent="💾 Save Changes";
+    btn.style.background="var(--green)";
+    renderDetItems(true);
+  } else {
+    // Save edits: read inputs back into _currentDetOrder.items
+    var rows=document.querySelectorAll(".det-edit-row");
+    var newItems=[];
+    rows.forEach(function(row){
+      var nm=(row.querySelector(".det-edit-name").value||"").trim();
+      var pcs=parseInt(row.querySelector(".det-edit-pcs").value||"0",10)||0;
+      var boxes=parseFloat(row.querySelector(".det-edit-boxes").value||"0")||0;
+      if(nm) newItems.push({name:nm,totalQty:pcs,boxes:boxes,boxSize:"",mode:"box"});
+    });
+    _currentDetOrder.items=newItems;
+    btn.textContent="✏️ Edit Order";
+    btn.style.background="var(--black)";
+    renderDetItems(false);
+    // Update total row in order list
+    renderOrders();
+  }
+}
+
+function renderDetItems(editMode){
+  var o=_currentDetOrder; if(!o) return;
   var totalPcs=0;
-  document.getElementById("detTitle").textContent=(o.name||"Customer")+(o.refId?" · "+o.refId:"");
-  document.getElementById("detDate").textContent="📅 "+(o.date||"")+(o.phone?"   📞 "+o.phone:"");
-  document.getElementById("detPhone").textContent="";
   var html="";
   if(Array.isArray(o.items)&&o.items.length){
-    o.items.forEach(function(it){
+    o.items.forEach(function(it,i){
       var nm=it.name||"";
       var boxes=it.boxes||0;
       var pcs=parseInt(it.totalQty||0,10)||0;
       totalPcs+=pcs;
-      var qtyTxt=(boxes?(boxes+" box"+(boxes>1?"es":"")):"")+(pcs?" = "+pcs+" pcs":"");
-      html+='<div class="ord-item"><span class="ord-item-name">'+esc(nm)+'</span><span class="ord-item-qty">'+esc(qtyTxt)+'</span></div>';
+      if(editMode){
+        html+='<div class="det-edit-row" style="display:flex;gap:6px;align-items:center;margin-bottom:8px">'
+          +'<input class="det-edit-name" value="'+esc(nm)+'" placeholder="Product name" style="flex:2;border:1.5px solid var(--border);border-radius:7px;padding:7px 9px;font-size:13px;font-family:inherit;outline:none">'
+          +'<input class="det-edit-boxes" value="'+esc(boxes||"")+'" placeholder="Bx" type="number" min="0" style="width:50px;border:1.5px solid var(--border);border-radius:7px;padding:7px 6px;font-size:13px;font-family:inherit;outline:none;text-align:center">'
+          +'<input class="det-edit-pcs" value="'+esc(pcs||"")+'" placeholder="Pcs" type="number" min="0" style="width:70px;border:1.5px solid var(--border);border-radius:7px;padding:7px 6px;font-size:13px;font-family:inherit;outline:none;text-align:center">'
+          +'<button onclick="this.closest(\'.det-edit-row\').remove();recalcEditTotal()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px">✕</button>'
+          +'</div>';
+      } else {
+        var qtyTxt=(boxes?(boxes+" box"+(boxes>1?"es":"")):"")+(pcs?" = "+pcs+" pcs":"");
+        html+='<div class="ord-item"><span class="ord-item-name">'+esc(nm)+'</span><span class="ord-item-qty">'+esc(qtyTxt)+'</span></div>';
+      }
     });
+  }
+  if(editMode){
+    html+='<button onclick="addDetEditRow()" style="width:100%;border:1.5px dashed var(--border);border-radius:8px;padding:8px;font-size:12px;font-weight:700;color:var(--muted);background:none;cursor:pointer;margin-top:4px">+ Add Product</button>';
+    html+='<div style="font-size:11px;color:var(--muted);margin-top:6px">Boxes = number of boxes &nbsp;|&nbsp; Pcs = total pieces</div>';
   }
   document.getElementById("detItems").innerHTML=html;
   document.getElementById("detTotal").textContent=totalPcs+" pcs";
+  if(editMode){
+    // Wire pcs inputs to auto-update total
+    document.querySelectorAll(".det-edit-pcs").forEach(function(inp){
+      inp.addEventListener("input",recalcEditTotal);
+    });
+  }
+}
+
+function recalcEditTotal(){
+  var total=0;
+  document.querySelectorAll(".det-edit-pcs").forEach(function(inp){total+=parseInt(inp.value||0,10)||0;});
+  document.getElementById("detTotal").textContent=total+" pcs";
+}
+
+function addDetEditRow(){
+  var container=document.getElementById("detItems");
+  var addBtn=container.querySelector("button[onclick*='addDetEditRow']");
+  var row=document.createElement("div");
+  row.className="det-edit-row";
+  row.style.cssText="display:flex;gap:6px;align-items:center;margin-bottom:8px";
+  row.innerHTML='<input class="det-edit-name" placeholder="Product name" style="flex:2;border:1.5px solid var(--border);border-radius:7px;padding:7px 9px;font-size:13px;font-family:inherit;outline:none">'
+    +'<input class="det-edit-boxes" placeholder="Bx" type="number" min="0" style="width:50px;border:1.5px solid var(--border);border-radius:7px;padding:7px 6px;font-size:13px;font-family:inherit;outline:none;text-align:center">'
+    +'<input class="det-edit-pcs" placeholder="Pcs" type="number" min="0" style="width:70px;border:1.5px solid var(--border);border-radius:7px;padding:7px 6px;font-size:13px;font-family:inherit;outline:none;text-align:center">'
+    +'<button onclick="this.closest(\'.det-edit-row\').remove();recalcEditTotal()" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:4px">✕</button>';
+  row.querySelector(".det-edit-pcs").addEventListener("input",recalcEditTotal);
+  container.insertBefore(row,addBtn);
+  row.querySelector(".det-edit-name").focus();
+}
+
+function openOrdDetail(idx){
+  var o=_filteredOrders[idx]; if(!o) return;
+  _currentDetOrder=o;
+  _editMode=false;
+  var btn=document.getElementById("detEditBtn");
+  btn.textContent="✏️ Edit Order"; btn.style.background="var(--black)";
+  document.getElementById("detTitle").textContent=(o.name||"Customer")+(o.refId?" · "+o.refId:"");
+  document.getElementById("detDate").textContent="📅 "+(o.date||"")+(o.phone?"   📞 "+o.phone:"");
+  document.getElementById("detPhone").textContent="";
+  renderDetItems(false);
   document.getElementById("ordDetail").classList.add("open");
 }
 
@@ -1059,7 +1137,6 @@ function pushImagesToSheet(){
   var statusEl=document.getElementById("pushStatus");
   statusEl.textContent="Starting… 0/"+products.length+" products done";
 
-  // Upload one base64 image to ImgBB, return promise of public URL
   function uploadBase64(b64){
     var fd=new FormData();
     fd.append("key",IMGBB_KEY);
@@ -1069,38 +1146,51 @@ function pushImagesToSheet(){
       .then(function(j){return j.success?j.data.url:null;});
   }
 
-  // Resolve one URL: upload if base64, else return as-is
   function resolveUrl(s){
     if(!s) return Promise.resolve("");
     if(s.startsWith("data:")) return uploadBase64(s).then(function(u){return u||"";});
     return Promise.resolve(s);
   }
 
-  // Process all products sequentially to avoid rate limits
   var sheetData={};
   var done=0;
 
+  // After collecting all sheetData, send via GET requests in batches of 5
+  function sendBatches(data){
+    var names=Object.keys(data);
+    if(!names.length){
+      statusEl.textContent="Koi image data nahi mili push karne ke liye.";
+      return;
+    }
+    var BATCH=5;
+    var sid=getSheetId();
+    var requests=[];
+    for(var i=0;i<names.length;i+=BATCH){
+      var batch={};
+      names.slice(i,i+BATCH).forEach(function(n){if(data[n])batch[n]=data[n];});
+      if(!Object.keys(batch).length) continue;
+      var url=SCRIPT_URL+"?action=syncImages&sheetId="+encodeURIComponent(sid)+"&data="+encodeURIComponent(JSON.stringify(batch));
+      requests.push(fetch(url,{mode:"no-cors"}).catch(function(){}));
+    }
+    statusEl.textContent="Sending "+names.length+" products to Sheet in "+requests.length+" batches…";
+    Promise.all(requests).then(function(){
+      // Update local overrides with resolved ImgBB URLs
+      Object.keys(data).forEach(function(pname){
+        if(data[pname]){
+          var urls=data[pname].split("|");
+          if(!_imgOverrides[pname]) _imgOverrides[pname]={imgs:["","",""]};
+          _imgOverrides[pname].imgs=urls;
+        }
+      });
+      try{localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));}catch(e){}
+      statusEl.textContent="✅ Done! "+names.length+" products pushed. 10 seconds baad stock app reload karo.";
+      showToast("✅ Images pushed to Sheet!");
+    });
+  }
+
   function processNext(idx){
     if(idx>=products.length){
-      // All done — push to sheet
-      statusEl.textContent="Sending to Sheet…";
-      fetch(SCRIPT_URL,{
-        method:"POST",mode:"no-cors",
-        headers:{"Content-Type":"text/plain;charset=utf-8"},
-        body:JSON.stringify({action:"syncImages",data:sheetData,sheetId:getSheetId()})
-      }).then(function(){
-        // Also update local overrides with new ImgBB URLs
-        Object.keys(sheetData).forEach(function(pname){
-          if(sheetData[pname]){
-            var urls=sheetData[pname].split("|");
-            if(!_imgOverrides[pname]) _imgOverrides[pname]={imgs:["","",""]};
-            _imgOverrides[pname].imgs=urls;
-          }
-        });
-        try{localStorage.setItem(IMG_OVERRIDES_KEY,JSON.stringify(_imgOverrides));}catch(e){}
-        statusEl.textContent="✅ Done! "+Object.keys(sheetData).length+" products pushed to Sheet. Stock app reload karo.";
-        showToast("✅ Images pushed to Sheet!");
-      });
+      sendBatches(sheetData);
       return;
     }
     var pname=products[idx];
@@ -1109,7 +1199,6 @@ function pushImagesToSheet(){
     if(ov&&ov.imgs){ov.imgs.forEach(function(s){rawUrls.push(s||"");});}
     else if(ov&&ov.url){rawUrls=[ov.url,"",""];}
 
-    // Resolve all 3 slots
     Promise.all(rawUrls.map(resolveUrl)).then(function(resolved){
       var finalUrls=resolved.filter(function(u){return u;});
       if(finalUrls.length) sheetData[pname]=finalUrls.join("|");
