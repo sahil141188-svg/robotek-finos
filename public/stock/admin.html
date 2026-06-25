@@ -515,11 +515,32 @@ function parseOrders(json, csvPhones){
     var boxes=numVal(row, iBoxes);
     var phone=phoneByOrder[orderId]||csvPhones[orderId]||"";
 
+    // Skip TOTAL/summary rows injected by Apps Script
+    if((orderId||"").toString().indexOf("TOTAL")!==-1) return;
+    if((customer||"").toString().trim().startsWith("--")) return;
+    if((product||"").toString().trim().startsWith("--")) return;
     if(!orderId&&!customer) return;
+
+    // Recalculate totalQty from boxes × boxSize when stored value is unreliable
+    // (Apps Script sometimes copies wrong value; boxes & boxSize are always correct)
+    if(boxes>0 && boxSize>0){
+      var computed=Math.round(boxes*boxSize);
+      // If stored totalQty is way off (>2× or <0.5× computed), use computed
+      if(totalQty===0 || totalQty>computed*2 || totalQty<computed/2){
+        totalQty=computed;
+      }
+    }
+
     var key=orderId||(customer+"|"+orderDate);
     if(!groupMap[key]){
-      groupMap[key]={name:customer,phone:phone,date:orderDate,refId:orderId,items:[],enquiries:[]};
+      // Use real customer name (not a TOTAL row name) for the group
+      var realCustomer=(customer||"").toString().trim().startsWith("--")?"":customer;
+      groupMap[key]={name:realCustomer,phone:phone,date:orderDate,refId:orderId,items:[],enquiries:[]};
       groupKeys.push(key);
+    }
+    // Update customer name if current row has a better (non-TOTAL) name
+    if(customer&&!(customer||"").toString().trim().startsWith("--")&&!groupMap[key].name){
+      groupMap[key].name=customer;
     }
     if(product){
       groupMap[key].items.push({name:product,totalQty:totalQty,boxes:boxes,boxSize:boxSize,qty:boxes});
