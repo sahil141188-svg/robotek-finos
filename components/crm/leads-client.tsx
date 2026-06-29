@@ -9,6 +9,7 @@ import { LEAD_TYPE_LABELS, DRIP_STATUS_LABELS, DRIP_STATUS_COLORS } from "@/lib/
 import { scoreLead, BAND_LABELS, BAND_COLORS } from "@/lib/crm/scoring";
 import { ArrangeMeeting } from "@/components/crm/arrange-meeting";
 import { ForwardLead, type ExpertTarget, type SsTarget } from "@/components/crm/forward-lead";
+import { ShareDocument } from "@/components/crm/share-document";
 import { formatIndian } from "@/lib/format";
 import type { CrmLeadStatus } from "@/types/database";
 import type { LeadWithNames } from "@/lib/crm/queries";
@@ -267,6 +268,7 @@ export function LeadsClient({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right whitespace-nowrap">
+                  <span className="mr-3 inline-block"><ShareDocument leadId={l.id} leadName={l.name} compact /></span>
                   <span className="mr-3 inline-block"><ForwardLead lead={l} experts={meetingTargets} superStockists={superStockists} /></span>
                   <span className="mr-3 inline-block"><ArrangeMeeting leadId={l.id} leadName={l.name} targets={meetingTargets} defaultNotes={l.notes} compact /></span>
                   <button

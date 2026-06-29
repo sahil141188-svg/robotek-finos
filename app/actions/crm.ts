@@ -752,3 +752,42 @@ export async function transferToFunnel(id: string): Promise<Result> {
   revalidatePath("/dashboard/sales-os");
   return { error: null };
 }
+
+/** Log a catalog / document share for a lead */
+export async function shareDocument(input: {
+  leadId: string;
+  remarks: string;
+  driveUrl?: string;
+  markQualified?: boolean;
+}): Promise<Result> {
+  const uid = await currentUserId();
+  if (!uid) return { error: "Not authenticated" };
+
+  const supabase = (await createClient()) as any;
+
+  const subject = `📎 ${input.remarks || "Document shared"}`;
+  const body = input.driveUrl ?? null;
+
+  const { error: actErr } = await supabase.from("crm_activities").insert({
+    type: "note",
+    subject,
+    body,
+    lead_id: input.leadId,
+    owner_id: uid,
+    created_by: uid,
+    done: true,
+    done_at: new Date().toISOString(),
+  });
+  if (actErr) return { error: actErr.message };
+
+  if (input.markQualified) {
+    await supabase
+      .from("crm_leads")
+      .update({ status: "qualified" })
+      .eq("id", input.leadId);
+  }
+
+  revalidatePath("/dashboard/sales-os/leads");
+  revalidatePath("/dashboard/sales-os");
+  return { error: null };
+}

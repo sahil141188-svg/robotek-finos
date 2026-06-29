@@ -200,15 +200,30 @@ export function LeadDetailView({ detail }: { detail: LeadDetail }) {
         <h3 className="text-sm font-semibold text-brand-black mb-3">Activities</h3>
         {activities.length === 0 ? <p className="text-sm text-brand-gray-mid">No activities.</p> : (
           <div className="divide-y divide-border">
-            {activities.map((a) => (
-              <div key={a.id} className="py-2 flex items-center justify-between text-sm">
-                <span className={a.done ? "line-through text-brand-gray-mid" : "text-brand-black"}>
-                  <span className="text-[10px] uppercase bg-brand-gray-light rounded px-1.5 py-0.5 mr-2 text-brand-gray-mid">{ACTIVITY_TYPE_LABELS[a.type]}</span>
-                  {a.subject}
-                </span>
-                <span className="text-xs text-brand-gray-mid">{a.due_at ? fmtDate(a.due_at) : ""}</span>
-              </div>
-            ))}
+            {activities.map((a) => {
+              const isDocShare = a.type === "note" && a.subject?.startsWith("📎");
+              return (
+                <div key={a.id} className="py-2 flex items-start justify-between text-sm gap-2">
+                  <span className={a.done && !isDocShare ? "line-through text-brand-gray-mid" : "text-brand-black"}>
+                    <span className="text-[10px] uppercase bg-brand-gray-light rounded px-1.5 py-0.5 mr-2 text-brand-gray-mid">
+                      {isDocShare ? "Doc Shared" : ACTIVITY_TYPE_LABELS[a.type]}
+                    </span>
+                    {a.subject}
+                    {isDocShare && (a as any).body && (
+                      <a
+                        href={(a as any).body}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 inline-flex items-center gap-0.5 text-xs text-brand-red hover:underline"
+                      >
+                        ↗ Open
+                      </a>
+                    )}
+                  </span>
+                  <span className="text-xs text-brand-gray-mid shrink-0">{a.due_at ? fmtDate(a.due_at) : ""}</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
