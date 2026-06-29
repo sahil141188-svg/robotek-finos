@@ -290,28 +290,33 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
         </div>
       </div>
 
-      <Separator />
-
-      {/* ── Sales team (NBD / CRR) ── */}
-      <div className="space-y-3">
-        <h3 className="font-semibold text-sm">Sales Team (NBD / CRR) Role</h3>
+      {/* ── Sales Team (NBD / CRR) — shown right after role for discoverability ── */}
+      <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm">Sales Team Role</h3>
+          {crmTeamRole && (
+            <button
+              type="button"
+              onClick={() => { setCrmDept(""); setCrmTeamRole(""); if (!isEditing) setPermissions(DEFAULT_PERMISSIONS[role]); }}
+              className="text-xs text-muted-foreground hover:text-brand-red underline"
+            >
+              Clear
+            </button>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">
-          For sales staff &mdash; click a preset. It sets their role, department and Sales OS access automatically.
-          {!crmTeamRole && " Leave blank for finance-only users (CEO, CFO, Accounts, CA)."}
+          Click a preset to assign NBD / CRR role. Leave blank for finance users (CEO, Accounts, CA).
         </p>
-        {crmTeamRole && (
-          <p className="text-xs text-brand-red font-medium">&#10003; Preset active &mdash; the Role field above shows their job title.</p>
-        )}
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: "NBD — Sales Coordinator", dept: "nbd", role: "sales_coordinator" },
-            { label: "NBD — Sales Expert",      dept: "nbd", role: "sales_expert" },
-            { label: "NBD — Field Sales Rep",   dept: "nbd", role: "fsr" },
-            { label: "NBD — Lead Generation",   dept: "nbd", role: "lead_gen" },
-            { label: "CRR — Sales Coordinator", dept: "crr", role: "sales_coordinator" },
-            { label: "CRR — CRM (Acct Manager)",dept: "crr", role: "crm" },
-            { label: "CRR — Sales Expert",      dept: "crr", role: "sales_expert" },
-            { label: "Sales Head (NBD + CRR)",  dept: "nbd", role: "sales_head" },
+            { label: "NBD — Sales Coordinator (SC)", dept: "nbd", role: "sales_coordinator" },
+            { label: "NBD — Sales Expert",            dept: "nbd", role: "sales_expert" },
+            { label: "NBD — Field Sales Rep (FSR)",   dept: "nbd", role: "fsr" },
+            { label: "NBD — Lead Generation",         dept: "nbd", role: "lead_gen" },
+            { label: "CRR — Sales Coordinator (SC)",  dept: "crr", role: "sales_coordinator" },
+            { label: "CRR — Account Manager (CRM)",   dept: "crr", role: "crm" },
+            { label: "CRR — Sales Expert",            dept: "crr", role: "sales_expert" },
+            { label: "Sales Head (NBD + CRR)",        dept: "nbd", role: "sales_head" },
           ].map((p) => {
             const active = crmDept === p.dept && crmTeamRole === p.role;
             return (
@@ -321,7 +326,9 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
                 onClick={() => applyPreset(p.dept, p.role)}
                 className={cn(
                   "text-xs rounded-lg border px-3 py-2 text-left transition-colors",
-                  active ? "border-brand-red bg-brand-red/5 text-brand-red font-medium" : "border-border hover:border-brand-red/50"
+                  active
+                    ? "border-brand-red bg-brand-red text-white font-medium shadow-sm"
+                    : "border-border bg-background hover:border-brand-red/60 hover:bg-brand-red/5"
                 )}
               >
                 {p.label}
@@ -329,37 +336,6 @@ export function UserForm({ user, onSuccess }: UserFormProps) {
             );
           })}
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label>Department</Label>
-            <select value={crmDept} onChange={(e) => setCrmDept(e.target.value)} className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm">
-              <option value="">— none —</option>
-              <option value="nbd">NBD (New Business)</option>
-              <option value="crr">CRR (Retention)</option>
-            </select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Sales role</Label>
-            <select value={crmTeamRole} onChange={(e) => setCrmTeamRole(e.target.value)} className="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm">
-              <option value="">— none —</option>
-              <option value="lead_gen">Lead Generation</option>
-              <option value="sales_coordinator">Sales Coordinator (SC)</option>
-              <option value="sales_expert">Sales Expert</option>
-              <option value="crm">CRM (Account Manager)</option>
-              <option value="fsr">Field Sales Rep (FSR)</option>
-              <option value="sales_head">Sales Head</option>
-            </select>
-          </div>
-        </div>
-        {crmTeamRole && (
-          <button
-            type="button"
-            onClick={() => { setCrmDept(""); setCrmTeamRole(""); if (!isEditing) setPermissions(DEFAULT_PERMISSIONS[role]); }}
-            className="text-xs text-muted-foreground hover:text-brand-red underline"
-          >
-            Clear sales role &mdash; switch to finance role instead
-          </button>
-        )}
       </div>
 
       <Separator />
