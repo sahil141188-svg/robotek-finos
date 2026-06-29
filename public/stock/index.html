@@ -71,7 +71,8 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 .bodyw{padding:14px 14px 100px}
 /* ── Bottom Nav ── */
 #bnav{position:relative;z-index:500;background:#fff;border-top:1px solid var(--border);display:flex;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -2px 12px rgba(0,0,0,.08);flex-shrink:0}
-.bni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 0 8px;gap:3px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:inherit;font-size:10px;font-weight:600;letter-spacing:.2px;position:relative;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .18s}
+.bni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 0 7px;gap:3px;background:none;border:none;cursor:pointer;color:var(--muted);font-family:inherit;font-size:12px;font-weight:600;letter-spacing:.2px;position:relative;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:color .18s}
+.bni:active{opacity:.6}
 .bni.active{color:var(--red)}
 .bni svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;transition:stroke .18s}
 .bn-badge{position:absolute;top:5px;right:calc(50% - 18px);background:var(--red);color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:50px;display:none;align-items:center;justify-content:center;padding:0 4px;border:2px solid #fff}
@@ -590,7 +591,7 @@ button,.chip,.gcat,.pord-oh,.myord-bar,.ch,.qm,.rev-qs,.rev-qn,.rev-rm,.rev-back
 
 <div class="srchw">
   <div class="srchb"><span class="sico">&#9906;</span>
-    <input type="text" id="si" placeholder="Search — DC 101, BN47, SC 222..." oninput="doSearch()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <input type="search" enterkeyhint="search" id="si" placeholder="Search — DC 101, BN47, SC 222..." oninput="doSearch()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
   </div>
   <div class="sinf" id="sinf">&nbsp;</div>
 </div>
@@ -1706,7 +1707,7 @@ function saveName(){
   refreshWho();toast("Welcome, "+name+"!");
   setTimeout(maybeShowInstallSheet,2000);
 }
-function toast(t){var el=document.getElementById("toast");el.textContent=t;el.classList.add("show");setTimeout(function(){el.classList.remove("show");},2200);}
+function toast(t){try{if(navigator.vibrate)navigator.vibrate(12);}catch(e){}var el=document.getElementById("toast");el.textContent=t;el.classList.add("show");setTimeout(function(){el.classList.remove("show");},2200);}
 
 /* ---------- PWA INSTALL ---------- */
 var deferredPrompt=null;
